@@ -97,12 +97,40 @@ export default function FinanceManager() {
     transactionInfo: ''
   });
 
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalMonthKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const displayCategory = (cat: string) => {
+    const map: { [key: string]: string } = {
+      'sewa': 'Sewa Gedung',
+      'iuran': 'Sumbangan',
+      'listrik': 'Listrik & Air',
+      'perbaikan': 'Perbaikan',
+      'peralatan': 'Peralatan',
+      'kebersihan': 'Kebersihan & Keamanan',
+      'keamanan': 'Kebersihan & Keamanan',
+      'umum': 'Lainnya'
+    };
+    return map[cat] || cat;
+  };
+
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalMonthKey(new Date()) + '-' + String(new Date().getDate()).padStart(2, '0'),
     source: '',
     amount: '',
     type: 'income' as 'income' | 'expense' | 'reallocation',
     category: 'umum',
+    customCategory: '',
     paymentMethod: 'transfer' as 'cash' | 'transfer' | 'qris',
     notes: '',
     status: 'completed',
@@ -116,10 +144,8 @@ export default function FinanceManager() {
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   useEffect(() => {
-    const unsubTx = subscribeToTransactions(setTransactions, { 
-      type: activeType, 
-      month: activeMonth 
-    });
+    // Subscribe to all transactions for accurate lifetime stats
+    const unsubTx = subscribeToTransactions(setTransactions);
     const unsubConfig = subscribeToConfig(setConfig);
     const unsubAdmins = subscribeToAdmins(setAdmins);
     return () => {
@@ -127,7 +153,7 @@ export default function FinanceManager() {
       unsubConfig();
       unsubAdmins();
     };
-  }, [activeType, activeMonth]);
+  }, []);
 
   useEffect(() => {
     if (config?.devFundRate) {
@@ -140,19 +166,47 @@ export default function FinanceManager() {
 
   useEffect(() => {
     if (transactions.length > 0) {
+      // We only sync totals if there's no filter active to prevent overwriting global state with partial data
+      // Actually, syncFinanceTotals should probably be handled more safely, but for now we'll only sync all
       syncFinanceTotals(transactions);
     }
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    if (!searchQuery.trim()) return transactions;
-    const lower = searchQuery.toLowerCase();
-    return transactions.filter(t => 
-      t.source?.toLowerCase().includes(lower) || 
-      t.category?.toLowerCase().includes(lower) ||
-      t.addedBy?.toLowerCase().includes(lower)
-    );
-  }, [transactions, searchQuery]);
+    let result = [...transactions];
+    
+    if (activeType !== 'all') {
+      result = result.filter(t => t.type === activeType);
+    }
+    
+    if (activeMonth !== 'all') {
+      result = result.filter(t => t.date.startsWith(activeMonth));
+    }
+
+    if (searchQuery.trim()) {
+      const lower = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        t.source?.toLowerCase().includes(lower) || 
+        t.category?.toLowerCase().includes(lower) ||
+        t.addedBy?.toLowerCase().includes(lower)
+      );
+    }
+
+    return result.sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    });
+  }, [transactions, searchQuery, activeMonth, activeType]);
+
+  const filteredStats = useMemo(() => {
+    const periodTxs = activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth));
+    
+    const income = periodTxs.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const expense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+    
+    return { income, expense };
+  }, [transactions, activeMonth]);
 
   const rate = config?.devFundRate ?? 0.2;
   const totalIncome = transactions
@@ -165,21 +219,25 @@ export default function FinanceManager() {
   const totalDevFund = transactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
   const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
 
-  const currentMonth = new Date().toISOString().substring(0, 7);
+  const currentMonthKey = getLocalMonthKey(new Date());
+  const reportMonthKey = activeMonth === 'all' ? currentMonthKey : activeMonth;
   const currentMonthOpsExpense = transactions
-    .filter(t => t.date.startsWith(currentMonth) && t.type === 'expense' && t.expenseSource === 'ops')
+    .filter(t => t.date.startsWith(reportMonthKey) && t.type === 'expense' && t.expenseSource === 'ops')
     .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
   
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
 
   const handleEdit = (tx: any) => {
     setEditingId(tx.id);
+    const isFixed = ['sewa', 'iuran', 'listrik', 'perbaikan', 'peralatan', 'kebersihan', 'keamanan', 'umum'].includes(tx.category);
+    
     setFormData({
       date: tx.date,
       source: tx.source,
       amount: Math.abs(tx.amount).toString(),
       type: tx.type,
-      category: tx.category || 'umum',
+      category: isFixed ? tx.category : 'umum',
+      customCategory: isFixed ? '' : tx.category,
       paymentMethod: tx.paymentMethod || 'transfer',
       notes: tx.notes || '',
       status: tx.status || 'completed',
@@ -248,6 +306,15 @@ export default function FinanceManager() {
     doc.setTextColor(226, 232, 240); // Better contrast
     doc.text(config?.reportOrgName?.toUpperCase() || 'HUNTAP TONDO 2, KEL. TONDO, KEC. MANTIKULORE', margin, 28);
     doc.text('KOTA PALU, SULAWESI TENGAH', margin, 34);
+
+    if (activeMonth !== 'all') {
+      const [year, month] = activeMonth.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+    }
 
     // Metadata Section (Right Aligned)
     doc.setTextColor(255, 255, 255);
@@ -327,16 +394,16 @@ export default function FinanceManager() {
     });
 
     // Handle display of categories matching app settings
-    const displayCategory = (cat: string) => {
+    const pdfDisplayCategory = (cat: string) => {
       const map: Record<string, string> = {
         sewa: 'Sewa Gedung',
-        iuran: 'Iuran Warga',
+        iuran: 'Sumbangan',
         listrik: 'Listrik & Air',
         perbaikan: 'Perbaikan',
         peralatan: 'Peralatan',
-        kebersihan: 'Kebersihan',
-        keamanan: 'Keamanan',
-        umum: 'Umum / Lainnya'
+        kebersihan: 'Kebersihan & Keamanan',
+        keamanan: 'Kebersihan & Keamanan',
+        umum: 'Lainnya'
       };
       return map[cat] || cat?.toUpperCase() || 'UMUM';
     };
@@ -345,7 +412,7 @@ export default function FinanceManager() {
       index + 1,
       t.date.split('-').reverse().join('/'), 
       t.source,
-      displayCategory(t.category),
+      pdfDisplayCategory(t.category),
       t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
       { content: t.type === 'income' ? 'MASUK' : t.type === 'reallocation' ? 'REALLOKASI' : 'KELUAR', styles: { textColor: t.type === 'income' ? [5, 150, 105] : t.type === 'reallocation' ? [217, 119, 6] : [220, 38, 38] } },
       `Rp ${Math.abs(t.amount || 0).toLocaleString('id-ID')}`
@@ -379,8 +446,73 @@ export default function FinanceManager() {
       }
     });
 
+    // --- REKAPITULASI ARUS KAS ---
+    const recapY = (doc as any).lastAutoTable.finalY + 12;
+    
+    // Safety check for page capacity
+    let finalRecapY = recapY;
+    if (finalRecapY > pageHeight - 75) {
+      doc.addPage();
+      finalRecapY = 25;
+    }
+
+    doc.setFillColor(248, 250, 252); // soft slate background
+    doc.rect(margin, finalRecapY - 5, pageWidth - (margin * 2), 48, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, finalRecapY - 5, pageWidth - (margin * 2), 48, 'D');
+
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    
+    let recapTitle = 'III. REKAPITULASI SALDO PERIODE';
+    if (activeMonth !== 'all') {
+      const [year, month] = activeMonth.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      recapTitle += ` (${monthName.toUpperCase()})`;
+    }
+    doc.text(recapTitle, margin + 5, finalRecapY + 2);
+
+    const periodIncome = sortedTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const periodExpense = sortedTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+    
+    // Initial balance (Balance before the period start)
+    const allTxsSorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let initialBalance = 0;
+    if (activeMonth !== 'all') {
+      initialBalance = allTxsSorted
+        .filter(t => t.date < activeMonth + '-01')
+        .reduce((acc, curr) => {
+          if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
+          if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
+          return acc;
+        }, 0);
+    }
+
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Saldo Awal (Dana dari periode sebelumnya)', margin + 5, finalRecapY + 12);
+    doc.text(`Rp ${Math.floor(initialBalance).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 12, { align: 'right' });
+
+    doc.text('(+) Total Pemasukan Periode Ini', margin + 5, finalRecapY + 20);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Rp ${Math.floor(periodIncome).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 20, { align: 'right' });
+
+    doc.setTextColor(71, 85, 105);
+    doc.text('(-) Total Pengeluaran Periode Ini', margin + 5, finalRecapY + 28);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Rp ${Math.floor(periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 28, { align: 'right' });
+
+    doc.setFillColor(30, 64, 175);
+    doc.rect(margin + 2, finalRecapY + 34, pageWidth - (margin * 2) - 4, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL SALDO AKHIR PERIODE (AVAILABLE)', margin + 5, finalRecapY + 40.5);
+    doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 40.5, { align: 'right' });
+
     // Section 3: Signature Area
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = finalRecapY + 55;
     
     let sigY = finalY;
     if (sigY > pageHeight - 60) {
@@ -434,7 +566,11 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'italic');
     doc.text('Tanda Tangan & Cap Stempel Resmi', pageWidth / 2, sigY + 50, { align: 'center' });
 
-    doc.save(`Laporan_Keuangan_GSG_Admin_${new Date().toISOString().split('T')[0]}.pdf`);
+    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
+      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+
+    doc.save(`Laporan_Keuangan_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToCSV = () => {
@@ -463,16 +599,16 @@ export default function FinanceManager() {
     });
 
     // Handle display of categories matching app settings
-    const displayCategory = (cat: string) => {
+    const csvDisplayCategory = (cat: string) => {
       const map: Record<string, string> = {
         sewa: 'Sewa Gedung',
-        iuran: 'Iuran Warga',
+        iuran: 'Sumbangan',
         listrik: 'Listrik & Air',
         perbaikan: 'Perbaikan',
         peralatan: 'Peralatan',
-        kebersihan: 'Kebersihan',
-        keamanan: 'Keamanan',
-        umum: 'Umum / Lainnya'
+        kebersihan: 'Kebersihan & Keamanan',
+        keamanan: 'Kebersihan & Keamanan',
+        umum: 'Lainnya'
       };
       return map[cat] || cat?.toUpperCase() || 'UMUM';
     };
@@ -481,7 +617,7 @@ export default function FinanceManager() {
       t.id,
       t.date.split('-').reverse().join('/'),
       t.source,
-      displayCategory(t.category),
+      csvDisplayCategory(t.category),
       t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
       t.type === 'income' ? 'PEMASUKAN' : t.type === 'reallocation' ? 'REALLOKASI' : 'PENGELUARAN',
       t.amount || 0,
@@ -500,11 +636,15 @@ export default function FinanceManager() {
       }).join(','))
     ].join('\n');
 
+    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
+      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Ekspor_Admin_Keuangan_GSG_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Ekspor_Keuangan_${periodLabel}_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -564,16 +704,24 @@ export default function FinanceManager() {
       }
 
       if (editingId) {
+        const { category, customCategory, ...rest } = formData;
+        const finalCategory = category === 'umum' && customCategory.trim() ? customCategory : category;
+
         await updateTransaction(editingId, {
-          ...formData,
+          ...rest,
+          category: finalCategory,
           receiptUrl: finalReceiptUrl,
           amount: finalAmount,
           devFund,
           ops
         });
       } else {
+        const { category, customCategory, ...rest } = formData;
+        const finalCategory = category === 'umum' && customCategory.trim() ? customCategory : category;
+
         await addTransaction({
-          ...formData,
+          ...rest,
+          category: finalCategory,
           receiptUrl: finalReceiptUrl,
           amount: finalAmount,
           devFund,
@@ -588,11 +736,12 @@ export default function FinanceManager() {
       setIsModalOpen(false);
       setEditingId(null);
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(new Date()),
         source: '',
         amount: '',
         type: 'income',
         category: 'umum',
+        customCategory: '',
         paymentMethod: 'transfer',
         notes: '',
         status: 'completed',
@@ -640,9 +789,11 @@ export default function FinanceManager() {
   // Calculate 7-month stats for chart
   const chartData = useMemo(() => {
     const months = [];
+    const baseDate = activeMonth === 'all' ? new Date() : new Date(activeMonth + '-05'); // mid month avoids TZ issues
+    
     for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(1); // Prevent overflow if current day > target month days
+      const d = new Date(baseDate);
+      d.setDate(1);
       d.setMonth(d.getMonth() - i);
       const monthKey = d.toISOString().substring(0, 7);
       const monthLabel = d.toLocaleDateString('id-ID', { month: 'short' });
@@ -654,12 +805,15 @@ export default function FinanceManager() {
       months.push({ name: monthLabel, income, expense });
     }
     return months;
-  }, [transactions]);
+  }, [transactions, activeMonth]);
+
 
   // Calculate Category Stats
   const categoryData = useMemo(() => {
     const cats: { [key: string]: number } = {};
-    transactions
+    const targetTxs = activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth));
+    
+    targetTxs
       .filter(t => t.type === 'expense')
       .forEach(t => {
         const cat = t.category || 'umum';
@@ -667,54 +821,93 @@ export default function FinanceManager() {
       });
     
     return Object.entries(cats)
-      .map(([name, value]) => ({ name: name.toUpperCase(), value }))
+      .map(([name, value]) => ({ name: displayCategory(name).toUpperCase(), value }))
       .sort((a, b) => b.value - a.value);
-  }, [transactions]);
+  }, [transactions, activeMonth]);
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#6366F1'];
 
   return (
     <div className="space-y-8 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+        <div className="flex-1">
           <h2 className="text-3xl font-black text-gray-900 tracking-tight">Manajemen Keuangan</h2>
-          <p className="text-gray-500 text-sm mt-1">Laporan arus kas masuk dan keluar gedung.</p>
+          <p className="text-gray-500 text-sm mt-1">Audit arus kas masuk, pengeluaran & tabungan aset warga.</p>
+          
+          <div className="flex flex-wrap items-center gap-3 mt-6">
+            <div className="relative group">
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <select 
+                  value={activeMonth}
+                  onChange={(e: any) => setActiveMonth(e.target.value)}
+                  className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                >
+                  <option value="all">SEMUA WAKTU</option>
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const d = new Date();
+                    d.setDate(1);
+                    d.setMonth(d.getMonth() - i);
+                    const val = getLocalMonthKey(d);
+                    const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                  })}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="relative group">
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
+                <Filter className="w-4 h-4 text-gray-400" />
+                <select 
+                  value={activeType}
+                  onChange={(e: any) => setActiveType(e.target.value)}
+                  className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                >
+                  <option value="all">SEMUA ARUS</option>
+                  <option value="income">PENDAPATAN</option>
+                  <option value="expense">PENGELUARAN</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block" />
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsRateModalOpen(true)}
+                className="p-3 bg-gray-50 text-accent rounded-xl hover:bg-orange-50 transition-colors"
+                title="Atur % Dana"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setIsBudgetModalOpen(true)}
+                className="p-3 bg-gray-50 text-emerald-500 rounded-xl hover:bg-emerald-50 transition-colors"
+                title="Budget Bulanan"
+              >
+                <TrendingUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button 
-            onClick={() => setIsRateModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
-          >
-            <Shield className="w-4 h-4 text-accent" />
-            Atur % Dana
-          </button>
-          <button 
-            onClick={() => setIsBudgetModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
-          >
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-            Budget Bulanan
-          </button>
+
+        <div className="flex flex-wrap items-center gap-3 md:justify-end shrink-0">
           <button 
             onClick={exportToPDF}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
+            className="flex items-center gap-2 px-6 py-4 rounded-3xl bg-gray-900 text-white text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200"
           >
-            <Download className="w-4 h-4 text-primary" />
-            PDF
-          </button>
-          <button 
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all active:scale-95"
-          >
-            <LayoutGrid className="w-4 h-4 text-emerald-500" />
-            Excel/CSV
+            <Download className="w-4 h-4" />
+            Download PDF
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-105 transition-transform"
+            className="bg-primary text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
           >
             <PlusCircle className="w-5 h-5" />
-            Catat Transaksi
+            Catat Keuangan
           </button>
         </div>
       </div>
@@ -744,7 +937,9 @@ export default function FinanceManager() {
           <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalOps).toLocaleString('id-ID')}</h3>
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1.5">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Penyerapan Budget</span>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                Penyerapan Budget {activeMonth !== 'all' ? activeMonth : ''}
+              </span>
               <span className="text-[10px] font-black text-primary">{Math.min(100, Math.round(budgetProgress))}%</span>
             </div>
             <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -877,42 +1072,12 @@ export default function FinanceManager() {
           />
         </div>
         
-        <div className="flex gap-2">
-          <div className="relative group">
-            <div className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-3 rounded-2xl shadow-sm">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select 
-                value={activeType}
-                onChange={(e: any) => setActiveType(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none cursor-pointer appearance-none pr-4"
-              >
-                <option value="all">Semua Tipe</option>
-                <option value="income">Pendapatan</option>
-                <option value="expense">Pengeluaran</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
-            </div>
-          </div>
-
-          <div className="relative group">
-            <div className="flex items-center gap-2 bg-white border border-gray-100 px-4 py-3 rounded-2xl shadow-sm">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <select 
-                value={activeMonth}
-                onChange={(e: any) => setActiveMonth(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none cursor-pointer appearance-none pr-4"
-              >
-                <option value="all">Semua Waktu</option>
-                {Array.from({ length: 6 }).map((_, i) => {
-                  const d = new Date();
-                  d.setDate(1); // Prevent overflow
-                  d.setMonth(d.getMonth() - i);
-                  const val = d.toISOString().substring(0, 7);
-                  const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                  return <option key={val} value={val}>{label}</option>;
-                })}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
+        <div className="flex items-center gap-4 px-6 border-l border-gray-100 hidden lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Aktivitas {activeMonth === 'all' ? 'Total' : 'Bulan Ini'}</p>
+            <div className="flex items-center gap-3">
+               <span className="text-xs font-black text-emerald-500">+{filteredStats.income.toLocaleString()}</span>
+               <span className="text-xs font-black text-red-500">-{filteredStats.expense.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -979,13 +1144,7 @@ export default function FinanceManager() {
                         <p className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">{t.source}</p>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 bg-gray-100 rounded-md uppercase tracking-wider">
-                            {t.category === 'sewa' ? 'Sewa Gedung' : 
-                             t.category === 'iuran' ? 'Iuran Warga' :
-                             t.category === 'listrik' ? 'Listrik & Air' :
-                             t.category === 'perbaikan' ? 'Perbaikan' :
-                             t.category === 'peralatan' ? 'Peralatan' :
-                             t.category === 'kebersihan' ? 'Kebersihan' :
-                             t.category === 'keamanan' ? 'Keamanan' : 'Umum'}
+                            {displayCategory(t.category)}
                           </span>
                           <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-widest italic">
                             {t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER'}
@@ -1182,15 +1341,45 @@ export default function FinanceManager() {
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none cursor-pointer"
                   >
                     <option value="sewa">Sewa Gedung</option>
-                    <option value="iuran">Iuran Warga</option>
+                    <option value="iuran">Sumbangan</option>
                     <option value="listrik">Listrik & Air</option>
                     <option value="perbaikan">Perbaikan</option>
                     <option value="peralatan">Peralatan</option>
-                    <option value="kebersihan">Kebersihan</option>
-                    <option value="keamanan">Keamanan</option>
-                    <option value="umum">Lainnya / Umum</option>
+                    <option value="kebersihan">Kebersihan & Keamanan</option>
+                    <option value="umum">Lainnya / Manual</option>
                   </select>
                 </div>
+                {formData.category === 'umum' && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                  >
+                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest mb-3">Sebutkan Kategori Lainnya</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Contoh: Honor Staf"
+                      value={formData.customCategory}
+                      onChange={(e) => setFormData({...formData, customCategory: e.target.value})}
+                      className="w-full bg-blue-50/50 border border-blue-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
+                    />
+                  </motion.div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Sumber / Keterangan Singkat</label>
+                <textarea 
+                  required
+                  rows={2}
+                  placeholder="Contoh: Sewa Resepsi Pernikahan (Bpk. Ahmad)"
+                  value={formData.source}
+                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                     {formData.type === 'income' ? 'Metode Alokasi' : formData.type === 'reallocation' ? 'Arah Pemindahan' : 'Sumber Dana'}
@@ -1233,21 +1422,6 @@ export default function FinanceManager() {
                     )}
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Sumber / Keterangan Singkat</label>
-                <textarea 
-                  required
-                  rows={2}
-                  placeholder="Contoh: Sewa Resepsi Pernikahan (Bpk. Ahmad)"
-                  value={formData.source}
-                  onChange={(e) => setFormData({...formData, source: e.target.value})}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Metode Pembayaran</label>
                   <select 
@@ -1259,9 +1433,6 @@ export default function FinanceManager() {
                     <option value="cash">Tunai (Cash)</option>
                     <option value="qris">QRIS / E-Wallet</option>
                   </select>
-                </div>
-                <div className="flex flex-col justify-end">
-                   <p className="text-[9px] text-gray-400 font-bold mb-2 uppercase">Catatan: Pastikan bukti sesuai metode</p>
                 </div>
               </div>
 

@@ -113,26 +113,28 @@ service cloud.firestore {
     // Global Config
     match /config/{docId} {
       allow read: if true;
-      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
+      allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
+      allow delete: if isSuperAdmin();
     }
 
     // Facilities / Gedung
     match /facilities/{docId} {
       allow read: if true;
-      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
+      allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
+      allow delete: if isSuperAdmin();
     }
 
     // Transaksi / Keuangan
     match /transactions/{docId} {
       allow read: if true; // Publik perlu lihat data transaksi untuk transparansi
-      allow write: if hasAnyRole(['owner', 'admin', 'finance', 'bendahara']) && isValidTransaction(incoming());
-      allow delete: if isSuperAdmin(); // Hanya admin utama yang bisa hapus riwayat keuangan
+      allow create, update: if hasAnyRole(['owner', 'admin', 'finance', 'bendahara']) && isValidTransaction(incoming());
+      allow delete: if hasAnyRole(['owner', 'admin', 'finance', 'bendahara']); // Izinkan finance & bendahara hapus juga jika diperlukan
     }
 
     // Booking Gedung
     match /bookings/{docId} {
       allow read: if true; // Publik perlu lihat jadwal
-      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) && isValidBooking(incoming());
+      allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) && isValidBooking(incoming());
       allow delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
     }
   }

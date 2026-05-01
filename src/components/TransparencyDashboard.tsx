@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock } from 'lucide-react';
+import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown } from 'lucide-react';
 import { subscribeToConfig, subscribeToTransactions } from '../lib/db';
 import { 
   BarChart, 
@@ -19,11 +19,33 @@ import autoTable from 'jspdf-autotable';
 import { auth } from '../lib/firebase';
 
 export default function TransparencyDashboard() {
+  const getLocalMonthKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const displayCategory = (cat: string) => {
+    const map: Record<string, string> = {
+      sewa: 'Sewa Gedung',
+      iuran: 'Sumbangan',
+      listrik: 'Listrik & Air',
+      perbaikan: 'Perbaikan',
+      peralatan: 'Peralatan',
+      kebersihan: 'Kebersihan & Keamanan',
+      keamanan: 'Kebersihan & Keamanan',
+      umum: 'Lainnya'
+    };
+    return map[cat] || cat || 'Umum';
+  };
+
   const [config, setConfig] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [activeMonth, setActiveMonth] = useState('all');
 
   useEffect(() => {
     const unsubConfig = subscribeToConfig((data) => setConfig(data));
+    // Subscribe to all to keep balances accurate, filter list/charts client-side
     const unsubTx = subscribeToTransactions((data) => setTransactions(data));
     return () => {
       unsubConfig();
@@ -33,10 +55,21 @@ export default function TransparencyDashboard() {
 
   const totalDevFund = transactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
   const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
+  
+  const currentMonthKey = getLocalMonthKey(new Date());
+  const reportMonthKey = activeMonth === 'all' ? currentMonthKey : activeMonth;
+  
+  const filteredTransactions = (activeMonth === 'all' 
+    ? transactions 
+    : transactions.filter(t => t.date.startsWith(activeMonth))
+  ).sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  });
 
-  const currentMonth = new Date().toISOString().substring(0, 7);
   const currentMonthOpsExpense = transactions
-    .filter(t => t.date.startsWith(currentMonth) && t.type === 'expense' && t.expenseSource === 'ops')
+    .filter(t => t.date.startsWith(reportMonthKey) && t.type === 'expense' && t.expenseSource === 'ops')
     .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
   
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
@@ -46,7 +79,7 @@ export default function TransparencyDashboard() {
     const d = new Date();
     d.setDate(1); // Prevent overflow
     d.setMonth(d.getMonth() - (3 - i));
-    const monthKey = d.toISOString().substring(0, 7);
+    const monthKey = getLocalMonthKey(d);
     const monthLabel = d.toLocaleDateString('id-ID', { month: 'short' });
     
     const monthTxs = transactions.filter(t => t.date.startsWith(monthKey));
@@ -64,7 +97,7 @@ export default function TransparencyDashboard() {
         acc.set(cat, (acc.get(cat) || 0) + Math.abs(Number(t.amount) || 0));
         return acc;
       }, new Map<string, number>())
-  ).map(([name, value]) => ({ name: name.toUpperCase(), value })).sort((a, b) => b.value - a.value).slice(0, 5);
+  ).map(([name, value]) => ({ name: displayCategory(name).toUpperCase(), value })).sort((a, b) => b.value - a.value).slice(0, 5);
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
@@ -97,7 +130,17 @@ export default function TransparencyDashboard() {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(226, 232, 240); // slate-200 color
-    doc.text(config?.reportOrgName?.toUpperCase() || 'HUNTAP TONDO 2, KELURAHAN TONDO, KOTA PALU', margin, 28);
+    doc.text(config?.reportOrgName?.toUpperCase() || 'HUNTAP TONDO 2, KELURAHAN TONDO', margin, 28);
+    doc.text('KOTA PALU, SULAWESI TENGAH', margin, 34);
+
+    if (activeMonth !== 'all') {
+      const [year, month] = activeMonth.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+    }
     
     // Metadata (Right Aligned in Header)
     doc.setFontSize(8);
@@ -138,37 +181,27 @@ export default function TransparencyDashboard() {
     const lastY = (doc as any).lastAutoTable.finalY + 8; // Decreased spacing (was 12)
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('II. RIWAYAT 15 TRANSAKSI TERBARU', margin, lastY);
+    doc.text(activeMonth === 'all' ? 'II. RIWAYAT 15 TRANSAKSI TERBARU' : 'II. DAFTAR TRANSAKSI BULANAN', margin, lastY);
     
-    const sortedTransactions = [...transactions]
+    let sortedTransactions = [...filteredTransactions]
       .sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        if (dateA !== dateB) return dateB - dateA; // Descending to get most recent first
+        if (dateA !== dateB) return dateB - dateA; // Descending for raw sort
         return String(b.id || '').localeCompare(String(a.id || ''));
-      })
-      .slice(0, 15) // Get the 15 most recent transactions
-      .sort((a, b) => {
+      });
+
+    if (activeMonth === 'all') {
+      sortedTransactions = sortedTransactions.slice(0, 15);
+    }
+
+    sortedTransactions = sortedTransactions.sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
         if (dateA !== dateB) return dateA - dateB; // Ascending for the display list (newest at bottom)
         return String(a.id || '').localeCompare(String(b.id || ''));
       });
     
-    const displayCategory = (cat: string) => {
-      const map: Record<string, string> = {
-        sewa: 'Sewa Gedung',
-        iuran: 'Iuran Warga',
-        listrik: 'Listrik & Air',
-        perbaikan: 'Perbaikan',
-        peralatan: 'Peralatan',
-        kebersihan: 'Kebersihan',
-        keamanan: 'Keamanan',
-        umum: 'Umum'
-      };
-      return map[cat] || cat?.toUpperCase() || 'UMUM';
-    };
-
     const historyData = sortedTransactions.map((t) => [
       t.date.split('-').reverse().join('/'),
       t.source,
@@ -195,6 +228,72 @@ export default function TransparencyDashboard() {
       bodyStyles: { fontSize: 8, cellPadding: 2 }
     });
 
+    // --- REKAPITULASI ARUS KAS (Dashboard) ---
+    const recapY = (doc as any).lastAutoTable.finalY + 12;
+    const pageHeight = doc.internal.pageSize.height;
+    
+    // Safety check for page capacity
+    let finalRecapY = recapY;
+    if (finalRecapY > pageHeight - 70) {
+      doc.addPage();
+      finalRecapY = 25;
+    }
+
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, finalRecapY - 5, pageWidth - (margin * 2), 42, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(margin, finalRecapY - 5, pageWidth - (margin * 2), 42, 'D');
+
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    
+    let recapTitle = 'III. REKAPITULASI ARUS KAS PERIODE';
+    if (activeMonth !== 'all') {
+      const [year, month] = activeMonth.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      recapTitle += ` (${monthName.toUpperCase()})`;
+    }
+    doc.text(recapTitle, margin + 5, finalRecapY + 2);
+
+    const periodIncome = sortedTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const periodExpense = sortedTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+    
+    // Initial balance calculation (all time before activeMonth)
+    const allTxsSorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let initialBalance = 0;
+    if (activeMonth !== 'all') {
+      initialBalance = allTxsSorted
+        .filter(t => t.date < activeMonth + '-01')
+        .reduce((acc, curr) => {
+          if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
+          if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
+          return acc;
+        }, 0);
+    }
+
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Saldo Awal (Dana Sebelum Periode)', margin + 5, finalRecapY + 12);
+    doc.text(`Rp ${Math.floor(initialBalance).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 12, { align: 'right' });
+
+    doc.text('(+) Total Pemasukan Bulanan', margin + 5, finalRecapY + 19);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Rp ${Math.floor(periodIncome).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 19, { align: 'right' });
+
+    doc.setTextColor(71, 85, 105);
+    doc.text('(-) Total Pengeluaran Bulanan', margin + 5, finalRecapY + 26);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Rp ${Math.floor(periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 26, { align: 'right' });
+
+    doc.setFillColor(30, 64, 175);
+    doc.rect(margin + 2, finalRecapY + 31, pageWidth - (margin * 2) - 4, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SALDO AKHIR PERIODE (TOTAL KAS)', margin + 5, finalRecapY + 36.5);
+    doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 36.5, { align: 'right' });
+
     // Footer
     const totalPages = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -212,7 +311,11 @@ export default function TransparencyDashboard() {
       doc.text(`Halaman ${i} dari ${totalPages}`, pageWidth - margin, doc.internal.pageSize.height - 12, { align: 'right' });
     }
 
-    doc.save(`Laporan_Transparansi_GSG_${new Date().toISOString().split('T')[0]}.pdf`);
+    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
+      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+
+    doc.save(`Laporan_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToCSV = () => {
@@ -230,27 +333,13 @@ export default function TransparencyDashboard() {
       'Catatan'
     ];
 
-    const sortedTransactions = [...transactions]
+    const sortedTransactions = [...filteredTransactions]
       .sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        if (dateA !== dateB) return dateA - dateB; // Ascending
+        if (dateA !== dateB) return dateA - dateB; // Ascending (Oldest -> Newest)
         return String(a.id || '').localeCompare(String(b.id || ''));
       });
-
-    const displayCategory = (cat: string) => {
-      const map: Record<string, string> = {
-        sewa: 'Sewa Gedung',
-        iuran: 'Iuran Warga',
-        listrik: 'Listrik & Air',
-        perbaikan: 'Perbaikan',
-        peralatan: 'Peralatan',
-        kebersihan: 'Kebersihan',
-        keamanan: 'Keamanan',
-        umum: 'Umum'
-      };
-      return map[cat] || cat?.toUpperCase() || 'UMUM';
-    };
 
     const rows = sortedTransactions.map(t => [
       t.date.split('-').reverse().join('/'),
@@ -272,14 +361,19 @@ export default function TransparencyDashboard() {
       }).join(','))
     ].join('\n');
 
+    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
+      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Ekspor_GSG_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Ekspor_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
     URL.revokeObjectURL(url);
   };
+
 
   const stats = [
     {
@@ -305,11 +399,34 @@ export default function TransparencyDashboard() {
   return (
     <section id="transparansi" className="section-padding bg-surface-low">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">Anti-Minus Transparency</h2>
-          <p className="text-gray-500 max-w-2xl mx-auto">
-            Setiap rupiah yang Anda bayarkan dikelola kembali untuk kepentingan warga secara transparan dan akuntabel.
-          </p>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
+          <div className="text-center md:text-left">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">Financial Transparency</h2>
+            <p className="text-gray-500 max-w-2xl">
+              Setiap rupiah yang Anda bayarkan dikelola kembali untuk kepentingan warga secara transparan dan akuntabel.
+            </p>
+          </div>
+          <div className="relative group shrink-0">
+            <div className="flex items-center gap-2 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+              <Calendar className="w-5 h-5 text-primary" />
+              <select 
+                value={activeMonth}
+                onChange={(e: any) => setActiveMonth(e.target.value)}
+                className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+              >
+                <option value="all">SEMUA WAKTU</option>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const d = new Date();
+                  d.setDate(1); // Prevent overflow
+                  d.setMonth(d.getMonth() - i);
+                  const val = getLocalMonthKey(d);
+                  const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                  return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                })}
+              </select>
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -437,7 +554,7 @@ export default function TransparencyDashboard() {
                  </div>
                  <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Efisiensi Anggaran</span>
               </div>
-              <h3 className="text-2xl font-black mb-4">Penggunaan Dana Operasional Bulan Ini</h3>
+              <h3 className="text-2xl font-black mb-4">Penggunaan Dana Operasional {activeMonth === 'all' ? 'Bulan Ini' : new Date(activeMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</h3>
               <p className="text-emerald-100/60 text-sm leading-relaxed">
                 Kami berkomitmen menjaga pengeluaran operasional (listrik, air, staf) di bawah target anggaran bulanan untuk memaksimalkan saldo kas warga.
               </p>
@@ -491,20 +608,14 @@ export default function TransparencyDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {transactions.slice(0, 5).map((t) => (
+                {filteredTransactions.slice(0, activeMonth === 'all' ? 5 : 20).map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50/30 transition-colors">
                     <td className="px-8 py-4 text-[11px] font-bold text-gray-400">{t.date}</td>
                     <td className="px-8 py-4">
                       <p className="text-xs font-bold text-gray-900">{t.source}</p>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-                          {t.category === 'sewa' ? 'Sewa Gedung' : 
-                          t.category === 'iuran' ? 'Iuran Warga' :
-                          t.category === 'listrik' ? 'Listrik & Air' :
-                          t.category === 'perbaikan' ? 'Perbaikan' :
-                          t.category === 'peralatan' ? 'Peralatan' :
-                          t.category === 'kebersihan' ? 'Kebersihan' :
-                          t.category === 'keamanan' ? 'Keamanan' : 'Umum'}
+                          {displayCategory(t.category)}
                         </span>
                         <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-1.5 py-0.5 bg-blue-50 rounded italic">
                           {t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER'}
