@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "settings": {
+      "title": "Application Settings",
+      "description": "Global settings for the application including availability and public data.",
+      "type": "object",
+      "properties": {
+        "isAvailable": { "type": "boolean", "description": "Whether the hall is currently available for booking." },
+        "currentEvent": { "type": "string", "description": "The name of the current event if not available." },
+        "devFund": { "type": "string", "description": "Formatted string for Development Fund amount." },
+        "opsFund": { "type": "string", "description": "Formatted string for Operational Fund amount." },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["isAvailable", "devFund", "opsFund"]
+    },
+    "facility": {
+      "title": "Facility Package",
+      "description": "Information about a booking package/facility.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "price": { "type": "string" },
+        "duration": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "highlight": { "type": "boolean" },
+        "order": { "type": "number" },
+        "iconName": { "type": "string" }
+      },
+      "required": ["title", "price", "duration", "iconName"]
+    },
+    "transaction": {
+      "title": "Financial Transaction",
+      "description": "A record of income or expense.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "source": { "type": "string" },
+        "amount": { "type": "number", "description": "Signed value: positive for income, negative for expense" },
+        "devFund": { "type": "number" },
+        "ops": { "type": "number" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "category": { "type": "string" },
+        "allocationMode": { "type": "string", "enum": ["auto", "full_ops", "full_dev"] },
+        "expenseSource": { "type": "string", "enum": ["ops", "dev"] },
+        "receiptUrl": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "source", "amount", "devFund", "ops", "type", "category", "allocationMode", "expenseSource", "status"]
+    },
+    "admin": {
+      "title": "Administrator",
+      "description": "Whitelisted administrator account.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Google email of the administrator." },
+        "role": { "type": "string", "enum": ["owner", "admin", "editor", "finance"], "description": "Privilege level." },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "booking": {
+      "title": "Hall Booking",
+      "description": "Information about a facility rental booking.",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "purpose": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "amount": { "type": "number" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "completed", "rejected"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "paid"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "financeAdded": { "type": "boolean" }
+      },
+      "required": ["customerName", "phone", "purpose", "startDate", "amount", "status", "paymentStatus"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "admin",
+      "description": "Collection of whitelisted admin emails."
+    },
+    "/bookings/{bookingId}": {
+      "schema": "booking",
+      "description": "Collection of hall bookings."
+    },
+    "/config/global": {
+      "schema": "settings",
+      "description": "Global configuration document."
+    },
+    "/facilities/{facilityId}": {
+      "schema": "facility",
+      "description": "Collection of facility packages."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "transaction",
+      "description": "Collection of financial transactions."
+    }
+  }
+}

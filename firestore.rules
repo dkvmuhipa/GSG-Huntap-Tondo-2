@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function getUserEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role check - Memeriksa apakah pengguna memiliki salah satu role yang diizinkan
+    function hasAnyRole(roles) {
+      let userEmail = getUserEmail();
+      return isSignedIn() && (
+        userEmail == "dkvsmkmuhipa@gmail.com" || 
+        (exists(/databases/$(database)/documents/admins/$(userEmail)) && 
+         get(/databases/$(database)/documents/admins/$(userEmail)).data.role in roles)
+      );
+    }
+
+    // Helper untuk owner/admin utama
+    function isSuperAdmin() {
+      let userEmail = getUserEmail();
+      return isSignedIn() && (
+        userEmail == "dkvsmkmuhipa@gmail.com" || 
+        hasAnyRole(['owner', 'admin'])
+      );
+    }
+
+    // --- Validation Helpers ---
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['owner', 'admin', 'editor', 'finance', 'bendahara'] &&
+             (!('addedAt' in data) || data.addedAt is timestamp) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp));
+    }
+
+    function isValidTransaction(data) {
+      let requiredFields = ['date', 'source', 'amount', 'type', 'createdAt', 'devFund', 'ops', 'category', 'allocationMode', 'expenseSource', 'status'];
+      return data.keys().hasAll(requiredFields) &&
+             data.amount is number && 
+             data.type in ['income', 'expense', 'reallocation'] &&
+             data.createdAt is timestamp &&
+             data.devFund is number &&
+             data.ops is number &&
+             data.source is string && data.source.size() <= 200 &&
+             data.category is string &&
+             data.allocationMode in ['auto', 'full_ops', 'full_dev'] &&
+             data.expenseSource in ['ops', 'dev'] &&
+             data.status is string &&
+             // Allow optional addedBy fields
+             (!('addedBy' in data) || data.addedBy is string) &&
+             (!('addedByName' in data) || data.addedByName is string) &&
+             (!('addedByRole' in data) || data.addedByRole is string) &&
+             (!('bookingId' in data) || data.bookingId is string) &&
+             (!('receiptUrl' in data) || (data.receiptUrl is string && data.receiptUrl.size() <= 1000));
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['customerName', 'phone', 'purpose', 'startDate', 'amount', 'status', 'paymentStatus']) &&
+             data.customerName is string && data.customerName.size() <= 200 &&
+             data.phone is string && data.phone.size() <= 100 &&
+             data.purpose is string && data.purpose.size() <= 500 &&
+             data.startDate is string &&
+             data.amount is number &&
+             data.status in ['pending', 'approved', 'completed', 'rejected'] &&
+             data.paymentStatus in ['unpaid', 'paid'];
+    }
+
+    // --- Rules ---
+
+    // Koleksi Admins
+    match /admins/{adminId} {
+      // Izinkan list jika memiliki role yang berwenang
+      allow list: if hasAnyRole(['owner', 'admin', 'finance', 'bendahara']); 
+      allow get: if isSignedIn() && (getUserEmail() == adminId || isSuperAdmin());
+      
+      // Hanya owner/admin yang bisa menambah admin baru
+      allow create: if isSuperAdmin() && isValidAdmin(incoming());
+      
+      allow update: if isValidAdmin(incoming()) && (
+        isSuperAdmin() || (
+          isSignedIn() && 
+          getUserEmail() == adminId && 
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+        )
+      );
+      
+      allow delete: if isSuperAdmin() && adminId != getUserEmail(); 
+    }
+
+    // Global Config
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
+    }
+
+    // Facilities / Gedung
+    match /facilities/{docId} {
+      allow read: if true;
+      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
+    }
+
+    // Transaksi / Keuangan
+    match /transactions/{docId} {
+      allow read: if true; // Publik perlu lihat data transaksi untuk transparansi
+      allow write: if hasAnyRole(['owner', 'admin', 'finance', 'bendahara']) && isValidTransaction(incoming());
+      allow delete: if isSuperAdmin(); // Hanya admin utama yang bisa hapus riwayat keuangan
+    }
+
+    // Booking Gedung
+    match /bookings/{docId} {
+      allow read: if true; // Publik perlu lihat jadwal
+      allow write: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) && isValidBooking(incoming());
+      allow delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
+    }
+  }
+}
