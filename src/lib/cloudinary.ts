@@ -29,5 +29,12 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
     return response.json();
   }
   
+  const text = await response.text();
+  console.error('Expected JSON but got:', contentType, text.substring(0, 500));
+  
+  if (text.toLowerCase().includes('<!doctype html>') || text.toLowerCase().includes('<html>')) {
+    throw new Error('Server mengembalikan halaman HTML. Kemungkinan terjadi redirect atau endpoint API tidak ditemukan.');
+  }
+
   throw new Error('Server mengembalikan format response yang tidak valid (bukan JSON).');
 }

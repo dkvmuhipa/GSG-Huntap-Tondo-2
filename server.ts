@@ -72,7 +72,34 @@ async function startServer() {
 
   // Handle 404 for API routes
   app.all('/api/*', (req, res) => {
-    res.status(404).json({ error: `API route ${req.method} ${req.url} not found` });
+    res.status(404).json({ 
+      error: `API route ${req.method} ${req.url} not found`,
+      message: 'Pastikan endpoint API sudah benar dan server sedang berjalan.'
+    });
+  });
+
+  // Global Error Handler for API and Server
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('SERVER ERROR:', err);
+    
+    // If headers already sent, delegate to default handler
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    // Default to 500
+    const statusCode = err.status || err.statusCode || 500;
+    
+    // Always return JSON for API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(statusCode).json({
+        error: err.message || 'Internal Server Error',
+        details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+      });
+    }
+
+    // For other routes, let next (Vite/Static) handle or send simple error
+    next(err);
   });
 
   // Vite middleware for development
