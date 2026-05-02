@@ -357,6 +357,34 @@ export default function FinanceManager() {
     doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
   };
 
+  const exportCSV = () => {
+    const headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Sumber/Tujuan', 'Jumlah', 'Catatan'];
+    const rows = filteredTransactions.map(t => [
+      t.id,
+      t.date,
+      t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+      displayCategory(t.category),
+      t.source,
+      t.amount,
+      t.notes || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Laporan_Keuangan_GSG_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const rate = config?.devFundRate ?? 0.2;
   const totalIncome = transactions
     .filter(t => t.type === 'income')
@@ -1059,6 +1087,14 @@ export default function FinanceManager() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
               </div>
             </div>
+
+            <button 
+              onClick={exportCSV}
+              className="px-5 py-3 rounded-2xl bg-white border border-gray-100 text-gray-700 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Download className="w-4 h-4 text-primary" />
+              EKSPOR CSV
+            </button>
 
             <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block" />
 

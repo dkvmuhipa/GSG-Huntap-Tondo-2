@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Star, Send, CheckCircle } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function FeedbackSection() {
@@ -17,8 +17,9 @@ export default function FeedbackSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const feedbackPath = 'feedback';
     try {
-      await addDoc(collection(db, 'feedback'), {
+      await addDoc(collection(db, feedbackPath), {
         ...formData,
         status: 'pending', // Admins need to approve for display
         createdAt: serverTimestamp()
@@ -26,7 +27,7 @@ export default function FeedbackSection() {
       setIsSuccess(true);
       setFormData({ name: '', rating: 5, comment: '', eventDate: '' });
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.CREATE, feedbackPath);
     } finally {
       setIsSubmitting(false);
     }

@@ -13,7 +13,7 @@ import {
   History,
   ArrowRight
 } from 'lucide-react';
-import { db } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 interface InventoryItem {
@@ -58,11 +58,11 @@ export default function InventoryManager() {
     const unsubItems = onSnapshot(query(collection(db, 'inventory'), orderBy('name')), (snap) => {
       setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem)));
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'inventory'));
 
     const unsubLogs = onSnapshot(query(collection(db, 'maintenance_logs'), orderBy('date', 'desc')), (snap) => {
       setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceLog)));
-    });
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'maintenance_logs'));
 
     return () => {
       unsubItems();
@@ -72,6 +72,8 @@ export default function InventoryManager() {
 
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    const invPath = 'inventory';
+    const logPath = 'maintenance_logs';
     try {
       const data = {
         ...formData,
@@ -79,26 +81,42 @@ export default function InventoryManager() {
       };
 
       if (editingItem) {
-        await updateDoc(doc(db, 'inventory', editingItem.id), data);
+        try {
+          await updateDoc(doc(db, invPath, editingItem.id), data);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `${invPath}/${editingItem.id}`);
+        }
         
         // Add log entry for change
-        await addDoc(collection(db, 'maintenance_logs'), {
-          itemName: data.name,
-          action: 'Update Stok/Kondisi',
-          date: new Date().toISOString().split('T')[0],
-          performedBy: 'Admin',
-          notes: `Update kuantitas: Baik(${data.goodQuantity}), Rusak(${data.brokenQuantity})`
-        });
+        try {
+          await addDoc(collection(db, logPath), {
+            itemName: data.name,
+            action: 'Update Stok/Kondisi',
+            date: new Date().toISOString().split('T')[0],
+            performedBy: 'Admin',
+            notes: `Update kuantitas: Baik(${data.goodQuantity}), Rusak(${data.brokenQuantity})`
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, logPath);
+        }
       } else {
-        await addDoc(collection(db, 'inventory'), data);
+        try {
+          await addDoc(collection(db, invPath), data);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, invPath);
+        }
         
-        await addDoc(collection(db, 'maintenance_logs'), {
-          itemName: data.name,
-          action: 'Item Baru Terdaftar',
-          date: new Date().toISOString().split('T')[0],
-          performedBy: 'Admin',
-          notes: `Pendaftaran aset baru ke dalam sistem.`
-        });
+        try {
+          await addDoc(collection(db, logPath), {
+            itemName: data.name,
+            action: 'Item Baru Terdaftar',
+            date: new Date().toISOString().split('T')[0],
+            performedBy: 'Admin',
+            notes: `Pendaftaran aset baru ke dalam sistem.`
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, logPath);
+        }
       }
       
       setIsModalOpen(false);
@@ -111,7 +129,12 @@ export default function InventoryManager() {
 
   const handleDelete = async (id: string, name: string) => {
     if (confirm(`Hapus ${name} dari inventaris?`)) {
-      await deleteDoc(doc(db, 'inventory', id));
+      const invPath = 'inventory';
+      try {
+        await deleteDoc(doc(db, invPath, id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `${invPath}/${id}`);
+      }
     }
   };
 

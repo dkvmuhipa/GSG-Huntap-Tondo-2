@@ -77,9 +77,66 @@
         "financeAdded": { "type": "boolean" }
       },
       "required": ["customerName", "phone", "purpose", "startDate", "amount", "status", "paymentStatus"]
+    },
+    "inventoryItem": {
+      "title": "Inventory Item",
+      "description": "An asset or piece of equipment owned by the building.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "totalQuantity": { "type": "number" },
+        "goodQuantity": { "type": "number" },
+        "brokenQuantity": { "type": "number" },
+        "category": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "totalQuantity", "goodQuantity", "brokenQuantity", "category"]
+    },
+    "maintenanceLog": {
+      "title": "Maintenance Log",
+      "description": "A record of maintenance actions performed on assets.",
+      "type": "object",
+      "properties": {
+        "itemName": { "type": "string" },
+        "action": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "performedBy": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["itemName", "action", "date", "performedBy"]
+    },
+    "feedback": {
+      "title": "User Feedback",
+      "description": "Reviews and feedback from facility users.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "eventDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "rating", "comment", "status"]
+    },
+    "eContract": {
+      "title": "E-Contract",
+      "description": "Digital agreement document for a booking.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["draft", "signed", "archived"] },
+        "contractVesion": { "type": "string" }
+      },
+      "required": ["bookingId", "generatedAt", "status"]
     }
   },
   "firestore": {
+    "/e_contracts/{contractId}": {
+      "schema": "eContract",
+      "description": "Collection of digital contracts linked to bookings."
+    },
     "/admins/{adminId}": {
       "schema": "admin",
       "description": "Collection of whitelisted admin emails."
@@ -99,6 +156,18 @@
     "/transactions/{transactionId}": {
       "schema": "transaction",
       "description": "Collection of financial transactions."
+    },
+    "/inventory/{itemId}": {
+      "schema": "inventoryItem",
+      "description": "Collection of building assets."
+    },
+    "/maintenance_logs/{logId}": {
+      "schema": "maintenanceLog",
+      "description": "Collection of maintenance history records."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "feedback",
+      "description": "Collection of user feedback and reviews."
     }
   }
 }

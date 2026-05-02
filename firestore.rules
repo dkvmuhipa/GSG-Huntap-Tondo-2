@@ -11,10 +11,6 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email != null;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
     function getUserEmail() {
       return request.auth.token.email.lower();
     }
@@ -27,21 +23,21 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // Role check - Memeriksa apakah pengguna memiliki salah satu role yang diizinkan
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
     function hasAnyRole(roles) {
-      let userEmail = getUserEmail();
       return isSignedIn() && (
-        userEmail == "dkvsmkmuhipa@gmail.com" || 
-        (exists(/databases/$(database)/documents/admins/$(userEmail)) && 
-         get(/databases/$(database)/documents/admins/$(userEmail)).data.role in roles)
+        getUserEmail() == "dkvsmkmuhipa@gmail.com" || 
+        (exists(/databases/$(database)/documents/admins/$(getUserEmail())) && 
+         get(/databases/$(database)/documents/admins/$(getUserEmail())).data.role in roles)
       );
     }
 
-    // Helper untuk owner/admin utama
     function isSuperAdmin() {
-      let userEmail = getUserEmail();
       return isSignedIn() && (
-        userEmail == "dkvsmkmuhipa@gmail.com" || 
+        getUserEmail() == "dkvsmkmuhipa@gmail.com" || 
         hasAnyRole(['owner', 'admin'])
       );
     }
@@ -57,13 +53,12 @@ service cloud.firestore {
     }
 
     function isValidTransaction(data) {
-      let requiredFields = ['date', 'source', 'amount', 'type', 'createdAt', 'devFund', 'ops', 'category', 'allocationMode', 'expenseSource', 'status'];
-      return data.keys().hasAll(requiredFields) &&
-             data.amount is number && 
+      return data.keys().hasAll(['date', 'source', 'amount', 'type', 'createdAt', 'devFund', 'ops', 'category', 'allocationMode', 'expenseSource', 'status']) &&
+             (data.amount is int || data.amount is float) && 
              data.type in ['income', 'expense', 'reallocation'] &&
              data.createdAt is timestamp &&
-             data.devFund is number &&
-             data.ops is number &&
+             (data.devFund is int || data.devFund is float) &&
+             (data.ops is int || data.ops is float) &&
              data.source is string && data.source.size() <= 200 &&
              data.category is string &&
              data.allocationMode in ['auto', 'full_ops', 'full_dev'] &&
@@ -83,9 +78,45 @@ service cloud.firestore {
              data.phone is string && data.phone.size() <= 100 &&
              data.purpose is string && data.purpose.size() <= 500 &&
              data.startDate is string &&
-             data.amount is number &&
+             (data.amount is int || data.amount is float) &&
              data.status in ['pending', 'approved', 'completed', 'rejected'] &&
              data.paymentStatus in ['unpaid', 'paid'];
+    }
+
+    function isValidInventory(data) {
+      return data.keys().hasAll(['name', 'totalQuantity', 'goodQuantity', 'brokenQuantity', 'category']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.totalQuantity is int &&
+             data.goodQuantity is int &&
+             data.brokenQuantity is int &&
+             data.category is string &&
+             (!('lastUpdated' in data) || data.lastUpdated is timestamp);
+    }
+
+    function isValidMaintenanceLog(data) {
+      return data.keys().hasAll(['itemName', 'action', 'date', 'performedBy']) &&
+             data.itemName is string &&
+             data.action is string &&
+             data.date is string &&
+             data.performedBy is string &&
+             (!('notes' in data) || data.notes is string);
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['name', 'rating', 'comment', 'status']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 2000 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             (!('eventDate' in data) || data.eventDate is string) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidContract(data) {
+      return data.keys().hasAll(['bookingId', 'generatedAt', 'status']) &&
+             data.bookingId is string &&
+             data.generatedAt is timestamp &&
+             data.status in ['draft', 'signed', 'archived'];
     }
 
     // --- Rules ---
@@ -136,6 +167,36 @@ service cloud.firestore {
       allow read: if true; // Publik perlu lihat jadwal
       allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) && isValidBooking(incoming());
       allow delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
+    }
+
+    // Inventaris
+    match /inventory/{docId} {
+      allow read: if hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow create, update: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidInventory(incoming());
+      allow delete: if hasAnyRole(['owner', 'admin', 'bendahara']);
+    }
+
+    // Log Pemeliharaan
+    match /maintenance_logs/{docId} {
+      allow read: if hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow create: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidMaintenanceLog(incoming());
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Feedback Pengguna
+    match /feedback/{docId} {
+      allow list: if (resource.data.status == 'approved') || hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow get: if true;
+      allow create: if isValidFeedback(incoming()) && incoming().status == 'pending';
+      allow update: if isValidFeedback(incoming()) && hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // Kontrak Digital
+    match /e_contracts/{docId} {
+      allow read: if hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow create, update: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidContract(incoming());
+      allow delete: if isSuperAdmin();
     }
   }
 }

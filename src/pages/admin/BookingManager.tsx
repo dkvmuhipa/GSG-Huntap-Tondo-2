@@ -28,6 +28,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import { generateContract } from '../../services/contractService';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -513,6 +514,13 @@ export default function BookingManager() {
                              <div className="flex bg-gray-100 p-1.5 rounded-2xl items-center gap-1 shadow-inner">
                                <button onClick={() => sendWA(booking, 'approve')} className="p-2 hover:bg-white rounded-xl text-green-600 transition-all hover:shadow-sm" title="Kirim WA Setuju"><Check className="w-4 h-4" /></button>
                                <button onClick={() => sendWA(booking, 'remind')} className="p-2 hover:bg-white rounded-xl text-primary transition-all hover:shadow-sm" title="Kirim WA Pengingat"><MessageCircle className="w-4 h-4" /></button>
+                               <button 
+                                 onClick={() => generateContract(booking)} 
+                                 className="p-2 hover:bg-white rounded-xl text-blue-600 transition-all hover:shadow-sm" 
+                                 title="Cetak Kontrak (PDF)"
+                               >
+                                 <FileText className="w-4 h-4" />
+                               </button>
                              </div>
                              
                              <button 
