@@ -10,10 +10,10 @@ interface NavbarProps {
 
 export default function Navbar({ onOpenBooking }: NavbarProps) {
   const navLinks = [
-    { name: 'Beranda', href: '/' },
-    { name: 'Punya Aturan?', href: '/rules' },
-    { name: 'Cek Jadwal', href: '/#jadwal' },
+    { name: 'Jadwal', href: '/#jadwal' },
     { name: 'Transparansi', href: '/#transparansi' },
+    { name: 'Galeri', href: '/#galeri' },
+    { name: 'Aturan', href: '/rules' },
   ];
 
   return (

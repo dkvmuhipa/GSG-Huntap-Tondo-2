@@ -8,7 +8,8 @@ import {
   Shield,
   Home,
   LogOut,
-  Building2
+  Building2,
+  Box
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -21,6 +22,7 @@ export default function AdminSidebar({ userRole = 'admin', onLogout }: AdminSide
     { name: 'Ringkasan', icon: LayoutDashboard, path: '/admin', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] },
     { name: 'Kelola Booking', icon: CalendarCheck, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
     { name: 'Keuangan', icon: Wallet, path: '/admin/finance', roles: ['owner', 'admin', 'finance', 'bendahara'] },
+    { name: 'Inventaris & Log', icon: Box, path: '/admin/inventory', roles: ['owner', 'admin', 'bendahara'] },
     { name: 'Akses & Rules', icon: Shield, path: '/admin/rules', roles: ['owner', 'admin'] },
     { name: 'Pengaturan Gedung', icon: Settings, path: '/admin/settings', roles: ['owner', 'admin', 'editor', 'bendahara'] },
   ];

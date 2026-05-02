@@ -224,17 +224,43 @@ export default function FinanceManager() {
     const margin = 10;
     const width = doc.internal.pageSize.width;
     
+    // --- 0. BACKGROUND & WATERMARK ---
+    // Drawn first to stay in background behind text
+    doc.setTextColor(245, 247, 250);
+    doc.setFontSize(45);
+    doc.setFont('helvetica', 'bold');
+    doc.text('OFFICIAL RECEIPT', 40, 65, { angle: 15 });
+
     // 1. HEADER AREA
     doc.setFillColor(30, 58, 138); // Primary Blue
     doc.rect(0, 0, 5, 110, 'F'); // Left accent bar
     
-    // Logo Placeholder / Icon
-    doc.setFillColor(30, 58, 138);
-    doc.roundedRect(12, 10, 15, 15, 3, 3, 'F');
-    doc.setTextColor(255);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('G', 17, 20.5);
+    // APP LOGO (Replicating logo.svg)
+    doc.setFillColor(30, 58, 138); // #1e3a8a
+    doc.roundedRect(12, 10, 16, 16, 3, 3, 'F');
+    
+    doc.setDrawColor(255, 255, 255); // White
+    doc.setLineWidth(0.6);
+    
+    // Main building outline (Tall left, shorter right)
+    // Left Wing (Tall)
+    doc.line(15, 23, 15, 14); // Left wall
+    doc.line(15, 14, 21, 14); // Left roof
+    doc.line(21, 14, 21, 23); // Inner wall (middle)
+    
+    // Right Wing (Short)
+    doc.line(21, 17, 25, 17); // Right roof
+    doc.line(25, 17, 25, 23); // Right wall
+    
+    // Ground Line
+    doc.setLineWidth(0.7);
+    doc.line(14, 23, 26, 23);
+    
+    // Windows (3 horizontal lines on left wing)
+    doc.setLineWidth(0.5);
+    doc.line(17, 16.5, 19.5, 16.5); // Window 1
+    doc.line(17, 18.5, 19.5, 18.5); // Window 2
+    doc.line(17, 20.5, 19.5, 20.5); // Window 3
 
     // Title
     doc.setTextColor(30, 58, 138);
@@ -327,12 +353,6 @@ export default function FinanceManager() {
     doc.setTextColor(30, 58, 138);
     doc.text(bendaharaName, 170, 103, { align: 'center' });
     doc.line(145, 105, 195, 105);
-
-    // Final Watermark
-    doc.setTextColor(235, 235, 235);
-    doc.setFontSize(40);
-    doc.setFont('helvetica', 'bold');
-    doc.text('OFFICIAL RECEIPT', 40, 65, { angle: 15 });
 
     doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
   };

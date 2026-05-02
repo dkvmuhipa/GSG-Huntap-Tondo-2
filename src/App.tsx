@@ -10,12 +10,18 @@ import Hero from './components/Hero';
 import AvailabilityWidget from './components/AvailabilityWidget';
 import TransparencyDashboard from './components/TransparencyDashboard';
 import FacilitiesGrid from './components/FacilitiesGrid';
+import GallerySection from './components/GallerySection';
+import FAQSection from './components/FAQSection';
+import FeedbackSection from './components/FeedbackSection';
+import ContactSection from './components/ContactSection';
+import AnnouncementTicker from './components/AnnouncementTicker';
 import Footer from './components/Footer';
 import AdminLayout from './components/admin/AdminLayout';
 import DashboardOverview from './pages/admin/DashboardOverview';
 import FinanceManager from './pages/admin/FinanceManager';
 import BookingManager from './pages/admin/BookingManager';
 import ContentManager from './pages/admin/ContentManager';
+import InventoryManager from './pages/admin/InventoryManager';
 import AccountRules from './pages/admin/AccountRules';
 import RulesProcedures from './pages/RulesProcedures';
 import Login from './pages/admin/Login';
@@ -32,11 +38,16 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen">
+      <AnnouncementTicker />
       <Navbar onOpenBooking={() => openBooking()} />
       <main>
         <Hero onOpenBooking={() => openBooking()} />
         <AvailabilityWidget />
         <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
+        <GallerySection />
+        <FAQSection />
+        <FeedbackSection />
+        <ContactSection />
         <TransparencyDashboard />
       </main>
       <Footer />
@@ -68,6 +79,7 @@ export default function App() {
           <Route index element={<DashboardOverview />} />
           <Route path="bookings" element={<BookingManager />} />
           <Route path="finance" element={<FinanceManager />} />
+          <Route path="inventory" element={<InventoryManager />} />
           <Route path="rules" element={<AccountRules />} />
           <Route path="settings" element={<ContentManager />} />
         </Route>
