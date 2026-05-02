@@ -2,15 +2,18 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Building2, MessageCircle } from 'lucide-react';
 
+import { Link } from 'react-router-dom';
+
 interface NavbarProps {
   onOpenBooking: () => void;
 }
 
 export default function Navbar({ onOpenBooking }: NavbarProps) {
   const navLinks = [
-    { name: 'Cek Jadwal', href: '#jadwal' },
-    { name: 'Fasilitas', href: '#fasilitas' },
-    { name: 'Transparansi', href: '#transparansi' },
+    { name: 'Beranda', href: '/' },
+    { name: 'Punya Aturan?', href: '/rules' },
+    { name: 'Cek Jadwal', href: '/#jadwal' },
+    { name: 'Transparansi', href: '/#transparansi' },
   ];
 
   return (
@@ -18,23 +21,33 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Building2 className="text-white w-6 h-6" />
             </div>
             <span className="text-xl font-bold tracking-tight text-primary">GEDUNG SERBAGUNA</span>
-          </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             {navLinks.map((link) => (
-              <a 
-                key={link.name} 
-                href={link.href}
-                className="hover:text-primary transition-colors duration-200"
-              >
-                {link.name}
-              </a>
+              link.href.startsWith('/') && !link.href.includes('#') ? (
+                <Link 
+                  key={link.name} 
+                  to={link.href}
+                  className="hover:text-primary transition-colors duration-200"
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <a 
+                  key={link.name} 
+                  href={link.href}
+                  className="hover:text-primary transition-colors duration-200"
+                >
+                  {link.name}
+                </a>
+              )
             ))}
           </div>
 

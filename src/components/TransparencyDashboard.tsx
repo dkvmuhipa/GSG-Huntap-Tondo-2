@@ -42,6 +42,8 @@ export default function TransparencyDashboard() {
   const [config, setConfig] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [activeMonth, setActiveMonth] = useState('all');
+  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
+  const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     const unsubConfig = subscribeToConfig((data) => setConfig(data));
@@ -57,12 +59,14 @@ export default function TransparencyDashboard() {
   const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
   
   const currentMonthKey = getLocalMonthKey(new Date());
-  const reportMonthKey = activeMonth === 'all' ? currentMonthKey : activeMonth;
+  const reportMonthKey = filterMode === 'monthly' ? (activeMonth === 'all' ? currentMonthKey : activeMonth) : activeYear;
   
-  const filteredTransactions = (activeMonth === 'all' 
-    ? transactions 
-    : transactions.filter(t => t.date.startsWith(activeMonth))
-  ).sort((a, b) => {
+  const filteredTransactions = transactions.filter(t => {
+    if (filterMode === 'monthly') {
+      return activeMonth === 'all' || t.date.startsWith(activeMonth);
+    }
+    return t.date.startsWith(activeYear);
+  }).sort((a, b) => {
     const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
     if (dateDiff !== 0) return dateDiff;
     return String(b.id || '').localeCompare(String(a.id || ''));
@@ -75,10 +79,15 @@ export default function TransparencyDashboard() {
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
 
   // Calculate 4-month stats for chart
-  const chartData = Array.from({ length: 4 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(1); // Prevent overflow
-    d.setMonth(d.getMonth() - (3 - i));
+  const chartData = Array.from({ length: filterMode === 'monthly' ? 4 : 12 }).map((_, i) => {
+    const d = new Date(filterMode === 'monthly' ? new Date() : new Date(activeYear + '-12-01'));
+    d.setDate(1); 
+    const offset = filterMode === 'monthly' ? (3 - i) : (11 - i);
+    d.setMonth(d.getMonth() - offset);
+    
+    // For annual view, only show months of THAT year
+    if (filterMode === 'annual' && d.getFullYear().toString() !== activeYear) return null;
+
     const monthKey = getLocalMonthKey(d);
     const monthLabel = d.toLocaleDateString('id-ID', { month: 'short' });
     
@@ -87,10 +96,10 @@ export default function TransparencyDashboard() {
     const expense = monthTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
     
     return { name: monthLabel, income, expense };
-  });
+  }).filter(Boolean) as any[];
 
   const categoryData = Array.from(
-    transactions
+    filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
         const cat = t.category || 'umum';
@@ -406,25 +415,55 @@ export default function TransparencyDashboard() {
               Setiap rupiah yang Anda bayarkan dikelola kembali untuk kepentingan warga secara transparan dan akuntabel.
             </p>
           </div>
-          <div className="relative group shrink-0">
-            <div className="flex items-center gap-2 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-              <Calendar className="w-5 h-5 text-primary" />
-              <select 
-                value={activeMonth}
-                onChange={(e: any) => setActiveMonth(e.target.value)}
-                className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex items-center gap-1 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm">
+              <button 
+                onClick={() => setFilterMode('monthly')}
+                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
               >
-                <option value="all">SEMUA WAKTU</option>
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const d = new Date();
-                  d.setDate(1); // Prevent overflow
-                  d.setMonth(d.getMonth() - i);
-                  const val = getLocalMonthKey(d);
-                  const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                  return <option key={val} value={val}>{label.toUpperCase()}</option>;
-                })}
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                Bulanan
+              </button>
+              <button 
+                onClick={() => setFilterMode('annual')}
+                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
+              >
+                Tahunan
+              </button>
+            </div>
+
+            <div className="relative group shrink-0">
+              <div className="flex items-center gap-2 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+                <Calendar className="w-5 h-5 text-primary" />
+                {filterMode === 'monthly' ? (
+                  <select 
+                    value={activeMonth}
+                    onChange={(e: any) => setActiveMonth(e.target.value)}
+                    className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                  >
+                    <option value="all">SEMUA BULAN</option>
+                    {Array.from({ length: 12 }).map((_, i) => {
+                      const d = new Date();
+                      d.setDate(1);
+                      d.setMonth(d.getMonth() - i);
+                      const val = getLocalMonthKey(d);
+                      const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                      return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                    })}
+                  </select>
+                ) : (
+                  <select 
+                    value={activeYear}
+                    onChange={(e: any) => setActiveYear(e.target.value)}
+                    className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const year = (new Date().getFullYear() - i).toString();
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                )}
+                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>

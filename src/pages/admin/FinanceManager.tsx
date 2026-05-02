@@ -71,6 +71,8 @@ export default function FinanceManager() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [activeMonth, setActiveMonth] = useState('all');
+  const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
+  const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -179,8 +181,12 @@ export default function FinanceManager() {
       result = result.filter(t => t.type === activeType);
     }
     
-    if (activeMonth !== 'all') {
-      result = result.filter(t => t.date.startsWith(activeMonth));
+    if (filterMode === 'monthly') {
+      if (activeMonth !== 'all') {
+        result = result.filter(t => t.date.startsWith(activeMonth));
+      }
+    } else {
+      result = result.filter(t => t.date.startsWith(activeYear));
     }
 
     if (searchQuery.trim()) {
@@ -206,7 +212,130 @@ export default function FinanceManager() {
     const expense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
     
     return { income, expense };
-  }, [transactions, activeMonth]);
+  }, [transactions, activeMonth, activeYear, filterMode]);
+
+  const downloadKwitansi = (tx: any) => {
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [210, 110]
+    });
+
+    const margin = 10;
+    const width = doc.internal.pageSize.width;
+    
+    // 1. HEADER AREA
+    doc.setFillColor(30, 58, 138); // Primary Blue
+    doc.rect(0, 0, 5, 110, 'F'); // Left accent bar
+    
+    // Logo Placeholder / Icon
+    doc.setFillColor(30, 58, 138);
+    doc.roundedRect(12, 10, 15, 15, 3, 3, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('G', 17, 20.5);
+
+    // Title
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(18);
+    doc.text('GSG HUNTAP TONDO 2', 32, 18);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text('Pusat Kegiatan Warga Huntap Tondo 2, Palu - Sulawesi Tengah', 32, 23);
+    doc.text('Website: gsg-tondo2.web.app | Email: admin.gsg@tondo2.com', 32, 27);
+
+    // Receipt Badge
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(155, 10, 45, 18, 2, 2, 'F');
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KWITANSI', 161, 19);
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`NO: ${tx.id.substring(0, 12).toUpperCase()}`, 161, 24);
+
+    // Divider
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(12, 35, 200, 35);
+
+    // 2. CONTENT AREA
+    const startY = 45;
+    const labelX = 15;
+    const valueX = 55;
+    const rowHeight = 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+
+    // Row: Teruma Dari
+    doc.text('Telah terima dari', labelX, startY);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`:  ${tx.source.toUpperCase()}`, valueX, startY);
+    doc.line(valueX + 2, startY + 2, 200, startY + 2);
+
+    // Row: Uang Sejumlah
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Uang sejumlah', labelX, startY + rowHeight);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`:  Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, valueX, startY + rowHeight);
+    doc.line(valueX + 2, startY + rowHeight + 2, 200, startY + rowHeight + 2);
+
+    // Row: Untuk Pembayaran
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Untuk pembayaran', labelX, startY + (rowHeight * 2));
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`:  ${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'RESERVASI GEDUNG'}`, valueX, startY + (rowHeight * 2));
+    doc.line(valueX + 2, startY + (rowHeight * 2) + 2, 200, startY + (rowHeight * 2) + 2);
+
+    // 3. TERBILANG BOX (Visual Highlight)
+    doc.setFillColor(241, 245, 249);
+    doc.roundedRect(12, 80, 100, 15, 2, 2, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 18, 90);
+    
+    // 4. FOOTER & SIGNATURE
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const dateStr = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.text(`Palu, ${dateStr}`, 170, 80, { align: 'center' });
+    doc.text('Penerima / Bendahara,', 170, 85, { align: 'center' });
+
+    // Stamp Placeholder
+    doc.setDrawColor(30, 58, 138);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([2, 1], 0);
+    doc.circle(150, 92, 10);
+    doc.setFontSize(6);
+    doc.text('STEMPEL', 150, 92.5, { align: 'center' });
+    doc.setLineDashPattern([], 0);
+
+    const bendaharaName = config?.reportBendaharaName || 'Admin GSG Tondo 2';
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text(bendaharaName, 170, 103, { align: 'center' });
+    doc.line(145, 105, 195, 105);
+
+    // Final Watermark
+    doc.setTextColor(235, 235, 235);
+    doc.setFontSize(40);
+    doc.setFont('helvetica', 'bold');
+    doc.text('OFFICIAL RECEIPT', 40, 65, { angle: 15 });
+
+    doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
+  };
 
   const rate = config?.devFundRate ?? 0.2;
   const totalIncome = transactions
@@ -789,12 +918,20 @@ export default function FinanceManager() {
   // Calculate 7-month stats for chart
   const chartData = useMemo(() => {
     const months = [];
-    const baseDate = activeMonth === 'all' ? new Date() : new Date(activeMonth + '-05'); // mid month avoids TZ issues
+    const baseDate = filterMode === 'monthly' 
+      ? (activeMonth === 'all' ? new Date() : new Date(activeMonth + '-05'))
+      : new Date(activeYear + '-06-01');
     
-    for (let i = 5; i >= 0; i--) {
+    const count = filterMode === 'monthly' ? 5 : 11;
+    
+    for (let i = count; i >= 0; i--) {
       const d = new Date(baseDate);
       d.setDate(1);
       d.setMonth(d.getMonth() - i);
+      
+      // If annual, we strictly filter for the target year
+      if (filterMode === 'annual' && d.getFullYear().toString() !== activeYear) continue;
+
       const monthKey = d.toISOString().substring(0, 7);
       const monthLabel = d.toLocaleDateString('id-ID', { month: 'short' });
       
@@ -805,13 +942,15 @@ export default function FinanceManager() {
       months.push({ name: monthLabel, income, expense });
     }
     return months;
-  }, [transactions, activeMonth]);
+  }, [transactions, activeMonth, activeYear, filterMode]);
 
 
   // Calculate Category Stats
   const categoryData = useMemo(() => {
     const cats: { [key: string]: number } = {};
-    const targetTxs = activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth));
+    const targetTxs = filterMode === 'monthly'
+      ? (activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth)))
+      : transactions.filter(t => t.date.startsWith(activeYear));
     
     targetTxs
       .filter(t => t.type === 'expense')
@@ -835,24 +974,52 @@ export default function FinanceManager() {
           <p className="text-gray-500 text-sm mt-1">Audit arus kas masuk, pengeluaran & tabungan aset warga.</p>
           
           <div className="flex flex-wrap items-center gap-3 mt-6">
+            <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 p-1 rounded-2xl">
+              <button 
+                onClick={() => setFilterMode('monthly')}
+                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+              >
+                Bulanan
+              </button>
+              <button 
+                onClick={() => setFilterMode('annual')}
+                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+              >
+                Tahunan
+              </button>
+            </div>
+
             <div className="relative group">
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
                 <Calendar className="w-4 h-4 text-gray-400" />
-                <select 
-                  value={activeMonth}
-                  onChange={(e: any) => setActiveMonth(e.target.value)}
-                  className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
-                >
-                  <option value="all">SEMUA WAKTU</option>
-                  {Array.from({ length: 12 }).map((_, i) => {
-                    const d = new Date();
-                    d.setDate(1);
-                    d.setMonth(d.getMonth() - i);
-                    const val = getLocalMonthKey(d);
-                    const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                    return <option key={val} value={val}>{label.toUpperCase()}</option>;
-                  })}
-                </select>
+                {filterMode === 'monthly' ? (
+                  <select 
+                    value={activeMonth}
+                    onChange={(e: any) => setActiveMonth(e.target.value)}
+                    className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                  >
+                    <option value="all">SEMUA BULAN</option>
+                    {Array.from({ length: 24 }).map((_, i) => {
+                      const d = new Date();
+                      d.setDate(1);
+                      d.setMonth(d.getMonth() - i);
+                      const val = getLocalMonthKey(d);
+                      const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                      return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                    })}
+                  </select>
+                ) : (
+                  <select 
+                    value={activeYear}
+                    onChange={(e: any) => setActiveYear(e.target.value)}
+                    className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const year = (new Date().getFullYear() - i).toString();
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                )}
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
               </div>
             </div>
@@ -1197,10 +1364,19 @@ export default function FinanceManager() {
                               rel="noopener noreferrer"
                               referrerPolicy="no-referrer"
                               className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-blue-100 transition-all shadow-sm"
-                              title="Lihat Nota/Kwitansi"
+                              title="Lihat Bukti Upload"
+                            >
+                              <Upload className="w-4 h-4" />
+                            </a>
+                          )}
+                          {t.type === 'income' && (
+                            <button 
+                              onClick={() => downloadKwitansi(t)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all shadow-sm"
+                              title="Download Kwitansi PDF"
                             >
                               <Receipt className="w-4 h-4" />
-                            </a>
+                            </button>
                           )}
                           <button 
                             onClick={() => handleEdit(t)}

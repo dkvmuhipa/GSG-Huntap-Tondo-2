@@ -17,6 +17,7 @@ import FinanceManager from './pages/admin/FinanceManager';
 import BookingManager from './pages/admin/BookingManager';
 import ContentManager from './pages/admin/ContentManager';
 import AccountRules from './pages/admin/AccountRules';
+import RulesProcedures from './pages/RulesProcedures';
 import Login from './pages/admin/Login';
 import BookingModal from './components/ui/BookingModal';
 
@@ -61,6 +62,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/rules" element={<RulesProcedures />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardOverview />} />
