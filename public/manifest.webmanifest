@@ -1,0 +1,17 @@
+{
+  "name": "GSG Tondo 2",
+  "short_name": "GSG Tondo",
+  "description": "Pusat kegiatan warga Huntap Tondo 2",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

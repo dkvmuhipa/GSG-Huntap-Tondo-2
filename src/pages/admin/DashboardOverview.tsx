@@ -85,8 +85,17 @@ export default function DashboardOverview() {
   const previousWeekRevenue = 0; // Just as example
   const revenueTrend = calculateTrend(currentWeekRevenue, previousWeekRevenue);
 
+  const confirmedBookings = bookings.filter(b => b.status === 'approved' || b.status === 'completed').length;
+  const pendingBookings = bookings.filter(b => b.status === 'pending').length;
+
   const stats = [
-    { label: 'Total Booking', value: transactions.length.toString(), icon: Calendar, trend: '+0%', isPositive: true },
+    { 
+      label: 'Booking Terkonfirmasi', 
+      value: confirmedBookings.toString(), 
+      icon: Calendar, 
+      trend: pendingBookings > 0 ? `${pendingBookings} Menunggu` : 'Semua Terproses', 
+      isPositive: pendingBookings === 0 
+    },
     { 
       label: 'Saldo Kas', 
       value: (userRole === 'editor') ? '••••••' : (config?.opsFund || 'Rp 0'), 
@@ -95,9 +104,9 @@ export default function DashboardOverview() {
       isPositive: true,
       hidden: userRole === 'editor'
     },
-    { label: 'Admin/Warga', value: adminCount.toString(), icon: Users, trend: `+${adminCount}`, isPositive: true },
+    { label: 'Admin / Warga', value: adminCount.toString(), icon: Users, trend: `Aktif`, isPositive: true },
     { 
-      label: 'Dana Peng.', 
+      label: 'Dana Pembangunan', 
       value: (userRole === 'editor') ? '••••••' : (config?.devFund || 'Rp 0'), 
       icon: TrendingUp, 
       trend: revenueTrend, 
