@@ -116,7 +116,7 @@ export default function FinanceManager() {
     const map: { [key: string]: string } = {
       'sewa': 'Sewa Gedung',
       'iuran': 'Sumbangan',
-      'listrik': 'Listrik & Air',
+      'listrik': 'Listrik',
       'perbaikan': 'Perbaikan',
       'peralatan': 'Peralatan',
       'kebersihan': 'Kebersihan & Keamanan',
@@ -575,7 +575,7 @@ export default function FinanceManager() {
       const map: Record<string, string> = {
         sewa: 'Sewa Gedung',
         iuran: 'Sumbangan',
-        listrik: 'Listrik & Air',
+        listrik: 'Listrik',
         perbaikan: 'Perbaikan',
         peralatan: 'Peralatan',
         kebersihan: 'Kebersihan & Keamanan',
@@ -780,7 +780,7 @@ export default function FinanceManager() {
       const map: Record<string, string> = {
         sewa: 'Sewa Gedung',
         iuran: 'Sumbangan',
-        listrik: 'Listrik & Air',
+        listrik: 'Listrik',
         perbaikan: 'Perbaikan',
         peralatan: 'Peralatan',
         kebersihan: 'Kebersihan & Keamanan',
@@ -1574,7 +1574,7 @@ export default function FinanceManager() {
                   >
                     <option value="sewa">Sewa Gedung</option>
                     <option value="iuran">Sumbangan</option>
-                    <option value="listrik">Listrik & Air</option>
+                    <option value="listrik">Listrik</option>
                     <option value="perbaikan">Perbaikan</option>
                     <option value="peralatan">Peralatan</option>
                     <option value="kebersihan">Kebersihan & Keamanan</option>

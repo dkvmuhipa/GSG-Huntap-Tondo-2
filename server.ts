@@ -1,5 +1,4 @@
 import express from 'express';
-import { createServer as createViteServer } from 'vite';
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import path from 'path';
@@ -10,20 +9,32 @@ async function startServer() {
   const PORT = 3000;
 
   // Cloudinary Configuration
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      cloudinary_url: process.env.CLOUDINARY_URL
+    });
+  } else {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+  }
 
-  // Multer for file uploads
+  // Multer for file uploads - use /tmp for serverless environments
   const upload = multer({ dest: '/tmp' });
 
   app.use(express.json());
 
   // Health check
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
+    const isCloudinaryConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY));
+    res.json({ 
+      status: 'ok', 
+      env: process.env.NODE_ENV,
+      vercel: !!process.env.VERCEL,
+      cloudinaryConfigured: isCloudinaryConfigured
+    });
   });
 
   // Upload API
@@ -34,23 +45,27 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-        // Fallback or error if not configured
-        console.warn('Cloudinary is not configured. Please set the environment variables in the Settings menu.');
+      const isConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET));
+
+      if (!isConfigured) {
+        console.error('Cloudinary configuration is missing');
         return res.status(500).json({ 
-          error: 'Cloudinary configuration is missing. Please provide CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the settings.' 
+          error: 'Konfigurasi Cloudinary belum lengkap di Environment Variables Vercel. Pastikan CLOUDINARY_URL atau (CLOUD_NAME, API_KEY, API_SECRET) sudah diisi.' 
         });
       }
 
-      // Cloudinary upload
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'gsg_huntap_tondo',
         resource_type: 'auto', 
       });
 
       // Remove temp file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (err) {
+        console.error('Error deleting temp file:', err);
       }
 
       let finalUrl = result.secure_url;
@@ -64,9 +79,12 @@ async function startServer() {
         url: finalUrl,
         public_id: result.public_id,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload Error:', error);
-      res.status(500).json({ error: 'Failed to upload image' });
+      res.status(500).json({ 
+        error: 'Gagal mengupload file ke Cloudinary.',
+        message: error.message 
+      });
     }
   });
 
@@ -74,52 +92,44 @@ async function startServer() {
   app.all('/api/*', (req, res) => {
     res.status(404).json({ 
       error: `API route ${req.method} ${req.url} not found`,
-      message: 'Pastikan endpoint API sudah benar dan server sedang berjalan.'
+      message: 'Endpoint API tidak ditemukan.'
     });
   });
 
-  // Global Error Handler for API and Server
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('SERVER ERROR:', err);
-    
-    // If headers already sent, delegate to default handler
-    if (res.headersSent) {
-      return next(err);
-    }
-
-    // Default to 500
-    const statusCode = err.status || err.statusCode || 500;
-    
-    // Always return JSON for API routes
-    if (req.path.startsWith('/api/')) {
-      return res.status(statusCode).json({
-        error: err.message || 'Internal Server Error',
-        details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
-      });
-    }
-
-    // For other routes, let next (Vite/Static) handle or send simple error
-    next(err);
-  });
-
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
+    // In production (Vercel), we serve from dist
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    // Important: check if dist exists, though Vercel build should handle it
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
   }
 
+  // Global Error Handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Express Error:', err);
+    if (res.headersSent) return next(err);
+    res.status(err.status || 500).json({
+      error: err.message || 'Internal Server Error'
+    });
+  });
+
+  // Start the server locally
   if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+    const port = process.env.PORT || PORT;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${port}`);
     });
   }
 
@@ -128,3 +138,4 @@ async function startServer() {
 
 const appPromise = startServer();
 export default appPromise;
+
