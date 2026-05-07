@@ -17,7 +17,7 @@ async function startServer() {
   });
 
   // Multer for file uploads
-  const upload = multer({ dest: 'uploads/' });
+  const upload = multer({ dest: '/tmp' });
 
   app.use(express.json());
 
@@ -117,9 +117,14 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+
+  return app;
 }
 
-startServer();
+const appPromise = startServer();
+export default appPromise;
