@@ -14,8 +14,6 @@ import {
   Scale
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 export default function RulesProcedures() {
   const sections = [
@@ -72,11 +70,8 @@ export default function RulesProcedures() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onOpenBooking={() => {}} />
-      
-      <main className="pt-24 pb-20">
-        <div className="max-w-4xl mx-auto px-4">
+    <main className="pt-24 pb-20">
+      <div className="max-w-4xl mx-auto px-4">
           <Link 
             to="/" 
             className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors mb-8 group"
@@ -147,10 +142,7 @@ export default function RulesProcedures() {
               </a>
             </div>
           </div>
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </main>
   );
 }

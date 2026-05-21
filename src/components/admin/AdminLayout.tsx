@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
-import { User, Bell, LogOut, AlertTriangle, Menu, X, Home, Calendar, Wallet } from 'lucide-react';
+import { User, Bell, LogOut, AlertTriangle, Menu, X, Home, Calendar, Wallet, LayoutDashboard, CalendarCheck } from 'lucide-react';
 import { auth, logout, db } from '../../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
+import { motion, AnimatePresence } from 'motion/react';
+import { useLocation, Link } from 'react-router-dom';
 
 export default function AdminLayout() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -14,6 +16,7 @@ export default function AdminLayout() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [adminProfile, setAdminProfile] = useState<any>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let isMounted = true;
@@ -165,42 +168,61 @@ export default function AdminLayout() {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation (Always Visible) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around px-2 z-50">
-        <MobileAdminNav userRole={userRole} onLogout={handleLogout} />
-      </nav>
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+        <motion.nav 
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pt-3 pb-8 flex items-center justify-around pointer-events-auto w-full"
+        >
+          <MobileAdminNav userRole={userRole} onLogout={handleLogout} />
+        </motion.nav>
+      </div>
     </div>
   );
 }
 
 // Separate component for mobile nav to keep layout clean
 function MobileAdminNav({ userRole, onLogout }: { userRole: string | null, onLogout: () => void }) {
-  const { pathname } = useNavigate() as any; // Hack to get path easily in this context
+  const location = useLocation();
   const navigate = useNavigate();
   
   const menuItems = [
-    { name: 'Beranda', icon: Home, path: '/admin', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] },
-    { name: 'Booking', icon: Calendar, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/admin', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] },
+    { name: 'Booking', icon: CalendarCheck, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
     { name: 'Keuangan', icon: Wallet, path: '/admin/finance', roles: ['owner', 'admin', 'finance', 'bendahara'] },
-    { name: 'Keluar', icon: LogOut, path: 'logout', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] }
+    { name: 'Logout', icon: LogOut, path: 'logout', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] }
   ];
 
   const filteredMenu = menuItems.filter(item => item.roles.includes(userRole || 'admin'));
 
   return (
     <>
-      {filteredMenu.map(item => (
-        <button
-          key={item.name}
-          onClick={() => item.path === 'logout' ? onLogout() : navigate(item.path)}
-          className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-all ${
-            pathname === item.path ? 'text-primary' : 'text-gray-400'
-          }`}
-        >
-          <item.icon className="w-5 h-5" />
-          <span className="text-[9px] font-bold uppercase tracking-widest">{item.name}</span>
-        </button>
-      ))}
+      {filteredMenu.map(item => {
+        const isActive = location.pathname === item.path;
+        const Icon = item.icon;
+
+        return (
+          <button
+            key={item.name}
+            onClick={() => item.path === 'logout' ? onLogout() : navigate(item.path)}
+            className={`flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl transition-all duration-300 relative ${
+              isActive ? 'text-primary' : 'text-gray-400'
+            }`}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="activeTabAdmin"
+                className="absolute inset-0 bg-primary/5 rounded-xl -z-10"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
+            <span className={`text-[10px] font-bold uppercase tracking-tight ${isActive ? 'text-primary' : 'text-gray-400'}`}>
+              {item.name}
+            </span>
+          </button>
+        );
+      })}
     </>
   );
 }
