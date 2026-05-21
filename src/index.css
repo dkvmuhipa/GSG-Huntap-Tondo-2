@@ -9,9 +9,10 @@
 }
 
 @layer base {
-  body {
-    @apply font-sans bg-white text-gray-900;
-  }
+html,
+body {
+  @apply font-sans bg-white text-gray-900 overflow-x-hidden;
+}
 }
 
 .glass-card {

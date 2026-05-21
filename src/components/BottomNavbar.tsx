@@ -31,7 +31,7 @@ export default function BottomNavbar({ onOpenBooking }: BottomNavbarProps) {
       <motion.nav 
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pt-2 pb-8 flex items-center justify-around pointer-events-auto w-full"
+        className="bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pt-2 pb-8 flex items-center justify-around pointer-events-auto"
       >
         {navItems.map((item) => {
           if (item.isAction) {
