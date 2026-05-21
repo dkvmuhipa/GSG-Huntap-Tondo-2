@@ -250,17 +250,58 @@ export default function BookingManager() {
                       auth.currentUser?.displayName || 
                       'Administrator';
 
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN JADWAL BOOKING GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 20);
-    
-    doc.setFontSize(10);
-    doc.text(config?.reportOrgName?.toUpperCase() || 'GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 27);
+    // --- PDF GENERATION CORE ---
+    const drawHeader = (pageNumber: number) => {
+      const isFirst = pageNumber === 1;
+      const headerHeight = isFirst ? 45 : 25;
 
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Waktu Cetak: ${generationDate}`, 14, 32);
-    doc.text(`Oleh: ${authorName}`, 14, 37);
+      // Header background
+      doc.setFillColor(30, 64, 175); // primary blue
+      doc.rect(0, 0, doc.internal.pageSize.width, headerHeight, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      
+      if (isFirst) {
+        // Full Header (Page 1)
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('LAPORAN JADWAL BOOKING', 14, 18);
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 26);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text('KOTA PALU, SULAWESI TENGAH', 14, 33);
+
+        doc.setFontSize(8);
+        doc.text(`Waktu Cetak: ${generationDate}`, 14, 40);
+        doc.text(`Oleh: ${authorName}`, 14, 45);
+      } else {
+        // Minimal Header (Page 2+)
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DATA JADWAL - GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 12);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text(`Halaman ${pageNumber} | Dicetak: ${generationDate}`, 14, 18);
+      }
+    };
+
+    const drawFooter = (pageNumber: number) => {
+      doc.setFontSize(7);
+      doc.setTextColor(150);
+      const footerY = doc.internal.pageSize.height - 10;
+      doc.text('Laporan Operasional - Pengurus Gedung Serbaguna Huntap Tondo 2', 14, footerY);
+      doc.text(`Halaman ${pageNumber}`, doc.internal.pageSize.width - 14, footerY, { align: 'right' });
+    };
+
+    // Initial Header
+    drawHeader(1);
 
     const sortedBookings = [...filteredBookings].sort((a, b) => {
       const dateA = new Date(a.startDate).getTime();
@@ -279,7 +320,8 @@ export default function BookingManager() {
     ]);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 55,
+      margin: { top: 35, bottom: 20 },
       head: [['No', 'Nama Penyewa', 'Tujuan / Agenda', 'Jadwal Penggunaan', 'Status Approval', 'Biaya Sewa', 'Status Bayar']],
       body: tableData,
       theme: 'grid',
@@ -290,6 +332,12 @@ export default function BookingManager() {
         4: { halign: 'center' },
         5: { fontStyle: 'bold', halign: 'right' },
         6: { halign: 'center' }
+      },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          drawHeader(data.pageNumber);
+        }
+        drawFooter(data.pageNumber);
       }
     });
 

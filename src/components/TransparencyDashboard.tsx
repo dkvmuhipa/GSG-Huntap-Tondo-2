@@ -125,46 +125,81 @@ export default function TransparencyDashboard() {
     const margin = 15;
     const pageWidth = doc.internal.pageSize.width;
 
-    // Header - Professional Dark Theme
-    // Header - App Theme (Primary Blue)
-    doc.setFillColor(30, 64, 175); // primary blue
-    doc.rect(0, 0, pageWidth, 45, 'F');
-    
-    // Title Section
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14); // Reduced to 14 for optimal fit
-    doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN KEUANGAN GEDUNG SERBAGUNA', margin, 20);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240); // slate-200 color
-    doc.text(config?.reportOrgName?.toUpperCase() || 'HUNTAP TONDO 2, KELURAHAN TONDO', margin, 28);
-    doc.text('KOTA PALU, SULAWESI TENGAH', margin, 34);
+    // --- PDF GENERATION CORE ---
+    const drawHeader = (pageNumber: number) => {
+      const isFirst = pageNumber === 1;
+      const headerHeight = isFirst ? 45 : 25;
 
-    if (activeMonth !== 'all') {
-      const [year, month] = activeMonth.split('-');
-      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
+      // Header background
+      doc.setFillColor(30, 64, 175); // primary blue
+      doc.rect(0, 0, pageWidth, headerHeight, 'F');
+      
       doc.setTextColor(255, 255, 255);
-      doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
-    }
-    
-    // Metadata (Right Aligned in Header)
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.text('DATA TRANSPARANSI PUBLIK', pageWidth - margin, 18, { align: 'right' });
-    doc.setFontSize(8);
-    doc.setTextColor(226, 232, 240);
-    doc.text(`Waktu Cetak: ${generationDate}`, pageWidth - margin, 24, { align: 'right' });
+      
+      if (isFirst) {
+        // Full Header (Page 1)
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('LAPORAN TRANSPARANSI KEUANGAN', margin, 18);
+        
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 26);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240); // slate-200 color
+        doc.text('KOTA PALU, SULAWESI TENGAH', margin, 33);
 
-    const authorName = config?.reportAuthorName || 
-                      auth.currentUser?.displayName || 
-                      'Administrator Keuangan';
+        if (activeMonth !== 'all') {
+          const [year, month] = activeMonth.split('-');
+          const mDate = new Date(parseInt(year), parseInt(month) - 1);
+          const monthName = mDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+        }
 
-    doc.text(`Oleh: ${authorName}`, pageWidth - margin, 30, { align: 'right' });
-    doc.text('Status: Terverifikasi Sistem Digital', pageWidth - margin, 36, { align: 'right' });
+        // Metadata Right (Page 1)
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text('DATA TRANSPARANSI PUBLIK', pageWidth - margin, 18, { align: 'right' });
+        doc.setFontSize(8);
+        doc.setTextColor(226, 232, 240);
+        doc.text(`Waktu Cetak: ${generationDate}`, pageWidth - margin, 24, { align: 'right' });
+        
+        const currentAuthor = config?.reportAuthorName || auth.currentUser?.displayName || 'Administrator Keuangan';
+        doc.text(`Oleh: ${currentAuthor}`, pageWidth - margin, 30, { align: 'right' });
+      } else {
+        // Minimal Header (Page 2+)
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LAPORAN TRANSPARANSI - GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 12);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text(`Halaman ${pageNumber} | Dicetak: ${generationDate}`, margin, 18);
+      }
+    };
+
+    const drawFooter = (pageNumber: number) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, doc.internal.pageSize.height - 18, pageWidth - margin, doc.internal.pageSize.height - 18);
+      
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        'Laporan Transparansi Digital Keuangan - Gedung Serbaguna Huntap Tondo 2. Akuntabilitas untuk Warga.',
+        margin,
+        doc.internal.pageSize.height - 12
+      );
+      doc.text(`Halaman ${pageNumber}`, pageWidth - margin, doc.internal.pageSize.height - 12, { align: 'right' });
+    };
+
+    // Initial Header
+    drawHeader(1);
 
     // Summary Section
     doc.setTextColor(30, 64, 175);
@@ -174,7 +209,7 @@ export default function TransparencyDashboard() {
 
     autoTable(doc, {
       startY: 65,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 20 },
       head: [['Keterangan Alokasi Dana', 'Jumlah Saldo']],
       body: [
         ['Dana Operasional (Likuid / Rutin)', `Rp ${Math.floor(totalOps).toLocaleString('id-ID')}`],
@@ -183,7 +218,13 @@ export default function TransparencyDashboard() {
       ],
       theme: 'grid',
       headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 10 },
-      bodyStyles: { fontSize: 10, cellPadding: 2 }
+      bodyStyles: { fontSize: 10, cellPadding: 2 },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          drawHeader(data.pageNumber);
+        }
+        drawFooter(data.pageNumber);
+      }
     });
 
     // History Table
@@ -222,7 +263,7 @@ export default function TransparencyDashboard() {
 
     autoTable(doc, {
       startY: lastY + 5,
-      margin: { left: margin, right: margin, bottom: 20 },
+      margin: { left: margin, right: margin, bottom: 25, top: 35 },
       head: [['Tanggal', 'Uraian Transaksi', 'Klasifikasi', 'Metode', 'Status', 'Nominal']],
       body: historyData,
       theme: 'grid',
@@ -234,7 +275,13 @@ export default function TransparencyDashboard() {
         4: { halign: 'center', cellWidth: 25 },
         5: { halign: 'right', fontStyle: 'bold', cellWidth: 32 }
       },
-      bodyStyles: { fontSize: 8, cellPadding: 2 }
+      bodyStyles: { fontSize: 8, cellPadding: 2 },
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          drawHeader(data.pageNumber);
+        }
+        drawFooter(data.pageNumber);
+      }
     });
 
     // --- REKAPITULASI ARUS KAS (Dashboard) ---
@@ -245,7 +292,9 @@ export default function TransparencyDashboard() {
     let finalRecapY = recapY;
     if (finalRecapY > pageHeight - 70) {
       doc.addPage();
-      finalRecapY = 25;
+      drawHeader(doc.getNumberOfPages());
+      drawFooter(doc.getNumberOfPages());
+      finalRecapY = 35;
     }
 
     doc.setFillColor(248, 250, 252);
@@ -302,23 +351,6 @@ export default function TransparencyDashboard() {
     doc.setFont('helvetica', 'bold');
     doc.text('SALDO AKHIR PERIODE (TOTAL KAS)', margin + 5, finalRecapY + 36.5);
     doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 36.5, { align: 'right' });
-
-    // Footer
-    const totalPages = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setDrawColor(226, 232, 240);
-      doc.line(margin, doc.internal.pageSize.height - 18, pageWidth - margin, doc.internal.pageSize.height - 18);
-      
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.text(
-        'Laporan Transparansi Digital Keuangan - Gedung Serbaguna Huntap Tondo 2. Akuntabilitas untuk Warga.',
-        margin,
-        doc.internal.pageSize.height - 12
-      );
-      doc.text(`Halaman ${i} dari ${totalPages}`, pageWidth - margin, doc.internal.pageSize.height - 12, { align: 'right' });
-    }
 
     const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)

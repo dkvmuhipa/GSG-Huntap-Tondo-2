@@ -482,58 +482,78 @@ export default function FinanceManager() {
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
 
-    // Header - App Theme (Primary Blue)
-    doc.setFillColor(30, 64, 175); // primary blue
-    doc.rect(0, 0, pageWidth, 45, 'F');
-    
-    // Title Section
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14); // Reduced to 14 for optimal fit
-    doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN KEUANGAN GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 20);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240); // Better contrast
-    doc.text(config?.reportOrgName?.toUpperCase() || 'Pusat Kegiatan Warga Huntap Tondo 2, Palu - Sulawesi Tengah', margin, 28);
-    doc.text('KOTA PALU, SULAWESI TENGAH', margin, 34);
+    // --- PDF GENERATION CORE ---
+    const drawHeader = (pageNumber: number) => {
+      const isFirst = pageNumber === 1;
+      const headerHeight = isFirst ? 45 : 25;
 
-    if (activeMonth !== 'all') {
-      const [year, month] = activeMonth.split('-');
-      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
+      // Header background
+      doc.setFillColor(30, 64, 175); // primary blue
+      doc.rect(0, 0, pageWidth, headerHeight, 'F');
+      
       doc.setTextColor(255, 255, 255);
-      doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
-    }
+      
+      if (isFirst) {
+        // Full Header (Page 1)
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LAPORAN MANAJEMEN KEUANGAN', margin, 18);
+        doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 26);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text('KOTA PALU, SULAWESI TENGAH', margin, 33);
 
-    // Metadata Section (Right Aligned)
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INFORMASI LAPORAN:', pageWidth - margin, 18, { align: 'right' });
-    
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240);
-    doc.text(`Waktu Cetak: ${generationDate}`, pageWidth - margin, 24, { align: 'right' });
+        if (activeMonth !== 'all') {
+          const [year, month] = activeMonth.split('-');
+          const mDate = new Date(parseInt(year), parseInt(month) - 1);
+          const monthName = mDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+        }
 
-    const roleMap: Record<string, string> = {
-      owner: 'Pengelola',
-      admin: 'Administrator',
-      editor: 'Editor',
-      bendahara: 'Bendahara',
-      finance: 'Admin Keuangan'
+        // Metadata Right (Page 1 Only)
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text('INFORMASI LAPORAN:', pageWidth - margin, 18, { align: 'right' });
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text(`Waktu Cetak: ${generationDate}`, pageWidth - margin, 24, { align: 'right' });
+        
+        const roleMap: Record<string, string> = {
+          owner: 'Pengelola', admin: 'Administrator', editor: 'Editor', bendahara: 'Bendahara', finance: 'Admin Keuangan'
+        };
+        const currentRole = adminProfile?.role ? (roleMap[adminProfile.role] || adminProfile.role) : '';
+        const authorName = config?.reportAuthorName || 
+                          (adminProfile?.displayName ? `${adminProfile.displayName}${currentRole ? ` (${currentRole})` : ''}` : null) || 
+                          auth.currentUser?.displayName || 'Administrator';
+        doc.text(`Oleh: ${authorName}`, pageWidth - margin, 32, { align: 'right' });
+      } else {
+        // Minimal Header (Page 2+)
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LAPORAN KEUANGAN - GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 12);
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(226, 232, 240);
+        doc.text(`Halaman ${pageNumber} | Dicetak: ${generationDate}`, margin, 18);
+      }
     };
 
-    const currentRole = adminProfile?.role ? (roleMap[adminProfile.role] || adminProfile.role) : '';
-    const authorName = config?.reportAuthorName || 
-                      (adminProfile?.displayName ? `${adminProfile.displayName}${currentRole ? ` (${currentRole})` : ''}` : null) || 
-                      auth.currentUser?.displayName || 
-                      'Administrator';
+    const drawFooter = (pageNumber: number) => {
+      doc.setFontSize(7);
+      doc.setTextColor(150);
+      doc.text('Laporan Rahasia - Penggunaan Internal Pengurus Gedung Serbaguna Huntap Tondo 2', margin, pageHeight - 10);
+      doc.text(`Halaman ${pageNumber}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    };
 
-    doc.text(`Oleh: ${authorName}`, pageWidth - margin, 30, { align: 'right' });
-    doc.text(`Status: Laporan Internal Pengurus`, pageWidth - margin, 36, { align: 'right' });
+    // Initial Header
+    drawHeader(1);
 
     // Section 1: Ringkasan Saldo
     doc.setTextColor(30, 64, 175);
@@ -545,7 +565,7 @@ export default function FinanceManager() {
     
     autoTable(doc, {
       startY: 68,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 20 },
       head: [['Keterangan Klasifikasi Dana', 'Porsi (%)', 'Jumlah Saldo']],
       body: [
         ['Dana Operasional', `${100 - currentRate}%`, `Rp ${totalOps.toLocaleString('id-ID')}`],
@@ -559,7 +579,13 @@ export default function FinanceManager() {
         1: { cellWidth: 30, halign: 'center' },
         2: { cellWidth: 50, halign: 'right', fontStyle: 'bold' }
       },
-      theme: 'grid'
+      theme: 'grid',
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) {
+          drawHeader(data.pageNumber);
+        }
+        drawFooter(data.pageNumber);
+      }
     });
 
     const noteY = (doc as any).lastAutoTable.finalY + 8;
@@ -579,12 +605,10 @@ export default function FinanceManager() {
     const sortedTransactions = [...filteredTransactions].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      if (dateA !== dateB) return dateA - dateB; // Ascending
-      // Secondary sort by ID to preserve input order
+      if (dateA !== dateB) return dateA - dateB; 
       return String(a.id || '').localeCompare(String(b.id || ''));
     });
 
-    // Handle display of categories matching app settings
     const pdfDisplayCategory = (cat: string) => {
       const map: Record<string, string> = {
         sewa: 'Sewa Gedung',
@@ -611,7 +635,7 @@ export default function FinanceManager() {
 
     autoTable(doc, {
       startY: txStartY + 5,
-      margin: { left: margin, right: margin, bottom: 25 },
+      margin: { left: margin, right: margin, bottom: 25, top: 35 },
       head: [['No', 'Tanggal', 'Uraian Transaksi', 'Kategori', 'Metode', 'Status Arus', 'Nominal']],
       body: tableData,
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
@@ -628,12 +652,10 @@ export default function FinanceManager() {
       },
       theme: 'grid',
       didDrawPage: (data) => {
-        // Footer elements on each page
-        const str = 'Halaman ' + doc.getNumberOfPages();
-        doc.setFontSize(7);
-        doc.setTextColor(150);
-        doc.text('Laporan Transparansi Digital - Gedung Serbaguna Huntap Tondo 2', margin, pageHeight - 10);
-        doc.text(str, pageWidth - margin, pageHeight - 10, { align: 'right' });
+        if (data.pageNumber > 1) {
+          drawHeader(data.pageNumber);
+        }
+        drawFooter(data.pageNumber);
       }
     });
 
@@ -644,7 +666,9 @@ export default function FinanceManager() {
     let finalRecapY = recapY;
     if (finalRecapY > pageHeight - 75) {
       doc.addPage();
-      finalRecapY = 25;
+      drawHeader(doc.getNumberOfPages());
+      drawFooter(doc.getNumberOfPages());
+      finalRecapY = 35; // Adjusted to be below the minimal header
     }
 
     doc.setFillColor(248, 250, 252); // soft slate background
@@ -708,7 +732,9 @@ export default function FinanceManager() {
     let sigY = finalY;
     if (sigY > pageHeight - 60) {
       doc.addPage();
-      sigY = 30;
+      drawHeader(doc.getNumberOfPages());
+      drawFooter(doc.getNumberOfPages());
+      sigY = 35; // Adjusted to be below the minimal header
     }
 
     doc.setTextColor(15, 23, 42);
