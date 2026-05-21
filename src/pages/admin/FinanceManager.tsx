@@ -1348,7 +1348,8 @@ export default function FinanceManager() {
 
       {/* Table Section */}
       <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50/50 text-[10px] uppercase font-bold text-gray-400 tracking-widest">
@@ -1495,6 +1496,74 @@ export default function FinanceManager() {
               </AnimatePresence>
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View Card List */}
+        <div className="lg:hidden p-4 space-y-4">
+          <AnimatePresence mode="popLayout">
+            {filteredTransactions.length === 0 ? (
+              <div className="py-20 text-center italic text-gray-300 font-bold">Data transaksi tidak ditemukan...</div>
+            ) : (
+              filteredTransactions.map((t) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.date}</p>
+                      <h4 className="font-black text-gray-900 mt-1 leading-tight">{t.source}</h4>
+                    </div>
+                    <div className={`px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 ${t.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                      {t.status === 'completed' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                      {t.status.toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Nominal</p>
+                      <p className={`text-lg font-black ${t.type === 'income' ? 'text-gray-900' : t.type === 'reallocation' ? 'text-amber-600' : 'text-red-500'}`}>
+                        {t.type === 'income' ? '+' : t.type === 'reallocation' ? '' : '-'} Rp {Math.abs(t.amount).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    {t.devFund !== 0 && (
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Saving 20%</p>
+                        <p className="text-xs font-black text-accent">{t.devFund > 0 ? '+' : ''}Rp {Math.floor(Math.abs(t.devFund)).toLocaleString('id-ID')}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-[9px] font-bold text-gray-400 px-2 py-1 bg-gray-100 rounded-md uppercase tracking-wider">{displayCategory(t.category)}</span>
+                    <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-tighter italic">{t.paymentMethod?.toUpperCase()}</span>
+                  </div>
+
+                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    {t.receiptUrl && (
+                      <a href={t.receiptUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-primary py-3 rounded-xl border border-blue-100 font-black text-[10px] uppercase tracking-widest">
+                        <Upload className="w-4 h-4" /> Bukti
+                      </a>
+                    )}
+                    {t.type === 'income' && (
+                      <button onClick={() => downloadKwitansi(t)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl border border-emerald-100 font-black text-[10px] uppercase tracking-widest">
+                        <Receipt className="w-4 h-4" /> Kwitansi
+                      </button>
+                    )}
+                    <button onClick={() => handleEdit(t)} className="w-12 h-12 flex items-center justify-center bg-gray-50 text-gray-500 rounded-xl border border-gray-100">
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteTransaction(t.id, `${t.source} - Rp ${t.amount.toLocaleString()}`)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

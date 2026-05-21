@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
-import { User, Bell, LogOut, AlertTriangle } from 'lucide-react';
+import { User, Bell, LogOut, AlertTriangle, Menu, X, Home, Calendar, Wallet } from 'lucide-react';
 import { auth, logout, db } from '../../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
@@ -117,32 +117,38 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <AdminSidebar userRole={userRole} onLogout={handleLogout} />
-      <div className="flex-1 ml-64 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      {/* Sidebar - Desktop Only */}
+      <div className="hidden md:block">
+        <AdminSidebar 
+          userRole={userRole} 
+          onLogout={handleLogout} 
+        />
+      </div>
+      
+      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
         {/* Top Header */}
-        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40">
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
+        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight line-clamp-1">Admin Dashboard</h1>
+          </div>
           
-          <div className="flex items-center gap-6">
-            <button className="relative p-2 text-gray-400 hover:text-primary transition-colors">
+          <div className="flex items-center gap-3 md:gap-6">
+            <button className="hidden sm:block relative p-2 text-gray-400 hover:text-primary transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>
             
-            <div className="h-8 w-px bg-gray-100" />
+            <div className="hidden sm:block h-8 w-px bg-gray-100" />
             
-            <div className="flex items-center gap-3 group cursor-pointer" onClick={handleLogout}>
-              <div className="text-right">
-                <p className="text-sm font-bold text-gray-900">{adminProfile?.displayName || user?.displayName || 'Admin Tondo 2'}</p>
-                <p className="text-[10px] uppercase font-bold text-gray-400">
-                  {userRole === 'owner' ? 'System Owner' : 
-                   userRole === 'bendahara' ? 'Bendahara GSG' :
-                   userRole === 'finance' ? 'Keuangan' : 
-                   userRole === 'editor' ? 'Editor Konten' : 'Administrator'}
+            <div className="flex items-center gap-2 md:gap-3 group cursor-pointer" onClick={handleLogout}>
+              <div className="text-right hidden xs:block">
+                <p className="text-sm font-bold text-gray-900 line-clamp-1">{adminProfile?.displayName || user?.displayName || 'Admin'}</p>
+                <p className="text-[9px] uppercase font-bold text-gray-400">
+                  {userRole}
                 </p>
               </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-primary group-hover:bg-red-50 group-hover:text-red-500 transition-colors">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-primary group-hover:bg-red-50 group-hover:text-red-500 transition-colors shrink-0">
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="w-full h-full rounded-full" />
                 ) : (
@@ -154,10 +160,47 @@ export default function AdminLayout() {
         </header>
 
         {/* Content Area */}
-        <main className="p-8">
+        <main className="p-4 md:p-8 pb-24 md:pb-8">
           <Outlet context={{ userRole, adminProfile }} />
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation (Always Visible) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around px-2 z-50">
+        <MobileAdminNav userRole={userRole} onLogout={handleLogout} />
+      </nav>
     </div>
+  );
+}
+
+// Separate component for mobile nav to keep layout clean
+function MobileAdminNav({ userRole, onLogout }: { userRole: string | null, onLogout: () => void }) {
+  const { pathname } = useNavigate() as any; // Hack to get path easily in this context
+  const navigate = useNavigate();
+  
+  const menuItems = [
+    { name: 'Beranda', icon: Home, path: '/admin', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] },
+    { name: 'Booking', icon: Calendar, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
+    { name: 'Keuangan', icon: Wallet, path: '/admin/finance', roles: ['owner', 'admin', 'finance', 'bendahara'] },
+    { name: 'Keluar', icon: LogOut, path: 'logout', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] }
+  ];
+
+  const filteredMenu = menuItems.filter(item => item.roles.includes(userRole || 'admin'));
+
+  return (
+    <>
+      {filteredMenu.map(item => (
+        <button
+          key={item.name}
+          onClick={() => item.path === 'logout' ? onLogout() : navigate(item.path)}
+          className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-all ${
+            pathname === item.path ? 'text-primary' : 'text-gray-400'
+          }`}
+        >
+          <item.icon className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-widest">{item.name}</span>
+        </button>
+      ))}
+    </>
   );
 }

@@ -30,7 +30,7 @@ export default function AdminSidebar({ userRole = 'admin', onLogout }: AdminSide
   const filteredMenu = menuItems.filter(item => item.roles.includes(userRole || 'admin'));
 
   return (
-    <aside className="w-64 bg-gray-900 h-screen fixed left-0 top-0 text-white flex flex-col">
+    <aside className="w-64 bg-gray-900 h-screen fixed left-0 top-0 text-white flex flex-col z-50">
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

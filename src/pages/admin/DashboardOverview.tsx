@@ -123,51 +123,51 @@ export default function DashboardOverview() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`p-6 rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-6 ${
+        className={`p-4 sm:p-6 rounded-[2rem] sm:rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 ${
           availability.isBusy 
           ? 'bg-red-50 border-red-100 text-red-900' 
           : 'bg-emerald-50 border-emerald-100 text-emerald-900'
         }`}
       >
-        <div className="flex items-center gap-4 text-center md:text-left">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+        <div className="flex items-center gap-4 text-center md:text-left w-full md:w-auto">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${
             availability.isBusy ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
           }`}>
-            <LayoutGrid className="w-6 h-6" />
+            <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h4 className="font-black text-sm uppercase tracking-widest opacity-60">Status Gedung Hari Ini</h4>
-            <p className="text-xl font-black">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-black text-[10px] sm:text-sm uppercase tracking-widest opacity-60">Status Gedung Hari Ini</h4>
+            <p className="text-base sm:text-xl font-black truncate">
               {availability.isBusy ? `SEDANG DIGUNAKAN: ${availability.currentBooking?.purpose}` : 'GEDUNG SEDANG KOSONG / TERSEDIA'}
             </p>
           </div>
         </div>
         
         {availability.isBusy ? (
-          <div className="flex items-center gap-3 bg-white/50 px-5 py-3 rounded-2xl border border-red-100">
-            <Clock className="w-5 h-5 text-red-500" />
-            <div className="text-left leading-tight">
-              <p className="text-[10px] font-black uppercase text-red-400 leading-none mb-1">Booking Info</p>
-              <p className="text-sm font-bold">{availability.currentBooking?.customerName}</p>
+          <div className="flex items-center gap-3 bg-white/50 px-4 py-2 sm:px-5 sm:py-3 rounded-2xl border border-red-100 w-full md:w-auto">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 shrink-0" />
+            <div className="text-left leading-tight min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-black uppercase text-red-400 leading-none mb-1">Booking Info</p>
+              <p className="text-xs sm:text-sm font-bold truncate">{availability.currentBooking?.customerName}</p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-5 py-3 bg-white/50 rounded-2xl border border-emerald-100">
+          <div className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 bg-white/50 rounded-2xl border border-emerald-100 w-full md:w-auto justify-center md:justify-start">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-            <span className="text-sm font-black uppercase tracking-widest text-emerald-600">Ready for Events</span>
+            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-emerald-600">Siap Digunakan</span>
           </div>
         )}
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`bg-white p-6 rounded-2xl border border-gray-100 shadow-sm ${stat.hidden ? 'opacity-75 grayscale-[0.5]' : ''}`}
+            className={`bg-white p-5 sm:p-6 rounded-[2rem] border border-gray-100 shadow-sm ${stat.hidden ? 'opacity-75 grayscale-[0.5]' : ''}`}
           >
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-primary">
@@ -203,7 +203,7 @@ export default function DashboardOverview() {
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Performa 7 Hari Terakhir</p>
             </div>
             <div className="p-1 bg-gray-50 rounded-xl flex gap-1">
-              <span className="px-3 py-1 bg-white rounded-lg text-[10px] font-black text-primary shadow-sm tracking-widest uppercase">Income</span>
+              <span className="px-3 py-1 bg-white rounded-lg text-[10px] font-black text-primary shadow-sm tracking-widest uppercase">MASUKAN</span>
             </div>
           </div>
           <div className="h-[250px] w-full">
@@ -240,31 +240,37 @@ export default function DashboardOverview() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col h-full">
-          <div className="flex items-center justify-between mb-8">
+        <div className="bg-white p-5 sm:p-8 rounded-[2rem] sm:rounded-3xl border border-gray-100 shadow-sm flex flex-col h-full">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h3 className="font-bold text-gray-900 text-lg">Aktivitas Terbaru</h3>
             <button className="text-xs font-bold text-primary hover:underline">Semua</button>
           </div>
-          <div className="space-y-6 flex-1">
+          <div className="space-y-4 sm:space-y-6 flex-1">
             {recentTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center gap-4 group">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+              <div key={tx.id} className="flex items-start gap-3 sm:gap-4 group">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                   tx.type === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
                 }`}>
-                  {tx.type === 'expense' ? <ArrowDownRight className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+                  {tx.type === 'expense' ? <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm text-gray-900 truncate">{tx.source}</p>
-                    {tx.receiptUrl && <Receipt className="w-3 h-3 text-primary shrink-0" />}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-black text-sm text-gray-900 leading-tight">{tx.source}</p>
+                        {tx.receiptUrl && <Receipt className="w-3 h-3 text-primary shrink-0" />}
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                        {tx.category} • <span className="opacity-70">{tx.date}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between sm:flex-col sm:items-end shrink-0 sm:text-right mt-1 sm:mt-0">
+                      <p className={`text-sm font-black ${tx.type === 'expense' ? 'text-red-500' : 'text-emerald-600'}`}>
+                        {tx.type === 'income' ? '+' : '-'}Rp {Math.abs(tx.amount).toLocaleString()}
+                      </p>
+                      <p className="hidden sm:block text-[9px] font-bold text-gray-300 uppercase tracking-tighter">Berhasil</p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{tx.category} • {tx.date}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-xs font-black ${tx.type === 'expense' ? 'text-red-600' : 'text-gray-900'}`}>
-                    {tx.type === 'income' ? '+' : '-'}Rp {Math.abs(tx.amount).toLocaleString()}
-                  </p>
-                  <p className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">Verified</p>
                 </div>
               </div>
             ))}
@@ -278,13 +284,13 @@ export default function DashboardOverview() {
           <button 
             onClick={() => syncFinanceTotals(transactions)}
             disabled={userRole === 'editor' || transactions.length === 0}
-            className={`w-full mt-10 py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 ${
+            className={`w-full mt-8 sm:mt-10 py-3 sm:py-4 rounded-2xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
               userRole === 'editor' 
               ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
-              : 'bg-primary/5 text-primary hover:bg-primary/10'
+              : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10'
             }`}
           >
-            {userRole === 'editor' ? 'Akses Dibatasi' : 'Force Sync Dashboard Data'}
+            {userRole === 'editor' ? 'Akses Dibatasi' : 'Sinkronkan Data Dashboard'}
           </button>
         </div>
       </div>

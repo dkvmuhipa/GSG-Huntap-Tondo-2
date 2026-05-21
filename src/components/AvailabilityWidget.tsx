@@ -187,7 +187,7 @@ export default function AvailabilityWidget() {
       {/* TRACKING SECTION */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="max-w-md">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <Search className="w-5 h-5 text-primary" />
@@ -198,12 +198,12 @@ export default function AvailabilityWidget() {
               </p>
             </div>
 
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 max-w-md w-full">
               <div className="relative">
                 <input 
                   type="text"
                   placeholder="Contoh: 08123456xxx"
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold placeholder:font-normal"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 pl-12 pr-4 md:pr-32 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold placeholder:font-normal"
                   value={phoneToTrack}
                   onChange={(e) => setPhoneToTrack(e.target.value)}
                 />
@@ -211,7 +211,7 @@ export default function AvailabilityWidget() {
                 <button 
                   onClick={handleTrack}
                   disabled={isTracking || !phoneToTrack}
-                  className="absolute right-2 top-2 bottom-2 bg-primary text-white px-5 rounded-xl text-xs font-black shadow-sm disabled:opacity-50"
+                  className="mt-4 md:mt-0 md:absolute md:right-2 md:top-2 md:bottom-2 bg-primary text-white px-5 py-3 md:py-0 rounded-xl text-xs font-black shadow-sm disabled:opacity-50 w-full md:w-auto"
                 >
                   CEK STATUS
                 </button>

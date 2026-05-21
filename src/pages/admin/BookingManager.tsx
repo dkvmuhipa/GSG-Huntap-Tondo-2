@@ -488,103 +488,165 @@ export default function BookingManager() {
 
         <AnimatePresence mode="wait">
           {activeTab === 'list' ? (
-            <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100">
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-16">No</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Penyewa & WhatsApp</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu & Acara</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Keuangan</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredBookings.length === 0 ? (
-                    <tr><td colSpan={6} className="py-24 text-center italic text-gray-300 font-bold">Data booking tidak ditemukan...</td></tr>
-                  ) : (
-                    filteredBookings.map((booking, idx) => (
-                      <motion.tr key={booking.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50/50 transition-colors group">
-                        <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
-                        <td className="px-6 py-6">
-                          <p className="font-black text-gray-900 leading-none">{booking.customerName}</p>
-                          <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter">
-                            <MessageCircle className="w-3 h-3" /> {booking.phone}
-                          </a>
-                        </td>
-                        <td className="px-6 py-6 font-bold">
-                          <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded">
-                            {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                            {booking.endDate && booking.endDate !== booking.startDate && ` - ${new Date(booking.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`}
-                          </span>
-                          <p className="text-sm font-black text-gray-900 block mt-1">{booking.purpose}</p>
-                        </td>
-                        <td className="px-6 py-6 text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            {getStatusBadge(booking.status)}
-                            <select value={booking.status} onChange={(e) => handleStatusChange(booking.id, e.target.value)} className="text-[9px] font-black text-gray-400 bg-transparent border-none appearance-none cursor-pointer hover:text-primary transition-colors text-center focus:ring-0">
-                              <option value="pending">PENDING</option>
-                              <option value="approved">SETUJU</option>
-                              <option value="completed">SELESAI</option>
-                              <option value="rejected">TOLAK</option>
-                            </select>
-                          </div>
-                        </td>
-                        <td className="px-6 py-6 text-center">
-                          <p className="text-sm font-black text-gray-900 mb-1.5">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
-                          <button 
-                            onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
-                            className={`px-3 py-1 rounded-full text-[9px] font-black transition-all border ${booking.paymentStatus === 'paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`}
-                          >
-                            {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
-                          </button>
-                        </td>
-                        <td className="px-6 py-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                             {booking.status === 'pending' && (
-                               <div className="flex bg-blue-50 p-1.5 rounded-2xl items-center gap-1 shadow-inner border border-blue-100">
+            <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+              {/* Desktop View Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100">
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-16">No</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Penyewa & WhatsApp</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu & Acara</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Keuangan</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredBookings.length === 0 ? (
+                      <tr><td colSpan={6} className="py-24 text-center italic text-gray-300 font-bold">Data booking tidak ditemukan...</td></tr>
+                    ) : (
+                      filteredBookings.map((booking, idx) => (
+                        <motion.tr key={booking.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50/50 transition-colors group">
+                          <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
+                          <td className="px-6 py-6">
+                            <p className="font-black text-gray-900 leading-none">{booking.customerName}</p>
+                            <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter">
+                              <MessageCircle className="w-3 h-3" /> {booking.phone}
+                            </a>
+                          </td>
+                          <td className="px-6 py-6 font-bold">
+                            <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded">
+                              {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                              {booking.endDate && booking.endDate !== booking.startDate && ` - ${new Date(booking.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`}
+                            </span>
+                            <p className="text-sm font-black text-gray-900 block mt-1">{booking.purpose}</p>
+                          </td>
+                          <td className="px-6 py-6 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              {getStatusBadge(booking.status)}
+                              <select value={booking.status} onChange={(e) => handleStatusChange(booking.id, e.target.value)} className="text-[9px] font-black text-gray-400 bg-transparent border-none appearance-none cursor-pointer hover:text-primary transition-colors text-center focus:ring-0">
+                                <option value="pending">PENDING</option>
+                                <option value="approved">SETUJU</option>
+                                <option value="completed">SELESAI</option>
+                                <option value="rejected">TOLAK</option>
+                              </select>
+                            </div>
+                          </td>
+                          <td className="px-6 py-6 text-center">
+                            <p className="text-sm font-black text-gray-900 mb-1.5">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
+                            <button 
+                              onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
+                              className={`px-3 py-1 rounded-full text-[9px] font-black transition-all border ${booking.paymentStatus === 'paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`}
+                            >
+                              {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
+                            </button>
+                          </td>
+                          <td className="px-6 py-6 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                               {booking.status === 'pending' && (
+                                 <div className="flex bg-blue-50 p-1.5 rounded-2xl items-center gap-1 shadow-inner border border-blue-100">
+                                   <button 
+                                     onClick={() => handleStatusChange(booking.id, 'approved')} 
+                                     className="px-3 py-2 bg-white hover:bg-green-500 hover:text-white rounded-xl text-green-600 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
+                                   >
+                                     <Check className="w-3 h-3" /> SETUJUI
+                                   </button>
+                                   <button 
+                                     onClick={() => handleStatusChange(booking.id, 'rejected')} 
+                                     className="px-3 py-2 bg-white hover:bg-red-500 hover:text-white rounded-xl text-red-500 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
+                                   >
+                                     <X className="w-3 h-3" /> TOLAK
+                                   </button>
+                                 </div>
+                               )}
+
+                               <div className="flex bg-gray-100 p-1.5 rounded-2xl items-center gap-1 shadow-inner">
+                                 <button onClick={() => sendWA(booking, 'approve')} className="p-2 hover:bg-white rounded-xl text-green-600 transition-all hover:shadow-sm" title="Kirim WA Setuju"><Check className="w-4 h-4" /></button>
+                                 <button onClick={() => sendWA(booking, 'remind')} className="p-2 hover:bg-white rounded-xl text-primary transition-all hover:shadow-sm" title="Kirim WA Pengingat"><MessageCircle className="w-4 h-4" /></button>
                                  <button 
-                                   onClick={() => handleStatusChange(booking.id, 'approved')} 
-                                   className="px-3 py-2 bg-white hover:bg-green-500 hover:text-white rounded-xl text-green-600 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
+                                   onClick={() => generateContract(booking)} 
+                                   className="p-2 hover:bg-white rounded-xl text-blue-600 transition-all hover:shadow-sm" 
+                                   title="Cetak Kontrak (PDF)"
                                  >
-                                   <Check className="w-3 h-3" /> SETUJUI
-                                 </button>
-                                 <button 
-                                   onClick={() => handleStatusChange(booking.id, 'rejected')} 
-                                   className="px-3 py-2 bg-white hover:bg-red-500 hover:text-white rounded-xl text-red-500 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
-                                 >
-                                   <X className="w-3 h-3" /> TOLAK
+                                   <FileText className="w-4 h-4" />
                                  </button>
                                </div>
-                             )}
-
-                             <div className="flex bg-gray-100 p-1.5 rounded-2xl items-center gap-1 shadow-inner">
-                               <button onClick={() => sendWA(booking, 'approve')} className="p-2 hover:bg-white rounded-xl text-green-600 transition-all hover:shadow-sm" title="Kirim WA Setuju"><Check className="w-4 h-4" /></button>
-                               <button onClick={() => sendWA(booking, 'remind')} className="p-2 hover:bg-white rounded-xl text-primary transition-all hover:shadow-sm" title="Kirim WA Pengingat"><MessageCircle className="w-4 h-4" /></button>
+                               
                                <button 
-                                 onClick={() => generateContract(booking)} 
-                                 className="p-2 hover:bg-white rounded-xl text-blue-600 transition-all hover:shadow-sm" 
-                                 title="Cetak Kontrak (PDF)"
+                                 onClick={() => handleDelete(booking.id)} 
+                                 className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-2xl group shadow-sm"
+                                 title="Hapus Data Booking"
                                >
-                                 <FileText className="w-4 h-4" />
+                                 <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                </button>
-                             </div>
-                             
-                             <button 
-                               onClick={() => handleDelete(booking.id)} 
-                               className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-2xl group shadow-sm"
-                               title="Hapus Data Booking"
-                             >
-                               <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                             </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View Card List */}
+              <div className="lg:hidden p-4 space-y-4">
+                {filteredBookings.length === 0 ? (
+                  <div className="py-20 text-center italic text-gray-300 font-bold">Data booking tidak ditemukan...</div>
+                ) : (
+                  filteredBookings.map((booking, idx) => (
+                    <motion.div 
+                      key={booking.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-black text-gray-900 text-lg">{booking.customerName}</p>
+                          <p className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tighter">
+                            {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </p>
+                        </div>
+                        {getStatusBadge(booking.status)}
+                      </div>
+
+                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <p className="text-sm font-bold text-gray-700">{booking.purpose}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-gray-400" />
+                          <p className="text-sm font-black text-primary">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${booking.paymentStatus === 'paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                            {booking.paymentStatus === 'paid' ? 'LUNAS' : 'BELUM LUNAS'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                        <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100">
+                          <MessageCircle className="w-4 h-4" /> WhatsApp
+                        </a>
+                        <button onClick={() => generateContract(booking)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100">
+                          <Download className="w-4 h-4" /> Kontrak
+                        </button>
+                        <button onClick={() => handleDelete(booking.id)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {booking.status === 'pending' && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <button onClick={() => handleStatusChange(booking.id, 'approved')} className="bg-green-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-green-200">Setujui</button>
+                          <button onClick={() => handleStatusChange(booking.id, 'rejected')} className="bg-red-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-red-200">Tolak</button>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))
+                )}
+              </div>
             </motion.div>
           ) : (
             <motion.div key="calendar" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="p-8">

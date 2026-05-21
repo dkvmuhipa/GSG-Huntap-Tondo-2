@@ -440,37 +440,37 @@ export default function TransparencyDashboard() {
   return (
     <section id="transparansi" className="section-padding bg-surface-low">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
-          <div className="text-center md:text-left">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-12 text-center lg:text-left">
+          <div className="max-w-2xl">
             <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">Financial Transparency</h2>
-            <p className="text-gray-500 max-w-2xl">
+            <p className="text-gray-500">
               Setiap rupiah yang Anda bayarkan dikelola kembali untuk kepentingan warga secara transparan dan akuntabel.
             </p>
           </div>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="flex items-center gap-1 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+            <div className="flex items-center gap-1 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm w-full sm:w-auto">
               <button 
                 onClick={() => setFilterMode('monthly')}
-                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
               >
                 Bulanan
               </button>
               <button 
                 onClick={() => setFilterMode('annual')}
-                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
+                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
               >
                 Tahunan
               </button>
             </div>
 
-            <div className="relative group shrink-0">
+            <div className="relative group w-full sm:w-auto">
               <div className="flex items-center gap-2 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
                 <Calendar className="w-5 h-5 text-primary" />
                 {filterMode === 'monthly' ? (
                   <select 
                     value={activeMonth}
                     onChange={(e: any) => setActiveMonth(e.target.value)}
-                    className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                    className="w-full bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
                   >
                     <option value="all">SEMUA BULAN</option>
                     {Array.from({ length: 12 }).map((_, i) => {
@@ -486,7 +486,7 @@ export default function TransparencyDashboard() {
                   <select 
                     value={activeYear}
                     onChange={(e: any) => setActiveYear(e.target.value)}
-                    className="bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                    className="w-full bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
                   >
                     {Array.from({ length: 5 }).map((_, i) => {
                       const year = (new Date().getFullYear() - i).toString();
