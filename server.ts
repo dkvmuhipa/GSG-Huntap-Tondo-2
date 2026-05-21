@@ -55,7 +55,7 @@ async function startServer() {
       }
 
       const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'gsg_huntap_tondo',
+        folder: 'gedung_serbaguna_huntap_tondo',
         resource_type: 'auto', 
       });
 
@@ -127,7 +127,7 @@ async function startServer() {
 
   // Start the server locally
   if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    const port = process.env.PORT || PORT;
+    const port = Number(process.env.PORT) || PORT;
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on http://localhost:${port}`);
     });

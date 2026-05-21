@@ -215,11 +215,11 @@ export default function BookingManager() {
     const phone = booking.phone.replace(/[^0-9]/g, '');
     
     if (type === 'approve') {
-      msg = `Halo ${booking.customerName}, pengajuan booking GSG Huntap Tondo untuk acara "${booking.purpose}" pada tanggal ${new Date(booking.startDate).toLocaleDateString('id-ID')} telah DISETUJUI. Silakan lakukan pembayaran.`;
+      msg = `Halo ${booking.customerName}, pengajuan booking Gedung Serbaguna Huntap Tondo 2 untuk acara "${booking.purpose}" pada tanggal ${new Date(booking.startDate).toLocaleDateString('id-ID')} telah DISETUJUI. Silakan lakukan pembayaran.`;
     } else if (type === 'remind') {
-      msg = `Halo ${booking.customerName}, ini pengingat pembayaran sewa GSG untuk acara "${booking.purpose}" pada ${new Date(booking.startDate).toLocaleDateString('id-ID')}. Mohon segera dikonfirmasi.`;
+      msg = `Halo ${booking.customerName}, ini pengingat pembayaran sewa Gedung Serbaguna untuk acara "${booking.purpose}" pada ${new Date(booking.startDate).toLocaleDateString('id-ID')}. Mohon segera dikonfirmasi.`;
     } else if (type === 'reject') {
-      msg = `Mohon maaf ${booking.customerName}, pengajuan booking GSG Huntap Tondo pada tanggal tsb Belum Bisa disetujui karena ada agenda lain.`;
+      msg = `Mohon maaf ${booking.customerName}, pengajuan booking Gedung Serbaguna Huntap Tondo 2 pada tanggal tsb Belum Bisa disetujui karena ada agenda lain.`;
     }
 
     const url = `https://wa.me/62${phone.startsWith('0') ? phone.slice(1) : phone}?text=${encodeURIComponent(msg)}`;
@@ -255,7 +255,7 @@ export default function BookingManager() {
     doc.text('LAPORAN JADWAL BOOKING GEDUNG', 14, 20);
     
     doc.setFontSize(10);
-    doc.text(config?.reportOrgName?.toUpperCase() || 'GSG HUNTAP TONDO 2', 14, 27);
+    doc.text(config?.reportOrgName?.toUpperCase() || 'GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 27);
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');

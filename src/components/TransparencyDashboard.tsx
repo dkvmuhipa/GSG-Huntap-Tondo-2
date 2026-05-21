@@ -179,7 +179,7 @@ export default function TransparencyDashboard() {
       body: [
         ['Dana Operasional (Likuid / Rutin)', `Rp ${Math.floor(totalOps).toLocaleString('id-ID')}`],
         ['Dana Saving (Cadangan / Strategis)', `Rp ${Math.floor(totalDevFund).toLocaleString('id-ID')}`],
-        [{ content: 'TOTAL AKUMULASI SELURUH DANA GSG', styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, { content: `Rp ${Math.floor(totalDevFund + totalOps).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
+        [{ content: 'TOTAL AKUMULASI SELURUH DANA GEDUNG', styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, { content: `Rp ${Math.floor(totalDevFund + totalOps).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
       ],
       theme: 'grid',
       headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 10 },
@@ -313,7 +313,7 @@ export default function TransparencyDashboard() {
       doc.setFontSize(7);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        'Laporan Transparansi Digital Keuangan - GSG Huntap Tondo 2. Akuntabilitas untuk Warga.',
+        'Laporan Transparansi Digital Keuangan - Gedung Serbaguna Huntap Tondo 2. Akuntabilitas untuk Warga.',
         margin,
         doc.internal.pageSize.height - 12
       );

@@ -79,7 +79,7 @@ export default function Login() {
         
         <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Login Admin</h2>
         <p className="text-gray-500 mb-8 leading-relaxed">
-          Gunakan akun Google Anda untuk mengakses dashboard manajemen GSG Tondo 2.
+          Gunakan akun Google Anda untuk mengakses dashboard manajemen Gedung Serbaguna Huntap Tondo 2.
         </p>
 
         {error && (

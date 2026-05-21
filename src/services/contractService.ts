@@ -32,8 +32,8 @@ export const generateContract = async (booking: BookingData) => {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(226, 232, 240);
-  doc.text('GEDUNG SERBA GUNA (GSG) HUNTAP 2 TONDO - KOTA PALU', margin, 26);
-  doc.text('Komplek Huntap 2, Kel. Tondo, Kec. Mantikulore, Kota Palu', margin, 31);
+  doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2 - KOTA PALU', margin, 26);
+  doc.text('Komplek Huntap Tondo 2, Kel. Tondo, Kec. Mantikulore, Kota Palu', margin, 31);
   doc.text('Email: gsgtondo2@gmail.com | WhatsApp: +62 822-xxxx-xxxx', margin, 36);
 
   // Digital Badge
@@ -64,8 +64,8 @@ export const generateContract = async (booking: BookingData) => {
   doc.setFont('helvetica', 'bold');
   doc.text('I. PIHAK PERTAMA (PENGELOLA)', margin, 78);
   doc.setFont('helvetica', 'normal');
-  doc.text('Nama: Pengelola GSG Huntap Tondo 2', margin + 5, 83);
-  doc.text('Kedudukan: Selaku otoritas pengelola fasilitas publik Huntap 2 Tondo, Kota Palu.', margin + 5, 88);
+  doc.text('Nama: Pengelola Gedung Serbaguna Huntap Tondo 2', margin + 5, 83);
+  doc.text('Kedudukan: Selaku otoritas pengelola fasilitas publik Huntap Tondo 2, Kota Palu.', margin + 5, 88);
 
   doc.setFont('helvetica', 'bold');
   doc.text('II. PIHAK KEDUA (PENYEWA)', margin, 98);
@@ -80,7 +80,7 @@ export const generateContract = async (booking: BookingData) => {
   const clauses = [
     {
       t: 'PASAL 1: OBJEK DAN JANGKA WAKTU',
-      c: `Pihak Pertama menyewakan Gedung Serba Guna (GSG) Tondo 2 kepada Pihak Kedua untuk digunakan pada tanggal ${booking.startDate}. Masa sewa berlaku selama 24 jam terhitung sejak dimulainya persiapan acara hingga selesainya pembersihan.`
+      c: `Pihak Pertama menyewakan Gedung Serbaguna Tondo 2 kepada Pihak Kedua untuk digunakan pada tanggal ${booking.startDate}. Masa sewa berlaku selama 24 jam terhitung sejak dimulainya persiapan acara hingga selesainya pembersihan.`
     },
     {
       t: 'PASAL 2: HARGA DAN TATA CARA PEMBAYARAN',
@@ -133,7 +133,7 @@ export const generateContract = async (booking: BookingData) => {
   const sigY = 252;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('PENGELOLA GSG (PIHAK I)', margin + 30, sigY, { align: 'center' });
+  doc.text('PENGELOLA GEDUNG SERBAGUNA (PIHAK I)', margin + 30, sigY, { align: 'center' });
   doc.text('PENYEWA (PIHAK II)', pageWidth - margin - 30, sigY, { align: 'center' });
   
   doc.setDrawColor(200);
@@ -149,7 +149,7 @@ export const generateContract = async (booking: BookingData) => {
   doc.rect(0, 285, pageWidth, 12, 'F');
   doc.setTextColor(255);
   doc.setFontSize(8);
-  doc.text(`Dihasilkan otomatis oleh Sistem Informasi Digital GSG Huntap Tondo 2 | Ref: ${booking.id.toUpperCase()}`, pageWidth / 2, 292, { align: 'center' });
+  doc.text(`Dihasilkan otomatis oleh Sistem Informasi Digital Gedung Serbaguna Huntap Tondo 2 | Ref: ${booking.id.toUpperCase()}`, pageWidth / 2, 292, { align: 'center' });
 
   // Save PDF
   doc.save(`KONTRAK_RESMI_${booking.customerName.replace(/\s+/g, '_')}.pdf`);

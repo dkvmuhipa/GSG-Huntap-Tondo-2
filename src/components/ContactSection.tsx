@@ -39,7 +39,7 @@ export default function ContactSection() {
               Kunjungi Kami di <span className="text-primary italic">Huntap Tondo 2</span>
             </h2>
             <p className="text-gray-500 font-medium text-lg leading-relaxed mb-10">
-              Gedung Serba Guna berada di pusat strategis komplek Hunian Tetap Tondo 2, memudahkan akses bagi seluruh warga dan tamu undangan.
+              Gedung Serbaguna berada di pusat strategis komplek Hunian Tetap Tondo 2, memudahkan akses bagi seluruh warga dan tamu undangan.
             </p>
 
             <div className="grid gap-4 mb-10">
@@ -105,7 +105,7 @@ export default function ContactSection() {
                     <div className="absolute -bottom-2 w-4 h-4 bg-primary rotate-45" />
                   </div>
                   <div className="mt-4 px-4 py-2 bg-white rounded-xl shadow-xl text-center">
-                    <p className="text-[10px] font-black text-gray-900 uppercase">GSG Huntap 2</p>
+                    <p className="text-[10px] font-black text-gray-900 uppercase">Gedung Serbaguna Huntap Tondo 2</p>
                   </div>
                 </motion.div>
               </div>

@@ -265,7 +265,7 @@ export default function FinanceManager() {
     // Title
     doc.setTextColor(30, 58, 138);
     doc.setFontSize(18);
-    doc.text('GSG HUNTAP TONDO 2', 32, 18);
+    doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', 32, 18);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
@@ -302,57 +302,71 @@ export default function FinanceManager() {
     doc.text('Telah terima dari', labelX, startY);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(`:  ${tx.source.toUpperCase()}`, valueX, startY);
-    doc.line(valueX + 2, startY + 2, 200, startY + 2);
+    
+    const sourceText = `:  ${tx.source.toUpperCase()}`;
+    const sourceLines = doc.splitTextToSize(sourceText, 145);
+    doc.text(sourceLines, valueX, startY);
+    
+    const sourceHeight = (sourceLines.length - 1) * 5;
+    doc.line(valueX + 2, startY + sourceHeight + 2, 200, startY + sourceHeight + 2);
 
     // Row: Uang Sejumlah
+    const amountY = startY + rowHeight + sourceHeight;
     doc.setTextColor(100);
     doc.setFont('helvetica', 'normal');
-    doc.text('Uang sejumlah', labelX, startY + rowHeight);
+    doc.text('Uang sejumlah', labelX, amountY);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(`:  Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, valueX, startY + rowHeight);
-    doc.line(valueX + 2, startY + rowHeight + 2, 200, startY + rowHeight + 2);
+    doc.text(`:  Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, valueX, amountY);
+    doc.line(valueX + 2, amountY + 2, 200, amountY + 2);
 
     // Row: Untuk Pembayaran
+    const paymentY = amountY + rowHeight;
     doc.setTextColor(100);
     doc.setFont('helvetica', 'normal');
-    doc.text('Untuk pembayaran', labelX, startY + (rowHeight * 2));
+    doc.text('Untuk pembayaran', labelX, paymentY);
     doc.setTextColor(0);
     doc.setFont('helvetica', 'bold');
-    doc.text(`:  ${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'RESERVASI GEDUNG'}`, valueX, startY + (rowHeight * 2));
-    doc.line(valueX + 2, startY + (rowHeight * 2) + 2, 200, startY + (rowHeight * 2) + 2);
+    
+    const paymentText = `:  ${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'RESERVASI GEDUNG'}`;
+    const paymentLines = doc.splitTextToSize(paymentText, 145);
+    doc.text(paymentLines, valueX, paymentY);
+    
+    const paymentHeight = (paymentLines.length - 1) * 5;
+    doc.line(valueX + 2, paymentY + paymentHeight + 2, 200, paymentY + paymentHeight + 2);
 
-    // 3. TERBILANG BOX (Visual Highlight)
+    // 3. TERBILANG BOX (Visual Highlight) & FOOTER
+    const footerY = Math.max(82, paymentY + paymentHeight + 12);
+    
     doc.setFillColor(241, 245, 249);
-    doc.roundedRect(12, 80, 100, 15, 2, 2, 'F');
+    doc.roundedRect(12, footerY - 5, 100, 15, 2, 2, 'F');
     doc.setFontSize(14);
     doc.setTextColor(30, 58, 138);
-    doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 18, 90);
+    doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 18, footerY + 5);
     
     // 4. FOOTER & SIGNATURE
     doc.setTextColor(71, 85, 105);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     const dateStr = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.text(`Palu, ${dateStr}`, 170, 80, { align: 'center' });
-    doc.text('Penerima / Bendahara,', 170, 85, { align: 'center' });
+    doc.text(`Palu, ${dateStr}`, 170, footerY - 5, { align: 'center' });
+    doc.text('Penerima / Bendahara,', 170, footerY, { align: 'center' });
 
     // Stamp Placeholder
     doc.setDrawColor(30, 58, 138);
     doc.setLineWidth(0.2);
     doc.setLineDashPattern([2, 1], 0);
-    doc.circle(150, 92, 10);
+    doc.circle(150, footerY + 7, 10);
     doc.setFontSize(6);
-    doc.text('STEMPEL', 150, 92.5, { align: 'center' });
+    doc.text('STEMPEL', 150, footerY + 7.5, { align: 'center' });
     doc.setLineDashPattern([], 0);
 
-    const bendaharaName = config?.reportBendaharaName || 'Admin GSG Tondo 2';
+    const bendaharaName = config?.reportBendaharaName || 'Admin Gedung Serbaguna Huntap Tondo 2';
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 58, 138);
-    doc.text(bendaharaName, 170, 103, { align: 'center' });
-    doc.line(145, 105, 195, 105);
+    doc.text(bendaharaName, 170, footerY + 18, { align: 'center' });
+    doc.line(145, footerY + 20, 195, footerY + 20);
 
     doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
   };
@@ -378,7 +392,7 @@ export default function FinanceManager() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Keuangan_GSG_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Laporan_Keuangan_Gedung_Serbaguna_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -870,7 +884,7 @@ export default function FinanceManager() {
           devFund = 0;
         }
       } else if (formData.type === 'reallocation') {
-        finalAmount = 0; // Net zero for the whole GSG
+        finalAmount = 0; // Net zero for the whole building
         if (formData.transferDirection === 'ops_to_dev') {
           ops = -amount;
           devFund = amount;
@@ -953,7 +967,7 @@ export default function FinanceManager() {
             Level Akses Anda: {
               userRole === 'owner' ? 'System Owner' :
               userRole === 'admin' ? 'Administrator' :
-              userRole === 'bendahara' ? 'Bendahara GSG' :
+              userRole === 'bendahara' ? 'Bendahara Gedung Serbaguna' :
               userRole === 'finance' ? 'Administrasi Keuangan' :
               userRole === 'editor' ? 'Editor Konten' : userRole
             }
@@ -1143,7 +1157,7 @@ export default function FinanceManager() {
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md">
               <Wallet className="w-6 h-6" />
             </div>
-            <p className="text-sm font-medium text-white/60 mb-1">Total Akumulasi Seluruh Dana GSG</p>
+            <p className="text-sm font-medium text-white/60 mb-1">Total Akumulasi Seluruh Dana Gedung</p>
             <h3 className="text-4xl font-extrabold tracking-tight">Rp {(totalDevFund + totalOps).toLocaleString('id-ID')}</h3>
             <div className="mt-8 flex gap-4 text-[10px] font-bold uppercase tracking-widest overflow-x-auto pb-2 scrollbar-none">
               <span className="bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm whitespace-nowrap">Status: Sinkron</span>

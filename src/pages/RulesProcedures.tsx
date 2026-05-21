@@ -33,7 +33,7 @@ export default function RulesProcedures() {
       title: 'Prosedur Booking',
       icon: Clock,
       items: [
-        'Booking dilakukan melalui website resmi GSG Huntap Tondo 2.',
+        'Booking dilakukan melalui website resmi Gedung Serbaguna Huntap Tondo 2.',
         'Penyewa minimal melakukan reservasi 7 hari sebelum hari pelaksanaan.',
         'Admin akan melakukan verifikasi maksimal dalam 2x24 jam.',
         'Booking dianggap sah (Fixed) hanya jika sudah disetujui admin dan status berubah di sistem.'
@@ -91,10 +91,10 @@ export default function RulesProcedures() {
               Standard Operating Procedure
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-              Aturan & Prosedur <span className="text-primary">GSG Tondo 2</span>
+              Aturan & Prosedur <span className="text-primary">Gedung Serbaguna Huntap Tondo 2</span>
             </h1>
             <p className="text-gray-500 mt-4 text-lg max-w-2xl leading-relaxed">
-              Panduan lengkap tata tertib, hak, dan kewajiban selama menggunakan fasilitas Gedung Serba Guna Huntap Tondo 2 demi kenyamanan bersama.
+              Panduan lengkap tata tertib, hak, dan kewajiban selama menggunakan fasilitas Gedung Serbaguna Huntap Tondo 2 demi kenyamanan bersama.
             </p>
           </header>
 

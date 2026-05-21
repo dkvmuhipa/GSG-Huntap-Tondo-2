@@ -5,17 +5,17 @@ import { Bell, ChevronRight, ChevronLeft, X } from 'lucide-react';
 const announcements = [
   {
     id: 1,
-    text: 'Jadwal Kerja Bakti Warga Huntap 2 akan dilaksanakan pada Minggu, 12 Mei 2026. Mohon partisipasi seluruh warga.',
+    text: 'Jadwal Kerja Bakti Warga Huntap Tondo 2 akan dilaksanakan pada Minggu, 12 Mei 2026. Mohon partisipasi seluruh warga.',
     type: 'info'
   },
   {
     id: 2,
-    text: 'Gedung GSG akan ditutup sementara untuk pemeliharaan rutin atap pada tanggal 15-16 Mei 2026.',
+    text: 'Gedung Serbaguna akan ditutup sementara untuk pemeliharaan rutin atap pada tanggal 15-16 Mei 2026.',
     type: 'warning'
   },
   {
     id: 3,
-    text: 'Pendaftaran Senam Sehat Minggu Pagi di Halaman GSG telah dibuka! Hubungi Ibu RT untuk detail.',
+    text: 'Pendaftaran Senam Sehat Minggu Pagi di Halaman Gedung Serbaguna telah dibuka! Hubungi Ibu RT untuk detail.',
     type: 'success'
   }
 ];
@@ -38,7 +38,7 @@ export default function AnnouncementTicker() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-4">
         <div className="flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shrink-0">
           <Bell className="w-3.5 h-3.5 animate-bounce" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Info Huntap 2</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Info Huntap Tondo 2</span>
         </div>
 
         <div className="flex-1 overflow-hidden relative h-5">

@@ -52,7 +52,7 @@ export default function Hero({ onOpenBooking }: HeroProps) {
             <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl shadow-gray-200 border-8 border-white">
               <img 
                 src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200" 
-                alt="GSG Tondo 2 Interior" 
+                alt="Gedung Serbaguna Huntap Tondo 2 Interior" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />

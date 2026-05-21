@@ -182,7 +182,7 @@ export default function AccountRules() {
             Level Akses Anda: {
               userRole === 'owner' ? 'System Owner' :
               userRole === 'admin' ? 'Administrator' :
-              userRole === 'bendahara' ? 'Bendahara GSG' :
+              userRole === 'bendahara' ? 'Bendahara Gedung Serbaguna' :
               userRole === 'finance' ? 'Administrasi Keuangan' :
               userRole === 'editor' ? 'Editor Konten' : userRole
             }
@@ -231,7 +231,7 @@ export default function AccountRules() {
                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Nama Instansi / Gedung</label>
                 <input 
                   type="text" 
-                  value={config?.reportOrgName || 'GSG HUNTAP TONDO 2'}
+                  value={config?.reportOrgName || 'GEDUNG SERBAGUNA HUNTAP TONDO 2'}
                   onChange={(e) => setConfig({...config, reportOrgName: e.target.value})}
                   className="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 font-bold text-gray-900 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
                 />

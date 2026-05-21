@@ -198,7 +198,7 @@ export default function ContentManager() {
             Level Akses Anda: {
               userRole === 'owner' ? 'System Owner' :
               userRole === 'admin' ? 'Administrator' :
-              userRole === 'bendahara' ? 'Bendahara GSG' :
+              userRole === 'bendahara' ? 'Bendahara Gedung Serbaguna' :
               userRole === 'finance' ? 'Administrasi Keuangan' :
               userRole === 'editor' ? 'Editor Konten' : userRole
             }

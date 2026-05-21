@@ -10,7 +10,7 @@ export default function Footer() {
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                 <Building2 className="text-white w-6 h-6" />
               </div>
-              <span className="text-xl font-bold tracking-tight">GSG Tondo 2</span>
+              <span className="text-xl font-bold tracking-tight">Gedung Serbaguna Huntap Tondo 2</span>
             </div>
             <p className="text-gray-400 max-w-sm mb-8 leading-relaxed">
               Dikelola secara profesional oleh komunitas Huntap Tondo 2 untuk mewujudkan ekosistem lingkungan yang mandiri dan berdaya saing tinggi.
@@ -65,7 +65,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-gray-500">
-          <p>© 2026 GSG Tondo 2. All rights reserved.</p>
+          <p>© 2026 Gedung Serbaguna Huntap Tondo 2. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <a href="/login" className="hover:text-white transition-colors">Admin Login</a>
             <div className="flex items-center gap-2">
