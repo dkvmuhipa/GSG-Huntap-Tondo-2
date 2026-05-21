@@ -490,12 +490,12 @@ export default function FinanceManager() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14); // Reduced to 14 for optimal fit
     doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN KEUANGAN GEDUNG SERBAGUNA', margin, 20);
+    doc.text('LAPORAN KEUANGAN GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 20);
     
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(226, 232, 240); // Better contrast
-    doc.text(config?.reportOrgName?.toUpperCase() || 'HUNTAP TONDO 2, KEL. TONDO, KEC. MANTIKULORE', margin, 28);
+    doc.text(config?.reportOrgName?.toUpperCase() || 'Pusat Kegiatan Warga Huntap Tondo 2, Palu - Sulawesi Tengah', margin, 28);
     doc.text('KOTA PALU, SULAWESI TENGAH', margin, 34);
 
     if (activeMonth !== 'all') {
@@ -632,7 +632,7 @@ export default function FinanceManager() {
         const str = 'Halaman ' + doc.getNumberOfPages();
         doc.setFontSize(7);
         doc.setTextColor(150);
-        doc.text('Laporan Rahasia - Penggunaan Internal Pengurus Gedung Serbaguna Huntap Tondo 2', margin, pageHeight - 10);
+        doc.text('Laporan Transparansi Digital - Gedung Serbaguna Huntap Tondo 2', margin, pageHeight - 10);
         doc.text(str, pageWidth - margin, pageHeight - 10, { align: 'right' });
       }
     });

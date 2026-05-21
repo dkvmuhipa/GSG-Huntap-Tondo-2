@@ -27,7 +27,7 @@ export const generateContract = async (booking: BookingData) => {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('SURAT PERJANJIAN SEWA-MENYEWA FASILITAS GEDUNG', margin, 18);
+  doc.text('PERJANJIAN SEWA FASILITAS GEDUNG SERBAGUNA HUNTAP TONDO 2', margin, 18);
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');

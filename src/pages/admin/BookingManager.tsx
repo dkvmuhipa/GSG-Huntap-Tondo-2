@@ -250,9 +250,9 @@ export default function BookingManager() {
                       auth.currentUser?.displayName || 
                       'Administrator';
 
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN JADWAL BOOKING GEDUNG', 14, 20);
+    doc.text('LAPORAN JADWAL BOOKING GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 20);
     
     doc.setFontSize(10);
     doc.text(config?.reportOrgName?.toUpperCase() || 'GEDUNG SERBAGUNA HUNTAP TONDO 2', 14, 27);
