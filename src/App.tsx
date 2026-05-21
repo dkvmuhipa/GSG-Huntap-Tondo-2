@@ -38,14 +38,14 @@ function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <AnnouncementTicker />
       <Navbar onOpenBooking={() => openBooking()} />
-      <div className="pb-24">
+      <div className="flex-grow">
         <Outlet context={{ openBooking }} />
+        <Footer />
       </div>
       <BottomNavbar onOpenBooking={() => openBooking()} />
-      <Footer />
       <BookingModal 
         isOpen={isBookingOpen} 
         onClose={() => setIsBookingOpen(false)} 

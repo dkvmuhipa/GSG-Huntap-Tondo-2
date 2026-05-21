@@ -2,7 +2,7 @@ import { Building2, Mail, Phone, MapPin, Instagram, Facebook } from 'lucide-reac
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-900 text-white pt-20 pb-10">
+    <footer className="bg-gray-900 text-white pt-20 pb-32 md:pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-12 mb-20">
           <div className="col-span-1 md:col-span-2">
