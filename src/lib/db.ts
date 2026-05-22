@@ -10,7 +10,9 @@ import {
   setDoc,
   Timestamp,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  limit,
+  getDocs
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -93,11 +95,30 @@ export const removeFacility = async (id: string) => {
 };
 
 // Transactions
-export const subscribeToTransactions = (callback: (data: any[]) => void, filters?: { type?: string; month?: string }) => {
+export const getAllTransactions = async () => {
+  try {
+    const colRef = collection(db, 'transactions');
+    const q = query(colRef, orderBy('date', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    console.error("Error in getAllTransactions:", err);
+    return [];
+  }
+};
+
+export const subscribeToTransactions = (
+  callback: (data: any[]) => void, 
+  filters?: { type?: string; month?: string },
+  limitCount?: number
+) => {
   const colRef = collection(db, 'transactions');
   // Avoid composite index requirement by using only one orderBy
   // We'll sort secondary fields client-side if needed
   let q = query(colRef, orderBy('date', 'desc'));
+  if (limitCount && limitCount > 0) {
+    q = query(colRef, orderBy('date', 'desc'), limit(limitCount));
+  }
   
   return onSnapshot(q, (snapshot) => {
     let txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

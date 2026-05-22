@@ -17,11 +17,13 @@ import {
   Clock,
   User as UserIcon,
   ChevronDown,
+  Loader,
   Calendar,
   Upload,
   Edit3,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  PenTool
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -37,6 +39,7 @@ import {
 } from 'recharts';
 import { 
   subscribeToTransactions, 
+  getAllTransactions,
   addTransaction, 
   updateTransaction, 
   removeTransaction, 
@@ -91,11 +94,29 @@ export default function FinanceManager() {
   const isAuthorized = ['owner', 'admin', 'finance', 'bendahara'].includes(userRole);
   
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [allTransactions, setAllTransactions] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('gsg_all_transactions_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      console.error("Error reading financial local cache:", e);
+      return [];
+    }
+  });
+  const [limitCount, setLimitCount] = useState(20);
+  const [isMainLoading, setIsMainLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const [admins, setAdmins] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isReportSettingsModalOpen, setIsReportSettingsModalOpen] = useState(false);
+  const [localFinanceName, setLocalFinanceName] = useState('');
+  const [localBendaharaName, setLocalBendaharaName] = useState('');
+  const [localFinanceSig, setLocalFinanceSig] = useState<string | null>(null);
+  const [localBendaharaSig, setLocalBendaharaSig] = useState<string | null>(null);
   const [newRate, setNewRate] = useState('20');
   const [newBudget, setNewBudget] = useState('5000000');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -159,6 +180,17 @@ export default function FinanceManager() {
     return map[cat] || cat;
   };
 
+  const formatRupiahInput = (value: string) => {
+    const clean = String(value || '').replace(/\D/g, '');
+    if (!clean) return '';
+    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseRupiahInput = (value: string) => {
+    const clean = String(value || '').replace(/\D/g, '');
+    return Number(clean) || 0;
+  };
+
   const [formData, setFormData] = useState({
     date: getLocalMonthKey(new Date()) + '-' + String(new Date().getDate()).padStart(2, '0'),
     source: '',
@@ -219,17 +251,61 @@ export default function FinanceManager() {
     });
   };
 
+  // 1. Silent Background Full Sync on mount (for robust, 100% accurate statistics & offline availability)
   useEffect(() => {
-    // Subscribe to all transactions for accurate lifetime stats
-    const unsubTx = subscribeToTransactions(setTransactions);
+    const fetchFullTransactions = async () => {
+      setIsMainLoading(true);
+      try {
+        const fullList = await getAllTransactions();
+        if (fullList && fullList.length > 0) {
+          setAllTransactions(fullList);
+          localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(fullList));
+        }
+      } catch (err) {
+        console.error("Failed to fetch all transactions for cache/stats:", err);
+      } finally {
+        setIsMainLoading(false);
+      }
+    };
+    fetchFullTransactions();
+  }, []);
+
+  // 2. Real-time Subscription with limit for rendering efficiency
+  useEffect(() => {
+    setIsLoadingMore(true);
+    const unsubTx = subscribeToTransactions((data) => {
+      setTransactions(data);
+      setIsLoadingMore(false);
+    }, undefined, limitCount);
+    
     const unsubConfig = subscribeToConfig(setConfig);
     const unsubAdmins = subscribeToAdmins(setAdmins);
+    
     return () => {
       unsubTx();
       unsubConfig();
       unsubAdmins();
     };
-  }, []);
+  }, [limitCount]);
+
+  // 3. Keep real-time edits, additions within the limit synchronized in the local full list
+  useEffect(() => {
+    if (transactions.length > 0) {
+      setAllTransactions(prev => {
+        const map = new Map(prev.map(t => [t.id, t]));
+        transactions.forEach(t => {
+          map.set(t.id, t);
+        });
+        const merged = Array.from(map.values()).sort((a: any, b: any) => {
+          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          return String(b.id || '').localeCompare(String(a.id || ''));
+        });
+        localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(merged));
+        return merged;
+      });
+    }
+  }, [transactions]);
 
   useEffect(() => {
     if (config?.devFundRate) {
@@ -238,15 +314,20 @@ export default function FinanceManager() {
     if (config?.monthlyBudget) {
       setNewBudget(config.monthlyBudget.toString());
     }
+    if (config) {
+      setLocalFinanceName(config.reportFinanceName || '');
+      setLocalBendaharaName(config.reportBendaharaName || '');
+      setLocalFinanceSig(config.reportFinanceSignature || null);
+      setLocalBendaharaSig(config.reportBendaharaSignature || null);
+    }
   }, [config]);
 
+  // Sync totals using all transactions to prevent overwriting with partial/limited data
   useEffect(() => {
-    if (transactions.length > 0) {
-      // We only sync totals if there's no filter active to prevent overwriting global state with partial data
-      // Actually, syncFinanceTotals should probably be handled more safely, but for now we'll only sync all
-      syncFinanceTotals(transactions);
+    if (allTransactions.length > 0) {
+      syncFinanceTotals(allTransactions);
     }
-  }, [transactions]);
+  }, [allTransactions]);
 
   const filteredTransactions = useMemo(() => {
     let result = [...transactions];
@@ -277,16 +358,49 @@ export default function FinanceManager() {
       if (dateDiff !== 0) return dateDiff;
       return String(b.id || '').localeCompare(String(a.id || ''));
     });
-  }, [transactions, searchQuery, activeMonth, activeType]);
+  }, [transactions, searchQuery, activeMonth, activeType, filterMode, activeYear]);
+
+  const filteredReportTransactions = useMemo(() => {
+    let result = [...allTransactions];
+    
+    if (activeType !== 'all') {
+      result = result.filter(t => t.type === activeType);
+    }
+    
+    if (filterMode === 'monthly') {
+      if (activeMonth !== 'all') {
+        result = result.filter(t => t.date.startsWith(activeMonth));
+      }
+    } else {
+      result = result.filter(t => t.date.startsWith(activeYear));
+    }
+
+    if (searchQuery.trim()) {
+      const lower = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        t.source?.toLowerCase().includes(lower) || 
+        t.category?.toLowerCase().includes(lower) ||
+        t.addedBy?.toLowerCase().includes(lower)
+      );
+    }
+
+    return result.sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    });
+  }, [allTransactions, searchQuery, activeMonth, activeType, filterMode, activeYear]);
 
   const filteredStats = useMemo(() => {
-    const periodTxs = activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth));
+    const periodTxs = filterMode === 'monthly'
+      ? (activeMonth === 'all' ? allTransactions : allTransactions.filter(t => t.date.startsWith(activeMonth)))
+      : allTransactions.filter(t => t.date.startsWith(activeYear));
     
     const income = periodTxs.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const expense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
     
     return { income, expense };
-  }, [transactions, activeMonth, activeYear, filterMode]);
+  }, [allTransactions, activeMonth, activeYear, filterMode]);
 
   const downloadKwitansi = (tx: any) => {
     const doc = new jsPDF({
@@ -474,33 +588,33 @@ export default function FinanceManager() {
   };
 
   const rate = config?.devFundRate ?? 0.2;
-  const totalIncome = transactions
+  const totalIncome = allTransactions
     .filter(t => t.type === 'income')
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const totalExpense = transactions
+  const totalExpense = allTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  const totalDevFund = transactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
-  const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
+  const totalDevFund = allTransactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
+  const totalOps = allTransactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
 
   const currentMonthKey = getLocalMonthKey(new Date());
   const reportMonthKey = activeMonth === 'all' ? currentMonthKey : activeMonth;
-  const currentMonthOpsExpense = transactions
+  const currentMonthOpsExpense = allTransactions
     .filter(t => t.date.startsWith(reportMonthKey) && t.type === 'expense' && t.expenseSource === 'ops')
     .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
   
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
 
   // Real-time Balance Checking and Budget Warning variables
-  const originalTx = editingId ? transactions.find(t => t.id === editingId) : null;
+  const originalTx = editingId ? allTransactions.find(t => t.id === editingId) : null;
   const originalOps = originalTx ? (Number(originalTx.ops) || 0) : 0;
   const originalDevFund = originalTx ? (Number(originalTx.devFund) || 0) : 0;
 
   const availableOps = totalOps - originalOps;
   const availableDevFund = totalDevFund - originalDevFund;
 
-  const inputAmount = Number(formData.amount) || 0;
+  const inputAmount = parseRupiahInput(formData.amount);
 
   const isInsufficientOps = (formData.type === 'expense' && formData.expenseSource === 'ops' && inputAmount > availableOps) ||
                             (formData.type === 'reallocation' && formData.transferDirection === 'ops_to_dev' && inputAmount > availableOps);
@@ -512,12 +626,71 @@ export default function FinanceManager() {
     if (formData.type !== 'expense' || formData.expenseSource !== 'ops' || !config?.monthlyBudget) return false;
     
     const txMonth = formData.date.substring(0, 7);
-    const existingMonthOpsExpense = transactions
+    const existingMonthOpsExpense = allTransactions
       .filter(t => t.date.startsWith(txMonth) && t.type === 'expense' && t.expenseSource === 'ops' && t.id !== editingId)
       .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
       
     return (existingMonthOpsExpense + inputAmount) > config.monthlyBudget;
-  }, [formData.type, formData.expenseSource, formData.date, formData.amount, config?.monthlyBudget, transactions, editingId]);
+  }, [formData.type, formData.expenseSource, formData.date, formData.amount, config?.monthlyBudget, allTransactions, editingId]);
+
+  // Month-over-Month Delta Calculation for financial stat cards
+  const momDelta = useMemo(() => {
+    let currentKey = activeMonth;
+    if (currentKey === 'all') {
+      currentKey = new Date().toISOString().substring(0, 7);
+    }
+
+    const [yearStr, monthStr] = currentKey.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr);
+
+    const curDate = new Date(year, month - 1, 1);
+    const prevDate = new Date(year, month - 1, 1);
+    prevDate.setMonth(prevDate.getMonth() - 1);
+
+    const curMonthKey = curDate.toISOString().substring(0, 7);
+    const prevMonthKey = prevDate.toISOString().substring(0, 7);
+
+    const curTxs = allTransactions.filter(t => t.date.startsWith(curMonthKey));
+    const prevTxs = allTransactions.filter(t => t.date.startsWith(prevMonthKey));
+
+    // Calculate total incomes
+    const curIncome = curTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const prevIncome = prevTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    // Calculate operational expenses
+    const curOpsExpense = curTxs.filter(t => t.type === 'expense' && t.expenseSource === 'ops').reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+    const prevOpsExpense = prevTxs.filter(t => t.type === 'expense' && t.expenseSource === 'ops').reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+
+    // Calculate saving additions (accumulated from devFund portions)
+    const curSavingAlloc = curTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.devFund) || 0), 0) + 
+                           curTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'ops_to_dev').reduce((sum, t) => sum + (Number(t.amount) || 0), 0) -
+                           curTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'dev_to_ops').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+                           
+    const prevSavingAlloc = prevTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.devFund) || 0), 0) + 
+                            prevTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'ops_to_dev').reduce((sum, t) => sum + (Number(t.amount) || 0), 0) -
+                            prevTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'dev_to_ops').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const calculatePct = (curr: number, prev: number) => {
+      if (prev === 0) {
+        return curr > 0 ? 100 : 0;
+      }
+      return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    return {
+      incomePct: calculatePct(curIncome, prevIncome),
+      curIncome,
+      prevIncome,
+      opsExpensePct: calculatePct(curOpsExpense, prevOpsExpense),
+      curOpsExpense,
+      prevOpsExpense,
+      savingPct: calculatePct(curSavingAlloc, prevSavingAlloc),
+      curSavingAlloc,
+      prevSavingAlloc,
+      prevMonthLabel: prevDate.toLocaleDateString('id-ID', { month: 'short' })
+    };
+  }, [allTransactions, activeMonth]);
 
   const handleEdit = (tx: any) => {
     setEditingId(tx.id);
@@ -529,7 +702,7 @@ export default function FinanceManager() {
     setFormData({
       date: tx.date,
       source: tx.source,
-      amount: Math.abs(tx.amount).toString(),
+      amount: formatRupiahInput(Math.abs(tx.amount).toString()),
       type: tx.type,
       category: isFixed ? tx.category : 'umum',
       customCategory: isFixed ? '' : tx.category,
@@ -555,6 +728,11 @@ export default function FinanceManager() {
   const confirmDeleteTransaction = async () => {
     try {
       await removeTransaction(confirmModal.transactionId);
+      setAllTransactions(prev => {
+        const next = prev.filter(t => t.id !== confirmModal.transactionId);
+        localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(next));
+        return next;
+      });
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -569,8 +747,38 @@ export default function FinanceManager() {
     }
   };
 
+  const [dragActiveFinance, setDragActiveFinance] = useState(false);
+  const [dragActiveBendahara, setDragActiveBendahara] = useState(false);
+
+  const handleSignatureUpload = (file: File, type: 'finance' | 'bendahara') => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (type === 'finance') {
+        setLocalFinanceSig(base64);
+      } else {
+        setLocalBendaharaSig(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveReportSettings = async () => {
+    try {
+      await updateGlobalConfig({
+        reportFinanceName: localFinanceName,
+        reportBendaharaName: localBendaharaName,
+        reportFinanceSignature: localFinanceSig,
+        reportBendaharaSignature: localBendaharaSig
+      });
+      setIsReportSettingsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const exportToPDF = () => {
-    if (transactions.length === 0) return;
+    if (filteredReportTransactions.length === 0) return;
     
     const doc = new jsPDF();
     const generationDate = new Date().toLocaleString('id-ID', { 
@@ -706,7 +914,7 @@ export default function FinanceManager() {
     doc.text('II. RINCIAN TRANSAKSI AKTIVITAS', margin, txStartY);
 
     // Sort transactions by date ascending (Oldest to Newest) - Chronological order
-    const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    const sortedTransactions = [...filteredReportTransactions].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       if (dateA !== dateB) return dateA - dateB; 
@@ -861,6 +1069,18 @@ export default function FinanceManager() {
     doc.text(sigDate, rightSigX, sigY, { align: 'center' });
     doc.text('Mengetahui / Menyetujui,', rightSigX, sigY + 5, { align: 'center' });
     
+    // Draw Bendahara Digital Signature
+    if (config?.reportBendaharaSignature) {
+      try {
+        const sigData = config.reportBendaharaSignature;
+        const format = sigData.includes('jpeg') || sigData.includes('jpg') ? 'JPEG' : 'PNG';
+        // Positioned centrally in the blank space
+        doc.addImage(sigData, format, rightSigX - 15, sigY + 8, 30, 16);
+      } catch (e) {
+        console.error("Failed to add Bendahara digital signature:", e);
+      }
+    }
+
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42); // Black/Dark Slate
     doc.text(bendaharaName, rightSigX, sigY + 35, { align: 'center' });
@@ -874,6 +1094,17 @@ export default function FinanceManager() {
     doc.setTextColor(15, 23, 42);
     doc.text('Dibuat Oleh,', leftSigX, sigY + 5, { align: 'center' });
     
+    // Draw Finance Digital Signature
+    if (config?.reportFinanceSignature) {
+      try {
+        const sigData = config.reportFinanceSignature;
+        const format = sigData.includes('jpeg') || sigData.includes('jpg') ? 'JPEG' : 'PNG';
+        doc.addImage(sigData, format, leftSigX - 15, sigY + 8, 30, 16);
+      } catch (e) {
+        console.error("Failed to add Finance digital signature:", e);
+      }
+    }
+
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42); // Black/Dark Slate
     doc.text(financeName, leftSigX, sigY + 35, { align: 'center' });
@@ -895,7 +1126,7 @@ export default function FinanceManager() {
   };
 
   const exportToCSV = () => {
-    if (filteredTransactions.length === 0) return;
+    if (filteredReportTransactions.length === 0) return;
     
     const headers = [
       'ID',
@@ -912,7 +1143,7 @@ export default function FinanceManager() {
       'Catatan'
     ];
 
-    const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    const sortedTransactions = [...filteredReportTransactions].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       if (dateA !== dateB) return dateA - dateB; // Ascending
@@ -972,7 +1203,7 @@ export default function FinanceManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = Number(formData.amount);
+    const amount = parseRupiahInput(formData.amount);
     setIsLoggingIn(true);
     
     try {
@@ -1129,22 +1360,22 @@ export default function FinanceManager() {
       const monthKey = d.toISOString().substring(0, 7);
       const monthLabel = d.toLocaleDateString('id-ID', { month: 'short' });
       
-      const monthTxs = transactions.filter(t => t.date.startsWith(monthKey));
+      const monthTxs = allTransactions.filter(t => t.date.startsWith(monthKey));
       const income = monthTxs.filter(t => t.type === 'income').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
       const expense = monthTxs.filter(t => t.type === 'expense').reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
       
       months.push({ name: monthLabel, income, expense });
     }
     return months;
-  }, [transactions, activeMonth, activeYear, filterMode]);
+  }, [allTransactions, activeMonth, activeYear, filterMode]);
 
 
   // Calculate Category Stats
   const categoryData = useMemo(() => {
     const cats: { [key: string]: number } = {};
     const targetTxs = filterMode === 'monthly'
-      ? (activeMonth === 'all' ? transactions : transactions.filter(t => t.date.startsWith(activeMonth)))
-      : transactions.filter(t => t.date.startsWith(activeYear));
+      ? (activeMonth === 'all' ? allTransactions : allTransactions.filter(t => t.date.startsWith(activeMonth)))
+      : allTransactions.filter(t => t.date.startsWith(activeYear));
     
     targetTxs
       .filter(t => t.type === 'expense')
@@ -1156,7 +1387,7 @@ export default function FinanceManager() {
     return Object.entries(cats)
       .map(([name, value]) => ({ name: displayCategory(name).toUpperCase(), value }))
       .sort((a, b) => b.value - a.value);
-  }, [transactions, activeMonth]);
+  }, [allTransactions, activeMonth, activeYear, filterMode]);
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#6366F1'];
 
@@ -1259,6 +1490,13 @@ export default function FinanceManager() {
               >
                 <TrendingUp className="w-4 h-4" />
               </button>
+              <button 
+                onClick={() => setIsReportSettingsModalOpen(true)}
+                className="p-3 bg-gray-50 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors"
+                title="Laporan PDF & Tanda Tangan"
+              >
+                <PenTool className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -1295,19 +1533,25 @@ export default function FinanceManager() {
             </div>
             <p className="text-sm font-medium text-white/60 mb-1">Total Akumulasi Seluruh Dana Gedung</p>
             <h3 className="text-4xl font-extrabold tracking-tight">Rp {(totalDevFund + totalOps).toLocaleString('id-ID')}</h3>
-            <div className="mt-8 flex gap-4 text-[10px] font-bold uppercase tracking-widest overflow-x-auto pb-2 scrollbar-none">
-              <span className="bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm whitespace-nowrap">Status: Sinkron</span>
-              <span className="bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full backdrop-blur-sm whitespace-nowrap">Audit Transparan</span>
+            <div className="mt-8 flex flex-wrap gap-2.5 text-[10px] font-bold uppercase tracking-widest">
+              <span className={`px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border ${momDelta.incomePct >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
+                {momDelta.incomePct >= 0 ? '▲ +' : '▼ '}{momDelta.incomePct}% Pendapatan vs {momDelta.prevMonthLabel}
+              </span>
+              <span className="bg-white/10 text-white/90 px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border border-white/5">
+                Audit Transparan
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-primary/30 transition-all">
-          <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <Receipt className="w-6 h-6" />
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-primary/30 transition-all flex flex-col justify-between">
+          <div>
+            <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Receipt className="w-6 h-6" />
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Operasional (Likuid)</p>
+            <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalOps).toLocaleString('id-ID')}</h3>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Operasional (Likuid)</p>
-          <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalOps).toLocaleString('id-ID')}</h3>
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
@@ -1322,19 +1566,43 @@ export default function FinanceManager() {
                 className={`h-full ${budgetProgress > 100 ? 'bg-red-500' : 'bg-primary'}`}
                />
             </div>
-            <p className="text-[9px] text-gray-400 mt-1.5 font-medium italic">Dana siap pakai harian</p>
+            <div className="flex justify-between items-center mt-2.5 pt-1.5 border-t border-gray-50">
+              <span className="text-[9px] text-gray-400 font-medium italic">Siap pakai harian</span>
+              <span className={`text-[10px] font-black flex items-center gap-0.5 uppercase tracking-tight ${
+                momDelta.opsExpensePct > 0 
+                  ? 'text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md' 
+                  : momDelta.opsExpensePct < 0 
+                  ? 'text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md' 
+                  : 'text-gray-400'
+              }`}>
+                {momDelta.opsExpensePct > 0 ? '▲ +' : momDelta.opsExpensePct < 0 ? '▼ ' : '• '}{momDelta.opsExpensePct}% MoM ({momDelta.prevMonthLabel})
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-accent/30 transition-all">
-          <div className="w-12 h-12 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <TrendingUp className="w-6 h-6" />
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-accent/30 transition-all flex flex-col justify-between">
+          <div>
+            <div className="w-12 h-12 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Saving (Cadangan)</p>
+            <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalDevFund).toLocaleString('id-ID')}</h3>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Saving (Cadangan)</p>
-          <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalDevFund).toLocaleString('id-ID')}</h3>
-          <p className="text-[10px] text-accent font-bold mt-2 flex items-center gap-1 italic">
-            Prioritas: Renovasi & Darurat
-          </p>
+          <div className="mt-4">
+            <div className="flex justify-between items-center mt-2 pt-2.5 border-t border-gray-100">
+              <p className="text-[10px] text-accent font-bold flex items-center gap-1 italic">
+                Saran: Renovasi/Darurat
+              </p>
+              <span className={`text-[10px] font-black flex items-center gap-0.5 uppercase tracking-tight ${
+                momDelta.savingPct >= 0 
+                  ? 'text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md' 
+                  : 'text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md'
+              }`}>
+                {momDelta.savingPct >= 0 ? '▲ +' : '▼ '}{momDelta.savingPct}% Saving vs {momDelta.prevMonthLabel}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1675,6 +1943,50 @@ export default function FinanceManager() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Pagination controls */}
+        <div className="border-t border-gray-100 px-8 py-6 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-gray-500 font-medium">
+            {isLoadingMore ? (
+              <div className="flex items-center gap-2">
+                <Loader className="w-3.5 h-3.5 text-primary animate-spin" />
+                <span>Menghubungkan ke server & menyinkronkan data...</span>
+              </div>
+            ) : filteredTransactions.length === 0 ? (
+              <span>Tidak ada data transaksi yang dapat ditampilkan.</span>
+            ) : transactions.length >= allTransactions.length ? (
+              <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                Semua total {allTransactions.length} riwayat transaksi telah termuat & tersedia offline ✨
+              </span>
+            ) : (
+              <span>
+                Menampilkan <strong className="text-gray-900 font-semibold">{filteredTransactions.length}</strong> dari <strong className="text-gray-900 font-semibold">{transactions.length}</strong> data terunduh (Total: <strong className="text-gray-900 font-semibold">{allTransactions.length}</strong> transaksi di sistem)
+              </span>
+            )}
+          </div>
+
+          {transactions.length < allTransactions.length && (
+            <button
+              onClick={() => setLimitCount(prev => prev + 20)}
+              disabled={isLoadingMore}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-white border border-gray-200 hover:border-primary text-gray-700 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              id="btn-load-more"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader className="w-3.5 h-3.5 animate-spin text-primary" />
+                  Memuat...
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  Muat Lebih Banyak
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Modal Form */}
@@ -1774,11 +2086,12 @@ export default function FinanceManager() {
                   <div className="relative">
                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rp</span>
                     <input 
-                      type="number" 
+                      type="text"
+                      inputMode="numeric"
                       required
                       placeholder="0"
                       value={formData.amount}
-                      onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                      onChange={(e) => setFormData({...formData, amount: formatRupiahInput(e.target.value)})}
                       className={`w-full border rounded-2xl pl-12 pr-5 py-3.5 text-sm font-black outline-none transition-all ${
                         isInsufficientOps || isInsufficientDev
                           ? 'border-red-300 bg-red-50/20 focus:border-red-500'
@@ -2008,7 +2321,7 @@ export default function FinanceManager() {
                 </div>
               </div>
 
-              {Number(formData.amount) > 0 && (
+              {parseRupiahInput(formData.amount) > 0 && (
                 <div className="space-y-3">
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
@@ -2286,6 +2599,190 @@ export default function FinanceManager() {
               >
                 SIMPAN ANGGARAN
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Report PDF & Digital Signature Settings Modal */}
+      {isReportSettingsModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2.5rem] p-10 w-full max-w-2xl shadow-2xl overflow-hidden relative my-8"
+          >
+            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600" />
+            
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">Pengaturan Laporan & Tanda Tangan</h3>
+                <p className="text-gray-500 text-xs mt-1">Sesuaikan nama penandatangan dan sematkan gambar tanda tangan digital transparan pada PDF laporan bulanan.</p>
+              </div>
+              <button onClick={() => setIsReportSettingsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Administrasi Keuangan block */}
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] bg-indigo-55 text-indigo-700 font-extrabold px-2.5 py-1 rounded-md tracking-wider uppercase">Pihak 1 (Pembuat Laporan)</span>
+                    <h4 className="text-xs font-black text-gray-400 mt-2 uppercase tracking-wide">Administrasi Keuangan</h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nama Pegawai Keuangan</label>
+                    <input 
+                      type="text"
+                      value={localFinanceName}
+                      onChange={(e) => setLocalFinanceName(e.target.value)}
+                      placeholder="Contoh: Safira S.Ak."
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-xs font-bold outline-none focus:border-indigo-500 transition-all font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanda Tangan Digital (Transparan)</label>
+                    
+                    {localFinanceSig ? (
+                      <div className="relative border border-dashed border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
+                        <img 
+                          src={localFinanceSig} 
+                          alt="Tanda Tangan Administrasi"
+                          className="max-h-24 object-contain mb-3 bg-white border border-gray-100 p-2 rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setLocalFinanceSig(null)}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                        >
+                          Hapus Tanda Tangan
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        onDragOver={(e) => { e.preventDefault(); setDragActiveFinance(true); }}
+                        onDragLeave={() => setDragActiveFinance(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragActiveFinance(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handleSignatureUpload(file, 'finance');
+                        }}
+                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                          dragActiveFinance ? 'border-indigo-500 bg-indigo-50/30' : 'border-gray-200 hover:border-indigo-400 bg-gray-50'
+                        }`}
+                        onClick={() => document.getElementById('financeSigInput')?.click()}
+                      >
+                        <Upload className="w-5 h-5 text-gray-400 mb-2" />
+                        <span className="text-xs font-black text-gray-700">Pilih atau Tarik Gambar</span>
+                        <span className="text-[9px] text-gray-400 mt-1">PNG Transparan direkomendasikan</span>
+                        <input 
+                          id="financeSigInput"
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleSignatureUpload(file, 'finance');
+                          }}
+                          className="hidden" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bendahara block */}
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] bg-emerald-55 text-emerald-700 font-extrabold px-2.5 py-1 rounded-md tracking-wider uppercase">Pihak 2 (Mengetahui)</span>
+                    <h4 className="text-xs font-black text-gray-400 mt-2 uppercase tracking-wide">Bendahara / Ketua RT</h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 font-sans">Nama Bendahara / Ketua RT</label>
+                    <input 
+                      type="text"
+                      value={localBendaharaName}
+                      onChange={(e) => setLocalBendaharaName(e.target.value)}
+                      placeholder="Contoh: Bpk. H. Ahmad Fauzi"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-xs font-bold outline-none focus:border-indigo-500 transition-all font-sans"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanda Tangan Digital (Transparan)</label>
+                    
+                    {localBendaharaSig ? (
+                      <div className="relative border border-dashed border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
+                        <img 
+                          src={localBendaharaSig} 
+                          alt="Tanda Tangan Bendahara"
+                          className="max-h-24 object-contain mb-3 bg-white border border-gray-100 p-2 rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setLocalBendaharaSig(null)}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                        >
+                          Hapus Tanda Tangan
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        onDragOver={(e) => { e.preventDefault(); setDragActiveBendahara(true); }}
+                        onDragLeave={() => setDragActiveBendahara(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragActiveBendahara(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handleSignatureUpload(file, 'bendahara');
+                        }}
+                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                          dragActiveBendahara ? 'border-emerald-500 bg-emerald-50/30' : 'border-gray-200 hover:border-emerald-400 bg-gray-50'
+                        }`}
+                        onClick={() => document.getElementById('bendaharaSigInput')?.click()}
+                      >
+                        <Upload className="w-5 h-5 text-gray-400 mb-2" />
+                        <span className="text-xs font-black text-gray-700">Pilih atau Tarik Gambar</span>
+                        <span className="text-[9px] text-gray-400 mt-1">PNG Transparan direkomendasikan</span>
+                        <input 
+                          id="bendaharaSigInput"
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleSignatureUpload(file, 'bendahara');
+                          }}
+                          className="hidden" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-[10px] text-indigo-700 font-medium leading-relaxed">
+                💡 <span className="font-bold">Tips Transparansi:</span> Menggunakan gambar tanda tangan digital berlatar belakang transparan (PNG) akan memberikan tampilan paling tajam dan presisi pada cetakan PDF laporan tanpa menutupi batas garis stempel laporan fisik.
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsReportSettingsModalOpen(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black active:scale-[0.98] transition-transform text-xs uppercase"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleSaveReportSettings}
+                  className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-900/10 active:scale-[0.98] transition-transform text-xs uppercase"
+                >
+                  Simpan Pengaturan
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
