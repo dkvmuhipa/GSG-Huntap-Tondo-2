@@ -53,6 +53,39 @@ import autoTable from 'jspdf-autotable';
 
 import { useOutletContext } from 'react-router-dom';
 
+const AUTO_CATEGORIES = [
+  {
+    category: 'listrik',
+    label: 'Listrik',
+    keywords: ['listrik', 'pln', 'token', 'pdam', 'air ', 'pam', 'pulsa ']
+  },
+  {
+    category: 'sewa',
+    label: 'Sewa Gedung',
+    keywords: ['sewa ', 'sewa_gedung', 'booking', 'dp ', 'pelunasan', 'resepsi', 'wedding', 'nikah', 'wisuda', 'acara', 'gedung', 'down payment']
+  },
+  {
+    category: 'iuran',
+    label: 'Sumbangan',
+    keywords: ['iuran', 'sumbangan', 'donasi', 'sedekah', 'infak', 'zakat', 'celengan', 'asrama', 'bantuan']
+  },
+  {
+    category: 'kebersihan',
+    label: 'Kebersihan & Keamanan',
+    keywords: ['sapu', 'pel ', 'kemoceng', 'kebersihan', 'keamanan', 'satpam', 'ronda', 'makam', 'poskamling', 'tong sampah', 'sabun', 'detergen', 'wipol', 'pembersih', 'tisue', 'tisu', 'cleaning']
+  },
+  {
+    category: 'perbaikan',
+    label: 'Perbaikan',
+    keywords: ['cat ', 'renov', 'perbaikan', 'bocor', 'atap', 'genteng', 'tembok', 'semen', 'servis', 'service', 'kunci', 'engsel', 'tukang', 'las ', 'pipa', 'keramik', 'pintu', 'jendela', 'semen', 'batu', 'pasir', 'gagang']
+  },
+  {
+    category: 'peralatan',
+    label: 'Peralatan',
+    keywords: ['meja', 'kursi', 'sound', 'proyektor', 'ac ', 'kipas', 'peralatan', 'lampu', 'kabel', 'piring', 'gelas', 'mic ', 'speaker', 'infocus', 'baterai', 'steker', 'colokan', 'terminal', 'perkakas', 'mesin']
+  }
+];
+
 export default function FinanceManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
   const isAuthorized = ['owner', 'admin', 'finance', 'bendahara'].includes(userRole);
@@ -144,6 +177,47 @@ export default function FinanceManager() {
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+
+  const [isCategoryManuallySelected, setIsCategoryManuallySelected] = useState(false);
+  const [autoSuggestedFromKeyword, setAutoSuggestedFromKeyword] = useState<{
+    keyword: string;
+    categoryName: string;
+    categoryId: string;
+  } | null>(null);
+
+  const handleSourceChange = (val: string) => {
+    setFormData(prev => {
+      const nextFormData = { ...prev, source: val };
+      
+      if (!isCategoryManuallySelected) {
+        const lower = val.toLowerCase();
+        let matched = false;
+        
+        for (const item of AUTO_CATEGORIES) {
+          for (const kw of item.keywords) {
+            if (lower.includes(kw)) {
+              nextFormData.category = item.category;
+              setAutoSuggestedFromKeyword({
+                keyword: kw,
+                categoryName: item.label,
+                categoryId: item.category
+              });
+              matched = true;
+              break;
+            }
+          }
+          if (matched) break;
+        }
+        
+        if (!matched) {
+          nextFormData.category = 'umum';
+          setAutoSuggestedFromKeyword(null);
+        }
+      }
+      
+      return nextFormData;
+    });
+  };
 
   useEffect(() => {
     // Subscribe to all transactions for accurate lifetime stats
@@ -418,10 +492,40 @@ export default function FinanceManager() {
   
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
 
+  // Real-time Balance Checking and Budget Warning variables
+  const originalTx = editingId ? transactions.find(t => t.id === editingId) : null;
+  const originalOps = originalTx ? (Number(originalTx.ops) || 0) : 0;
+  const originalDevFund = originalTx ? (Number(originalTx.devFund) || 0) : 0;
+
+  const availableOps = totalOps - originalOps;
+  const availableDevFund = totalDevFund - originalDevFund;
+
+  const inputAmount = Number(formData.amount) || 0;
+
+  const isInsufficientOps = (formData.type === 'expense' && formData.expenseSource === 'ops' && inputAmount > availableOps) ||
+                            (formData.type === 'reallocation' && formData.transferDirection === 'ops_to_dev' && inputAmount > availableOps);
+
+  const isInsufficientDev = (formData.type === 'expense' && formData.expenseSource === 'dev' && inputAmount > availableDevFund) ||
+                            (formData.type === 'reallocation' && formData.transferDirection === 'dev_to_ops' && inputAmount > availableDevFund);
+
+  const isBudgetExceeded = useMemo(() => {
+    if (formData.type !== 'expense' || formData.expenseSource !== 'ops' || !config?.monthlyBudget) return false;
+    
+    const txMonth = formData.date.substring(0, 7);
+    const existingMonthOpsExpense = transactions
+      .filter(t => t.date.startsWith(txMonth) && t.type === 'expense' && t.expenseSource === 'ops' && t.id !== editingId)
+      .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+      
+    return (existingMonthOpsExpense + inputAmount) > config.monthlyBudget;
+  }, [formData.type, formData.expenseSource, formData.date, formData.amount, config?.monthlyBudget, transactions, editingId]);
+
   const handleEdit = (tx: any) => {
     setEditingId(tx.id);
     const isFixed = ['sewa', 'iuran', 'listrik', 'perbaikan', 'peralatan', 'kebersihan', 'keamanan', 'umum'].includes(tx.category);
     
+    setIsCategoryManuallySelected(true);
+    setAutoSuggestedFromKeyword(null);
+
     setFormData({
       date: tx.date,
       source: tx.source,
@@ -952,6 +1056,8 @@ export default function FinanceManager() {
 
       setIsModalOpen(false);
       setEditingId(null);
+      setIsCategoryManuallySelected(false);
+      setAutoSuggestedFromKeyword(null);
       setFormData({
         date: getLocalDateString(new Date()),
         source: '',
@@ -1166,7 +1272,11 @@ export default function FinanceManager() {
             Download PDF
           </button>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsCategoryManuallySelected(false);
+              setAutoSuggestedFromKeyword(null);
+              setIsModalOpen(true);
+            }}
             className="bg-primary text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
           >
             <PlusCircle className="w-5 h-5" />
@@ -1590,6 +1700,8 @@ export default function FinanceManager() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingId(null);
+                  setIsCategoryManuallySelected(false);
+                  setAutoSuggestedFromKeyword(null);
                   setFormData({
                     date: new Date().toISOString().split('T')[0],
                     source: '',
@@ -1667,18 +1779,82 @@ export default function FinanceManager() {
                       placeholder="0"
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-black outline-none focus:border-emerald-500 transition-all"
+                      className={`w-full border rounded-2xl pl-12 pr-5 py-3.5 text-sm font-black outline-none transition-all ${
+                        isInsufficientOps || isInsufficientDev
+                          ? 'border-red-300 bg-red-50/20 focus:border-red-500'
+                          : isBudgetExceeded
+                          ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
+                          : 'bg-gray-50 border-gray-100 focus:border-emerald-500'
+                      }`}
                     />
                   </div>
+                  {isInsufficientOps && (
+                    <span className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0 animate-pulse">
+                      ⚠️ Melebihi Kas Operasional (Rp {Math.floor(availableOps).toLocaleString('id-ID')})
+                    </span>
+                  )}
+                  {isInsufficientDev && (
+                    <span className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0 animate-pulse">
+                      ⚠️ Melebihi Kas Pengembangan (Rp {Math.floor(availableDevFund).toLocaleString('id-ID')})
+                    </span>
+                  )}
+                  {isBudgetExceeded && !isInsufficientOps && (
+                    <span className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0">
+                      ⚠️ Over-Budget Bulanan! (Sisa plafon: Rp {Math.floor((config?.monthlyBudget ?? 0) - currentMonthOpsExpense).toLocaleString('id-ID')})
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Kategori</label>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Kategori</label>
+                    {isCategoryManuallySelected && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCategoryManuallySelected(false);
+                          // Re-detect category based on description
+                          const mockVal = formData.source;
+                          const nextFormData = { ...formData };
+                          const lower = mockVal.toLowerCase();
+                          let matched = false;
+                          for (const item of AUTO_CATEGORIES) {
+                            for (const kw of item.keywords) {
+                              if (lower.includes(kw)) {
+                                nextFormData.category = item.category;
+                                setAutoSuggestedFromKeyword({
+                                  keyword: kw,
+                                  categoryName: item.label,
+                                  categoryId: item.category
+                                });
+                                matched = true;
+                                break;
+                              }
+                            }
+                            if (matched) break;
+                          }
+                          if (!matched) {
+                            nextFormData.category = 'umum';
+                            setAutoSuggestedFromKeyword(null);
+                          }
+                          setFormData(nextFormData);
+                        }}
+                        className="text-[9px] text-primary hover:text-blue-800 font-black flex items-center gap-0.5 tracking-tight uppercase"
+                        title="Klik untuk kembali menggunakan pencocokan otomatis berdasarkan kolom uraian"
+                      >
+                        ✨ AUTO DETEKSI
+                      </button>
+                    )}
+                  </div>
                   <select 
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, category: e.target.value});
+                      setIsCategoryManuallySelected(true);
+                      setAutoSuggestedFromKeyword(null);
+                    }}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none cursor-pointer"
                   >
                     <option value="sewa">Sewa Gedung</option>
@@ -1689,6 +1865,11 @@ export default function FinanceManager() {
                     <option value="kebersihan">Kebersihan & Keamanan</option>
                     <option value="umum">Lainnya / Manual</option>
                   </select>
+                  {autoSuggestedFromKeyword && (
+                    <span className="text-[10px] text-emerald-600 font-black block mt-2 animate-bounce flex items-center gap-1 pl-1">
+                      🪄 Disarankan otomatis: {autoSuggestedFromKeyword.categoryName} <span className="text-gray-400 font-medium font-mono text-[9px]">({autoSuggestedFromKeyword.keyword})</span>
+                    </span>
+                  )}
                 </div>
                 {formData.category === 'umum' && (
                   <motion.div
@@ -1715,7 +1896,7 @@ export default function FinanceManager() {
                   rows={2}
                   placeholder="Contoh: Sewa Resepsi Pernikahan (Bpk. Ahmad)"
                   value={formData.source}
-                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  onChange={(e) => handleSourceChange(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
                 />
               </div>
@@ -1828,66 +2009,156 @@ export default function FinanceManager() {
               </div>
 
               {Number(formData.amount) > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className={`${formData.type === 'income' ? 'bg-emerald-50 border-emerald-100' : formData.type === 'reallocation' ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'} p-6 rounded-[2rem] border`}
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <Shield className={`w-4 h-4 ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : 'text-red-600'}`} />
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : 'text-red-600'}`}>
-                      {formData.type === 'income' ? 'Simulasi Alokasi' : formData.type === 'reallocation' ? 'Detail Reallokasi' : 'Detail Pengurangan'}
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {formData.type === 'income' ? (
-                      <>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="text-gray-500 font-medium whitespace-nowrap">Tabungan Renovasi:</span>
-                          <span className="font-black text-accent text-sm">
-                            Rp {
-                              formData.allocationMode === 'full_ops' ? '0' :
-                              formData.allocationMode === 'full_dev' ? Number(formData.amount).toLocaleString('id-ID') :
-                              (Number(formData.amount) * (config?.devFundRate ?? 0.2)).toLocaleString('id-ID')
-                            }
-                          </span>
+                <div className="space-y-3">
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className={`${
+                      formData.type === 'income' 
+                        ? 'bg-emerald-50 border-emerald-150 text-emerald-900' 
+                        : formData.type === 'reallocation' 
+                        ? 'bg-amber-50 border-amber-150 text-amber-900' 
+                        : (isInsufficientOps || isInsufficientDev)
+                        ? 'bg-red-50 border-red-200 text-red-900'
+                        : 'bg-rose-50 border-rose-150 text-rose-900'
+                    } p-6 rounded-[2rem] border`}
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <Shield className={`w-4 h-4 ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : (isInsufficientOps || isInsufficientDev) ? 'text-red-600' : 'text-rose-600'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : (isInsufficientOps || isInsufficientDev) ? 'text-red-600' : 'text-rose-600'}`}>
+                        {formData.type === 'income' ? 'Simulasi Alokasi' : formData.type === 'reallocation' ? 'Detail Reallokasi' : 'Detail Pengurangan'}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {formData.type === 'income' ? (
+                        <div className="space-y-3.5 pt-1">
+                          <div className="text-[10px] font-black tracking-widest uppercase text-emerald-800/60 flex items-center justify-between border-b border-emerald-150 pb-2 mb-1.5">
+                            <span>Estimasi Alokasi Dana</span>
+                            <span>{formData.allocationMode === 'auto' ? 'Bagi Otomatis' : formData.allocationMode === 'full_ops' ? '100% Ops' : '100% Saving'}</span>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between text-xs items-center">
+                              <span className="text-gray-600 font-bold flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0 animate-pulse" />
+                                Tabungan Renovasi (Saving):
+                              </span>
+                              <span className="font-black text-accent text-sm">
+                                Rp {Math.floor(formData.allocationMode === 'full_ops' ? 0 : formData.allocationMode === 'full_dev' ? inputAmount : (inputAmount * (config?.devFundRate ?? 0.2))).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-gray-400 font-medium pl-4 mt-0.5">
+                              <span>Porsi {formData.allocationMode === 'full_ops' ? 0 : formData.allocationMode === 'full_dev' ? 100 : Math.round((config?.devFundRate ?? 0.2) * 100)}%</span>
+                              <span>Penyelamatan Gedung</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between text-xs items-center">
+                              <span className="text-gray-600 font-bold flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
+                                Dana Operasional:
+                              </span>
+                              <span className="font-black text-primary text-sm">
+                                Rp {Math.floor(formData.allocationMode === 'full_dev' ? 0 : formData.allocationMode === 'full_ops' ? inputAmount : (inputAmount * (1 - (config?.devFundRate ?? 0.2)))).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-gray-400 font-medium pl-4 mt-0.5">
+                              <span>Porsi {formData.allocationMode === 'full_dev' ? 0 : formData.allocationMode === 'full_ops' ? 100 : (100 - Math.round((config?.devFundRate ?? 0.2) * 100))}%</span>
+                              <span>Kebutuhan Harian</span>
+                            </div>
+                          </div>
+
+                          {/* Live Visual Progress Strip representing the split percentage */}
+                          <div className="h-3 bg-gray-200/60 rounded-full overflow-hidden flex shadow-inner mt-2">
+                            {(formData.allocationMode !== 'full_ops') && (
+                              <div 
+                                style={{ width: `${formData.allocationMode === 'full_dev' ? 100 : (config?.devFundRate ?? 0.2) * 100}%` }}
+                                className="bg-accent h-full transition-all duration-500 ease-out"
+                              />
+                            )}
+                            {(formData.allocationMode !== 'full_dev') && (
+                              <div 
+                                style={{ width: `${formData.allocationMode === 'full_ops' ? 100 : (1 - (config?.devFundRate ?? 0.2)) * 100}%` }}
+                                className="bg-primary h-full transition-all duration-500 ease-out"
+                              />
+                            )}
+                          </div>
                         </div>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="text-gray-500 font-medium whitespace-nowrap">Dana Operasional:</span>
-                          <span className="font-black text-primary text-sm">
-                            Rp {
-                              formData.allocationMode === 'full_dev' ? '0' :
-                              formData.allocationMode === 'full_ops' ? Number(formData.amount).toLocaleString('id-ID') :
-                              (Number(formData.amount) * (1 - (config?.devFundRate ?? 0.2))).toLocaleString('id-ID')
-                            }
-                          </span>
-                        </div>
-                      </>
-                    ) : formData.type === 'reallocation' ? (
-                      <>
-                         <div className="flex justify-between text-xs items-center">
-                          <span className="text-gray-500 font-medium whitespace-nowrap">Dari Pos:</span>
-                          <span className="font-black text-sm text-gray-900 border-b border-gray-200">
-                            {formData.transferDirection === 'ops_to_dev' ? 'Dana Operasional' : 'Dana Pengembangan'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-xs items-center">
-                          <span className="text-gray-500 font-medium whitespace-nowrap">Ke Pos:</span>
-                          <span className="font-black text-sm text-emerald-600">
-                             {formData.transferDirection === 'ops_to_dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex justify-between text-xs items-center">
-                        <span className="text-gray-500 font-medium whitespace-nowrap">Diambil Dari:</span>
-                        <span className={`font-black text-sm ${formData.expenseSource === 'dev' ? 'text-accent' : 'text-primary'}`}>
-                          {formData.expenseSource === 'dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
-                        </span>
+                      ) : formData.type === 'reallocation' ? (
+                        <>
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-gray-500 font-medium whitespace-nowrap">Dari Pos:</span>
+                            <span className="font-black text-sm text-gray-900 border-b border-gray-200">
+                              {formData.transferDirection === 'ops_to_dev' ? 'Dana Operasional' : 'Dana Pengembangan'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-gray-500 font-medium whitespace-nowrap">Saldo Tersedia:</span>
+                            <span className="font-extrabold text-xs text-gray-700">
+                              Rp {Math.floor(formData.transferDirection === 'ops_to_dev' ? availableOps : availableDevFund).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-gray-500 font-medium whitespace-nowrap">Ke Pos:</span>
+                            <span className="font-black text-xs text-emerald-600">
+                              {formData.transferDirection === 'ops_to_dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-gray-500 font-medium whitespace-nowrap">Diambil Dari:</span>
+                            <span className={`font-black text-sm ${formData.expenseSource === 'dev' ? 'text-accent' : 'text-primary'}`}>
+                              {formData.expenseSource === 'dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-gray-500 font-medium whitespace-nowrap">Saldo Tersedia:</span>
+                            <span className="font-extrabold text-xs text-gray-700">
+                              Rp {Math.floor(formData.expenseSource === 'dev' ? availableDevFund : availableOps).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Insufficient Funds Warning Alert */}
+                  {(isInsufficientOps || isInsufficientDev) && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-5 bg-red-50 border border-red-200 rounded-[2rem] text-xs text-red-800 font-medium flex items-start gap-3"
+                    >
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-black text-red-900 uppercase tracking-wide">Saldo Tidak Mencukupi</p>
+                        <p className="text-[11px] text-red-700 mt-1 leading-relaxed">
+                          Anda menginput nominal <span className="font-extrabold">Rp {inputAmount.toLocaleString('id-ID')}</span> yang melampaui saldo kas tersedia pada pos tersebut yaitu <span className="font-extrabold">Rp {Math.floor(formData.type === 'reallocation' ? (formData.transferDirection === 'ops_to_dev' ? availableOps : availableDevFund) : (formData.expenseSource === 'dev' ? availableDevFund : availableOps)).toLocaleString('id-ID')}</span>. Harap tinjau kembali nominal atau ubah sumber pos dana.
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </motion.div>
+                    </motion.div>
+                  )}
+
+                  {/* Over Budget Operational Warning Alert */}
+                  {isBudgetExceeded && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-5 bg-amber-50 border border-amber-200 rounded-[2rem] text-xs text-amber-800 font-medium flex items-start gap-3"
+                    >
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-black text-amber-900 uppercase tracking-wide">Over-Budget Bulanan</p>
+                        <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
+                          Pencatatan ini akan menyebabkan total pengeluaran operasional bulan ini melampaui sisa plafon anggaran bulanan gedung (Batas Anggaran Bulanan: <span className="font-bold">Rp {config?.monthlyBudget?.toLocaleString('id-ID')}</span>). Harap koordinasikan dengan penilai anggaran.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               )}
 
               <button 
