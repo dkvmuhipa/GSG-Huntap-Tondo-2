@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, MapPin, Search, FileDown, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Search, FileDown, CheckCircle, AlertTriangle, FileText, Receipt } from 'lucide-react';
 import { subscribeToBookings, checkCurrentAvailability, subscribeToConfig } from '../lib/db';
 import CalendarModal from './ui/CalendarModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateContract, generateReceipt } from '../services/contractService';
 
 export default function AvailabilityWidget() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -114,10 +115,10 @@ export default function AvailabilityWidget() {
     // Signatures
     const sigY = finalY + 50;
     doc.setFont('helvetica', 'normal');
-    doc.text('Disetujui Oleh,', 140, sigY);
-    doc.text('Admin GSG Huntap 2', 140, sigY + 25);
+    doc.text('Disetujui Oleh,', 130, sigY);
+    doc.text('Pengelola Gedung Serbaguna Huntap Tondo 2', 130, sigY + 25);
     doc.setDrawColor(200, 200, 200);
-    doc.line(140, sigY + 20, 190, sigY + 20);
+    doc.line(130, sigY + 20, 190, sigY + 20);
 
     doc.save(`Konfirmasi_Booking_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
   };
@@ -257,19 +258,30 @@ export default function AvailabilityWidget() {
                     <p className="text-xs text-gray-500 mt-1">{new Date(trackedBooking.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </div>
 
-                  <div className="flex items-center justify-end">
+                  <div className="flex items-center md:justify-end w-full">
                     {trackedBooking.status === 'approved' || trackedBooking.status === 'completed' ? (
-                      <button 
-                        onClick={() => downloadConfirmation(trackedBooking)}
-                        className="w-full md:w-auto bg-primary text-white py-4 px-8 rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                      >
-                        <FileDown className="w-5 h-5" />
-                        UNDUH BUKTI KONFIRMASI
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button 
+                          onClick={() => generateContract(trackedBooking)}
+                          className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-2xl font-black text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
+                          title="Unduh Surat Perjanjian Sewa Digital"
+                        >
+                          <FileText className="w-4.5 h-4.5" />
+                          SURAT PERJANJIAN SEWA
+                        </button>
+                        <button 
+                          onClick={() => generateReceipt(trackedBooking)}
+                          className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white py-4 px-6 rounded-2xl font-black text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
+                          title="Unduh Kuitansi Resmi Lunas"
+                        >
+                          <Receipt className="w-4.5 h-4.5" />
+                          KUITANSI RESMI (LUNAS)
+                        </button>
+                      </div>
                     ) : (
                       <div className="text-right">
                         <p className="text-[10px] text-gray-400 leading-relaxed italic max-w-[200px]">
-                          Bukti konfirmasi dapat diunduh secara otomatis segera setelah pengajuan Anda disetujui oleh admin.
+                          Bukti sewa & kuitansi resmi dapat diunduh secara otomatis segera setelah pengajuan Anda disetujui oleh admin.
                         </p>
                       </div>
                     )}

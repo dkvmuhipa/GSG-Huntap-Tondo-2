@@ -33,7 +33,7 @@ import HallLayoutCanvas, { HallLayoutData, LayoutTemplate, StagePosition } from 
 const DEFAULT_INVENTORY = [
   { id: 'inv-kursi', name: 'Kursi Lipat Chitose (Fasilitas Utama)', goodQuantity: 300, price: 5000, category: 'Fasilitas Utama' },
   { id: 'inv-meja', name: 'Meja Bulat Banquet (Fasilitas Utama)', goodQuantity: 45, price: 20000, category: 'Fasilitas Utama' },
-  { id: 'inv-sound', name: 'Sound System GSG 5000W + Mic Wireless', goodQuantity: 2, price: 500000, category: 'Sound System' },
+  { id: 'inv-sound', name: 'Sound System Utama 5000W + Mic Wireless', goodQuantity: 2, price: 500000, category: 'Sound System' },
   { id: 'inv-genset', name: 'Genset Honda Silent 10kVA', goodQuantity: 2, price: 300000, category: 'Lainnya' },
   { id: 'inv-tenda', name: 'Tenda Sarnafil VIP 5x5m', goodQuantity: 8, price: 150000, category: 'Lainnya' },
   { id: 'inv-ac', name: 'Air Conditioner Portable 2PK', goodQuantity: 4, price: 250000, category: 'Pendingin Ruangan' },
@@ -845,7 +845,7 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
                             </div>
                             <div className="flex-1">
                               <span className="text-[11px] font-bold text-gray-600 block group-hover:text-gray-900 transition-colors leading-relaxed">
-                                Saya menyetujui <button type="button" onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="text-primary underline hover:text-blue-700 font-extrabold">Syarat & Ketentuan</button> penyewaan gedung GSG Huntap Tondo 2 secara penuh.
+                                Saya menyetujui <button type="button" onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="text-primary underline hover:text-blue-700 font-extrabold">Syarat & Ketentuan</button> penyewaan Gedung Serbaguna Huntap Tondo 2 secara penuh.
                               </span>
                             </div>
                           </label>

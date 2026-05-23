@@ -26,6 +26,7 @@ import {
 import { subscribeToTransactions, subscribeToConfig, syncFinanceTotals, subscribeToAdmins, subscribeToBookings, checkCurrentAvailability } from '../../lib/db';
 
 import { useOutletContext } from 'react-router-dom';
+import QuickMenuGrid from '../../components/admin/QuickMenuGrid';
 
 export default function DashboardOverview() {
   const { userRole } = useOutletContext<{ userRole: string }>();
@@ -158,6 +159,9 @@ export default function DashboardOverview() {
           </div>
         )}
       </motion.div>
+
+      {/* Quick Menu Grid */}
+      <QuickMenuGrid userRole={userRole} pendingBookingsCount={pendingBookings} />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

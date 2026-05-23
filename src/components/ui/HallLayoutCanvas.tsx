@@ -500,7 +500,7 @@ export default function HallLayoutCanvas({
         {/* Label and Statistics */}
         <div className="w-full flex justify-between items-center z-10 mb-2 border-b border-white/5 pb-2">
           <div>
-            <h5 className="text-white text-xs font-black tracking-widest uppercase">PETA TATA LETAK GSG Tondo 2</h5>
+            <h5 className="text-white text-xs font-black tracking-widest uppercase">PETA TATA LETAK Gedung Serbaguna Huntap Tondo 2</h5>
             <p className="text-gray-400 text-[9px] font-black uppercase tracking-widest mt-0.5">Preset: {template.toUpperCase()} • Panggung: {stagePosition.toUpperCase()}</p>
           </div>
           <div className="flex gap-3 text-right">
@@ -591,7 +591,7 @@ export default function HallLayoutCanvas({
         
         {/* Footnotes indicator */}
         <p className="text-gray-500 text-[8px] font-black tracking-widest uppercase mt-3 text-center leading-relaxed">
-          Semua denah diatur dengan ruang jalan aman bencana • GSG Huntap Tondo 2
+          Semua denah diatur dengan ruang jalan aman bencana • Gedung Serbaguna Huntap Tondo 2
         </p>
       </div>
     </div>

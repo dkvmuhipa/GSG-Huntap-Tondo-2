@@ -45,7 +45,7 @@ export default function FeedbackSection() {
               Suara Penyewa
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight mb-6">
-              Bagaimana Pengalaman Anda di <span className="text-primary italic">GSG Tondo 2?</span>
+              Bagaimana Pengalaman Anda di <span className="text-primary italic">Gedung Serbaguna Huntap Tondo 2?</span>
             </h2>
             <p className="text-gray-500 font-medium text-lg leading-relaxed mb-8">
               Masukan Anda sangat berharga bagi kami untuk terus meningkatkan kualitas fasilitas dan pelayanan gedung pembangunan warga ini.

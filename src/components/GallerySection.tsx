@@ -45,7 +45,7 @@ export default function GallerySection() {
             Dokumentasi & Galeri
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
-            Lihat Rekam Jejak <span className="text-primary italic">GSG Tondo 2</span>
+            Lihat Rekam Jejak <span className="text-primary italic">Gedung Serbaguna Huntap Tondo 2</span>
           </h2>
           <p className="text-gray-500 max-w-2xl mx-auto font-medium">
             Koleksi foto fasilitas, kegiatan warga, dan berbagai acara yang telah sukses dilaksanakan di gedung kami.

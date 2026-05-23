@@ -10,6 +10,7 @@ import {
   User, 
   Phone, 
   FileText,
+  Receipt,
   Plus,
   ChevronDown,
   ExternalLink,
@@ -31,7 +32,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import { generateContract } from '../../services/contractService';
+import { generateContract, generateReceipt } from '../../services/contractService';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
@@ -585,9 +586,16 @@ export default function BookingManager() {
                                  <button 
                                    onClick={() => generateContract(booking)} 
                                    className="p-2 hover:bg-white rounded-xl text-blue-600 transition-all hover:shadow-sm" 
-                                   title="Cetak Kontrak (PDF)"
+                                   title="Cetak Surat Perjanjian Sewa Digital (PDF)"
                                  >
                                    <FileText className="w-4 h-4" />
+                                 </button>
+                                 <button 
+                                   onClick={() => generateReceipt(booking)} 
+                                   className="p-2 hover:bg-white rounded-xl text-emerald-600 transition-all hover:shadow-sm" 
+                                   title="Cetak Kuitansi Resmi Lunas/Invoice (PDF)"
+                                 >
+                                   <Receipt className="w-4 h-4" />
                                  </button>
                                </div>
                                
@@ -650,8 +658,11 @@ export default function BookingManager() {
                         <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100">
                           <MessageCircle className="w-4 h-4" /> WhatsApp
                         </a>
-                        <button onClick={() => generateContract(booking)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100">
-                          <Download className="w-4 h-4" /> Kontrak
+                        <button onClick={() => generateContract(booking)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100" title="Unduh Perjanjian Sewa">
+                          <FileText className="w-4 h-4" /> Kontrak
+                        </button>
+                        <button onClick={() => generateReceipt(booking)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-emerald-100" title="Unduh Kuitansi Pembayaran">
+                          <Receipt className="w-4 h-4" /> Kuitansi
                         </button>
                         <button onClick={() => handleDelete(booking.id)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100">
                           <Trash2 className="w-5 h-5" />
