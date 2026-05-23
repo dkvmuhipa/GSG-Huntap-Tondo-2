@@ -103,10 +103,11 @@ export default function TransparencyDashboard() {
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => {
         const cat = t.category || 'umum';
-        acc.set(cat, (acc.get(cat) || 0) + Math.abs(Number(t.amount) || 0));
+        const displayName = displayCategory(cat).toUpperCase();
+        acc.set(displayName, (acc.get(displayName) || 0) + Math.abs(Number(t.amount) || 0));
         return acc;
       }, new Map<string, number>())
-  ).map(([name, value]) => ({ name: displayCategory(name).toUpperCase(), value })).sort((a, b) => b.value - a.value).slice(0, 5);
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
@@ -566,7 +567,7 @@ export default function TransparencyDashboard() {
                 <PieChart>
                   <Pie data={categoryData.length > 0 ? categoryData : [{ name: 'N/A', value: 1 }]} innerRadius={45} outerRadius={60} paddingAngle={5} dataKey="value">
                     {categoryData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                    {categoryData.length === 0 && <Cell fill="#f1f5f9" />}
+                    {categoryData.length === 0 && <Cell key="empty-cell" fill="#f1f5f9" />}
                   </Pie>
                   <Tooltip />
                 </PieChart>

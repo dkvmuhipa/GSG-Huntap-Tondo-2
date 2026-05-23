@@ -1381,11 +1381,12 @@ export default function FinanceManager() {
       .filter(t => t.type === 'expense')
       .forEach(t => {
         const cat = t.category || 'umum';
-        cats[cat] = (cats[cat] || 0) + Math.abs(Number(t.amount) || 0);
+        const displayName = displayCategory(cat).toUpperCase();
+        cats[displayName] = (cats[displayName] || 0) + Math.abs(Number(t.amount) || 0);
       });
     
     return Object.entries(cats)
-      .map(([name, value]) => ({ name: displayCategory(name).toUpperCase(), value }))
+      .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [allTransactions, activeMonth, activeYear, filterMode]);
 
@@ -1673,7 +1674,7 @@ export default function FinanceManager() {
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
-                  {categoryData.length === 0 && <Cell fill="#f1f5f9" />}
+                  {categoryData.length === 0 && <Cell key="empty-cell" fill="#f1f5f9" />}
                 </Pie>
                 <Tooltip />
               </PieChart>

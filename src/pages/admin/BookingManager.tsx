@@ -21,7 +21,10 @@ import {
   MessageCircle,
   Zap,
   Check,
-  X
+  X,
+  LayoutGrid,
+  Warehouse,
+  Sparkles
 } from 'lucide-react';
 import { subscribeToBookings, updateBookingStatus, removeBooking, addBooking, recordBookingToFinance, subscribeToConfig } from '../../lib/db';
 import { jsPDF } from 'jspdf';
@@ -29,6 +32,9 @@ import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { generateContract } from '../../services/contractService';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -42,6 +48,10 @@ export default function BookingManager() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('list'); // 'list' or 'calendar'
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Layout Review Modal State
+  const [selectedBookingForLayoutReview, setSelectedBookingForLayoutReview] = useState<any | null>(null);
+  const [inventoryList, setInventoryList] = useState<any[]>([]);
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -78,9 +88,16 @@ export default function BookingManager() {
   useEffect(() => {
     const unsubBookings = subscribeToBookings((data) => setBookings(data));
     const unsubConfig = subscribeToConfig((data) => setConfig(data));
+    
+    // Subscribe to inventory items to map IDs to friendly names in Layout Modal
+    const unsubInv = onSnapshot(query(collection(db, 'inventory'), orderBy('name')), (snap) => {
+      setInventoryList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => console.warn("Error tracking inventory list:", err));
+
     return () => {
       unsubBookings();
       unsubConfig();
+      unsubInv();
     };
   }, []);
 
@@ -562,6 +579,7 @@ export default function BookingManager() {
                                )}
 
                                <div className="flex bg-gray-100 p-1.5 rounded-2xl items-center gap-1 shadow-inner">
+                                 <button onClick={() => setSelectedBookingForLayoutReview(booking)} className="p-2 hover:bg-white rounded-xl text-indigo-600 transition-all hover:shadow-sm" title="Tinjau Denah & Alat"><LayoutGrid className="w-4 h-4" /></button>
                                  <button onClick={() => sendWA(booking, 'approve')} className="p-2 hover:bg-white rounded-xl text-green-600 transition-all hover:shadow-sm" title="Kirim WA Setuju"><Check className="w-4 h-4" /></button>
                                  <button onClick={() => sendWA(booking, 'remind')} className="p-2 hover:bg-white rounded-xl text-primary transition-all hover:shadow-sm" title="Kirim WA Pengingat"><MessageCircle className="w-4 h-4" /></button>
                                  <button 
@@ -626,6 +644,9 @@ export default function BookingManager() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                        <button onClick={() => setSelectedBookingForLayoutReview(booking)} className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-indigo-100">
+                          <LayoutGrid className="w-4 h-4" /> Denah
+                        </button>
                         <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100">
                           <MessageCircle className="w-4 h-4" /> WhatsApp
                         </a>
@@ -781,6 +802,91 @@ export default function BookingManager() {
         message={confirmConfig.message}
         type={confirmConfig.type}
       />
+
+      {/* Tinjau Denah & Alat Modal Drawer */}
+      <AnimatePresence>
+        {selectedBookingForLayoutReview && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBookingForLayoutReview(null)} className="absolute inset-0 bg-gray-900/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] z-10">
+              <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                    <LayoutGrid className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-xl font-black text-gray-900">Denah Ruang & Alat Dipesan</h3>
+                    <p className="text-xs text-gray-500 font-bold mt-1">Pemohon: {selectedBookingForLayoutReview.customerName}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedBookingForLayoutReview(null)} className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-2xl"><XCircle className="w-6 h-6" /></button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div>
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1 block mb-3">Tata Letak Rencana Visual</span>
+                  <HallLayoutCanvas
+                    layoutData={{
+                      template: selectedBookingForLayoutReview.layoutDraft?.template || 'wedding',
+                      stagePosition: selectedBookingForLayoutReview.layoutDraft?.stagePosition || 'depan',
+                      tableQuantity: selectedBookingForLayoutReview.layoutDraft?.tableQuantity || 0,
+                      chairQuantity: selectedBookingForLayoutReview.layoutDraft?.chairQuantity || 0,
+                      selectedElementIds: selectedBookingForLayoutReview.layoutDraft?.selectedElementIds || []
+                    }}
+                    onChange={() => {}}
+                    interactive={false}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
+                    <Warehouse className="w-4 h-4 text-gray-400" />
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Detail Inventaris Untuk Acara Ini</h4>
+                  </div>
+
+                  <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100/50 space-y-2.5">
+                    {/* Render active selections */}
+                    {Object.entries(selectedBookingForLayoutReview.selectedInventory || {}).filter(([_, qty]) => Number(qty) > 0).length === 0 ? (
+                      <p className="text-xs text-gray-400 font-bold italic py-2 text-center">Tidak memesan alat tambahan.</p>
+                    ) : (
+                      Object.entries(selectedBookingForLayoutReview.selectedInventory || {}).map(([id, qty]) => {
+                        const invDoc = inventoryList.find(i => i.id === id);
+                        const cleanName = invDoc ? invDoc.name : (id === 'inv-kursi' ? 'Kursi Lipat Chitose' : id === 'inv-meja' ? 'Meja Bulat Banquet' : id);
+                        return (
+                          <div key={id} className="flex justify-between items-center text-xs text-gray-700 font-bold border-b border-gray-150/50 pb-2 last:border-none last:pb-0">
+                            <span className="text-gray-900">• {cleanName}</span>
+                            <span className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-primary font-mono font-black">{qty as number} Unit</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  {selectedBookingForLayoutReview.status === 'pending' && (
+                    <button 
+                      onClick={async () => {
+                        await handleStatusChange(selectedBookingForLayoutReview.id, 'approved');
+                        setSelectedBookingForLayoutReview(null);
+                      }} 
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-green-100 flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" /> SETUJUI BOOKING
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setSelectedBookingForLayoutReview(null)} 
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs uppercase tracking-widest py-4 rounded-2xl"
+                  >
+                    TUTUP TINJAUAN
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
