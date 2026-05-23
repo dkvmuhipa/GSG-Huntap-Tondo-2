@@ -22,3 +22,112 @@ body {
 .section-padding {
   @apply py-16 md:py-24;
 }
+
+@media print {
+  /* Completely hide standard web page noise */
+  nav,
+  footer,
+  aside,
+  header,
+  .print-hidden,
+  button,
+  .announcement-ticker,
+  #bottom-navbar {
+    display: none !important;
+  }
+
+  /* Reset layout structure for professional printable papers */
+  body,
+  html,
+  #root,
+  main {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main {
+    padding-top: 0.5cm !important;
+    padding-bottom: 0.5cm !important;
+  }
+
+  /* Expand max-width of container */
+  .max-w-4xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Typography formatting for high-contrast B&W */
+  h1, h2, h3, h4, p, span, li {
+    color: #111827 !important;
+  }
+
+  h1 {
+    font-size: 20pt !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h2 {
+    font-size: 14pt !important;
+    font-weight: 800 !important;
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Force display headings to render gracefully on white pages */
+  .text-transparent {
+    color: #111827 !important;
+    background-clip: unset !important;
+    -webkit-background-clip: unset !important;
+    background-image: none !important;
+  }
+
+  /* Custom section page breaking behavior */
+  section, 
+  .rounded-\[2rem\] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-bottom: 2rem !important;
+    background-color: transparent !important;
+  }
+
+  ul {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  li {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  li p {
+    color: #374151 !important;
+    font-size: 10.5pt !important;
+    font-weight: 500 !important;
+  }
+
+  /* Margin page specifications */
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+}
+

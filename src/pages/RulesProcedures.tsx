@@ -200,8 +200,22 @@ export default function RulesProcedures() {
             Kembali ke Beranda
           </Link>
 
+          {/* Official Document Letterhead (Kop Surat) - ONLY visible during Print */}
+          <div className="hidden print:block border-b-4 border-double border-gray-800 pb-5 mb-8 text-center text-black">
+            <div className="text-xs font-black uppercase tracking-[0.25em] text-gray-500 mb-2">RUKUN TETANGGA (RT) / KELURAHAN TONDO</div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight leading-none uppercase">
+              PENGURUS GEDUNG SERBAGUNA HUNTAP TONDO 2
+            </h1>
+            <p className="text-xs text-gray-600 font-bold mt-2 leading-relaxed">
+              Kecamatan Mantikulore, Kota Palu, Sulawesi Tengah - Indonesia • Kode Pos: 94119
+            </p>
+            <div className="text-[10px] text-gray-500 mt-1 uppercase font-black tracking-wide">
+              SURAT KEPUTUSAN TATA TERTIB & STANDARD OPERATING PROCEDURE (SOP) PENGGUNAAN GEDUNG
+            </div>
+          </div>
+
           {/* Header Block */}
-          <header className="mb-12 text-center md:text-left">
+          <header className="mb-12 text-center md:text-left print:hidden">
             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm print:hidden">
               <Scale className="w-4 h-4 text-indigo-500" />
               Surat Keputusan Pengurus & SOP Resmi
