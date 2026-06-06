@@ -1,10 +1,99 @@
 /**
+ * Compresses an image file on the client-side using the HTML5 Canvas API.
+ * Keeps non-image files intact, and preserves original file if compression does not reduce size.
+ * Targets maximum width/height of 1600px with 82% quality to stay under 4.5MB (Vercel payload limit).
+ */
+export async function compressImage(file: File, maxWidth = 1600, maxHeight = 1600, quality = 0.82): Promise<File> {
+  // Only compress images
+  if (!file.type.startsWith('image/')) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Apply max dimensions preserving aspect ratio
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file); // fallback if context fails
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to highly-compressed JPEG (highly optimized for photos/receipts)
+        // Except if it's png and we specifically want to preserve transparency, but for receipts, jpeg is ideal.
+        const outputType = 'image/jpeg';
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                type: outputType,
+                lastModified: Date.now(),
+              });
+              
+              // Only use compressed file if it actually reduces size
+              if (compressedFile.size < file.size) {
+                console.log(`[Compression] Succeeded: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+                resolve(compressedFile);
+              } else {
+                console.log(`[Compression] Ignored: Compressed was larger or equal. Original used: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+                resolve(file);
+              }
+            } else {
+              resolve(file); // fallback
+            }
+          },
+          outputType,
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}
+
+/**
  * Uploads a file to the backend API, which proxys it to Cloudinary.
  * @param file The file object to upload
  */
 export async function uploadToCloudinary(file: File): Promise<{ url: string; public_id: string }> {
+  // Compress the file if it's an image before sending to prevent Vercel's 4.5MB request limit
+  let processedFile = file;
+  if (file.type.startsWith('image/')) {
+    try {
+      console.log(`[Upload] Processing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      processedFile = await compressImage(file);
+    } catch (err) {
+      console.warn('[Upload] Image compression failed, uploading original', err);
+    }
+  }
+
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', processedFile);
 
   const response = await fetch('/api/upload', {
     method: 'POST',
@@ -38,3 +127,4 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
 
   throw new Error('Server mengembalikan format response yang tidak valid (bukan JSON).');
 }
+
