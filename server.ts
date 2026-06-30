@@ -21,8 +21,8 @@ async function startServer() {
     });
   }
 
-  // Multer for file uploads - use /tmp for serverless environments
-  const upload = multer({ dest: '/tmp' });
+  // Multer for file uploads - use memory storage for serverless environments (prevents read/write permission errors)
+  const upload = multer({ storage: multer.memoryStorage() });
 
   app.use(express.json());
 
@@ -54,19 +54,24 @@ async function startServer() {
         });
       }
 
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'gedung_serbaguna_huntap_tondo',
-        resource_type: 'auto', 
-      });
+      // Upload to Cloudinary using upload_stream (no need to write to disk /tmp)
+      const uploadFromBuffer = (fileBuffer: Buffer, originalName: string) => {
+        return new Promise<any>((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'gedung_serbaguna_huntap_tondo',
+              resource_type: 'auto',
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          );
+          stream.end(fileBuffer);
+        });
+      };
 
-      // Remove temp file
-      try {
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-      } catch (err) {
-        console.error('Error deleting temp file:', err);
-      }
+      const result = await uploadFromBuffer(req.file.buffer, req.file.originalname);
 
       let finalUrl = result.secure_url;
       const extension = result.format || req.file.originalname.split('.').pop()?.toLowerCase();
