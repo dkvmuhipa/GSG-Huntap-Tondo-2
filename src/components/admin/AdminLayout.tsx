@@ -31,12 +31,17 @@ export default function AdminLayout() {
           profile = { role: 'owner', displayName: 'System Owner' };
         }
 
-        // Direct lookup by email key
-        const docRef = doc(db, 'admins', userEmail);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          profile = docSnap.data();
+        try {
+          // Direct lookup by email key
+          const docRef = doc(db, 'admins', userEmail);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            profile = docSnap.data();
+          }
+        } catch (dbErr) {
+          console.warn("Could not fetch admin document from Firestore:", dbErr);
+          // Don't crash if they are already identified as owner
         }
 
         if (profile) {
@@ -110,10 +115,17 @@ export default function AdminLayout() {
           {error || "Sesi anda telah berakhir atau anda tidak memiliki akses ke area ini."}
         </p>
         <button 
-          onClick={() => navigate('/login', { replace: true })}
+          onClick={async () => {
+            try {
+              await logout();
+            } catch (err) {
+              console.error("Gagal log out:", err);
+            }
+            navigate('/login', { replace: true });
+          }}
           className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-blue-800 transition-all"
         >
-          Kembali ke Login
+          Keluar & Kembali ke Login
         </button>
       </div>
     </div>

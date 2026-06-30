@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Building2, ShieldCheck, ArrowRight, ExternalLink, AlertCircle } from 'lucide-react';
-import { loginWithGoogle, loginWithGoogleRedirect, getRedirectLoginResult, auth } from '../../lib/firebase';
+import { loginWithGoogle, loginWithGoogleRedirect, getRedirectLoginResult, auth, logout } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Login() {
@@ -90,13 +90,28 @@ export default function Login() {
         )}
 
         {auth.currentUser ? (
-          <button 
-            onClick={() => navigate('/admin')}
-            className="w-full bg-accent text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-lg shadow-accent/20 group"
-          >
-            Lanjut ke Dashboard
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
+          <div className="space-y-4">
+            <button 
+              onClick={() => navigate('/admin')}
+              className="w-full bg-accent text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-lg shadow-accent/20 group"
+            >
+              Lanjut ke Dashboard
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                  await logout();
+                  window.location.reload();
+                } catch (err) {
+                  console.error("Gagal log out:", err);
+                }
+              }}
+              className="w-full bg-white border-2 border-gray-100 text-red-600 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-red-50 transition-all shadow-sm"
+            >
+              Keluar / Ganti Akun
+            </button>
+          </div>
         ) : (
           <div className="space-y-4">
             <button 

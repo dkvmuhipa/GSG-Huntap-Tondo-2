@@ -1,19 +1,30 @@
 import express from 'express';
-import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+// Clean up invalid CLOUDINARY_URL from process.env immediately on load to prevent Cloudinary SDK from crashing the server
+if (process.env.CLOUDINARY_URL !== undefined) {
+  const url = process.env.CLOUDINARY_URL.trim();
+  if (url === '' || !url.startsWith('cloudinary://')) {
+    console.warn(`[Cloudinary Sanitize] Invalid CLOUDINARY_URL detected. Removing to prevent server crash.`);
+    delete process.env.CLOUDINARY_URL;
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Dynamically import cloudinary to guarantee process.env.CLOUDINARY_URL has been sanitized
+  const { v2: cloudinary } = await import('cloudinary');
 
   // Cloudinary Configuration
   if (process.env.CLOUDINARY_URL) {
     cloudinary.config({
       cloudinary_url: process.env.CLOUDINARY_URL
     });
-  } else {
+  } else if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
