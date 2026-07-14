@@ -27,24 +27,28 @@ import {
   Warehouse,
   Sparkles
 } from 'lucide-react';
-import { subscribeToBookings, updateBookingStatus, removeBooking, addBooking, recordBookingToFinance, subscribeToConfig } from '../../lib/db';
+import { updateBookingStatus, removeBooking, addBooking, recordBookingToFinance } from '../../lib/db';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { generateContract, generateReceipt } from '../../services/contractService';
 import { getTransparentPNG } from '../../lib/cloudinary';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
 
 import { useOutletContext } from 'react-router-dom';
 
+import BookingTable from '../../components/admin/booking/BookingTable';
+import BookingCalendar from '../../components/admin/booking/BookingCalendar';
+import BookingFormModal from '../../components/admin/booking/BookingFormModal';
+import LayoutReviewModal from '../../components/admin/booking/LayoutReviewModal';
+
 export default function BookingManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
   const auth = getAuth();
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
+  const bookings = useAppStore(state => state.bookings);
+  const config = useAppStore(state => state.config);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -53,7 +57,7 @@ export default function BookingManager() {
 
   // Layout Review Modal State
   const [selectedBookingForLayoutReview, setSelectedBookingForLayoutReview] = useState<any | null>(null);
-  const [inventoryList, setInventoryList] = useState<any[]>([]);
+  const inventoryList = useAppStore(state => state.inventory);
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -86,22 +90,6 @@ export default function BookingManager() {
     notes: '',
     autoFinance: true
   });
-
-  useEffect(() => {
-    const unsubBookings = subscribeToBookings((data) => setBookings(data));
-    const unsubConfig = subscribeToConfig((data) => setConfig(data));
-    
-    // Subscribe to inventory items to map IDs to friendly names in Layout Modal
-    const unsubInv = onSnapshot(query(collection(db, 'inventory'), orderBy('name')), (snap) => {
-      setInventoryList(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.warn("Error tracking inventory list:", err));
-
-    return () => {
-      unsubBookings();
-      unsubConfig();
-      unsubInv();
-    };
-  }, []);
 
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
@@ -574,312 +562,40 @@ export default function BookingManager() {
         <AnimatePresence mode="wait">
           {activeTab === 'list' ? (
             <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
-              {/* Desktop View Table */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50/50 border-b border-gray-100">
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-16">No</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Penyewa & WhatsApp</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu & Acara</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Keuangan</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredBookings.length === 0 ? (
-                      <tr><td colSpan={6} className="py-24 text-center italic text-gray-300 font-bold">Data booking tidak ditemukan...</td></tr>
-                    ) : (
-                      filteredBookings.map((booking, idx) => (
-                        <motion.tr key={booking.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
-                          <td className="px-6 py-6">
-                            <p className="font-black text-gray-900 leading-none">{booking.customerName}</p>
-                            <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter">
-                              <MessageCircle className="w-3 h-3" /> {booking.phone}
-                            </a>
-                          </td>
-                          <td className="px-6 py-6 font-bold">
-                            <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded">
-                              {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                              {booking.endDate && booking.endDate !== booking.startDate && ` - ${new Date(booking.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}`}
-                            </span>
-                            <p className="text-sm font-black text-gray-900 block mt-1">{booking.purpose}</p>
-                          </td>
-                          <td className="px-6 py-6 text-center">
-                            <div className="flex flex-col items-center gap-2">
-                              {getStatusBadge(booking.status)}
-                              <select value={booking.status} onChange={(e) => handleStatusChange(booking.id, e.target.value)} className="text-[9px] font-black text-gray-400 bg-transparent border-none appearance-none cursor-pointer hover:text-primary transition-colors text-center focus:ring-0">
-                                <option value="pending">PENDING</option>
-                                <option value="approved">SETUJU</option>
-                                <option value="completed">SELESAI</option>
-                                <option value="rejected">TOLAK</option>
-                              </select>
-                            </div>
-                          </td>
-                          <td className="px-6 py-6 text-center">
-                            <p className="text-sm font-black text-gray-900 mb-1.5">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
-                            <button 
-                              onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
-                              className={`px-3 py-1 rounded-full text-[9px] font-black transition-all border ${booking.paymentStatus === 'paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'}`}
-                            >
-                              {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
-                            </button>
-                          </td>
-                          <td className="px-6 py-6 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                               {booking.status === 'pending' && (
-                                 <div className="flex bg-blue-50 p-1.5 rounded-2xl items-center gap-1 shadow-inner border border-blue-100">
-                                   <button 
-                                     onClick={() => handleStatusChange(booking.id, 'approved')} 
-                                     className="px-3 py-2 bg-white hover:bg-green-500 hover:text-white rounded-xl text-green-600 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
-                                   >
-                                     <Check className="w-3 h-3" /> SETUJUI
-                                   </button>
-                                   <button 
-                                     onClick={() => handleStatusChange(booking.id, 'rejected')} 
-                                     className="px-3 py-2 bg-white hover:bg-red-500 hover:text-white rounded-xl text-red-500 transition-all font-black text-[9px] uppercase tracking-tighter flex items-center gap-1 shadow-sm"
-                                   >
-                                     <X className="w-3 h-3" /> TOLAK
-                                   </button>
-                                 </div>
-                               )}
-
-                               <div className="flex bg-gray-100 p-1.5 rounded-2xl items-center gap-1 shadow-inner">
-                                 <button onClick={() => setSelectedBookingForLayoutReview(booking)} className="p-2 hover:bg-white rounded-xl text-indigo-600 transition-all hover:shadow-sm" title="Tinjau Denah & Alat"><LayoutGrid className="w-4 h-4" /></button>
-                                 <button onClick={() => sendWA(booking, 'approve')} className="p-2 hover:bg-white rounded-xl text-green-600 transition-all hover:shadow-sm" title="Kirim WA Setuju"><Check className="w-4 h-4" /></button>
-                                 <button onClick={() => sendWA(booking, 'remind')} className="p-2 hover:bg-white rounded-xl text-primary transition-all hover:shadow-sm" title="Kirim WA Pengingat"><MessageCircle className="w-4 h-4" /></button>
-                                 <button 
-                                   onClick={() => generateContract(booking)} 
-                                   className="p-2 hover:bg-white rounded-xl text-blue-600 transition-all hover:shadow-sm" 
-                                   title="Cetak Surat Perjanjian Sewa Digital (PDF)"
-                                 >
-                                   <FileText className="w-4 h-4" />
-                                 </button>
-                                 <button 
-                                   onClick={() => generateReceipt(booking)} 
-                                   className="p-2 hover:bg-white rounded-xl text-emerald-600 transition-all hover:shadow-sm" 
-                                   title="Cetak Kuitansi Resmi Lunas/Invoice (PDF)"
-                                 >
-                                   <Receipt className="w-4 h-4" />
-                                 </button>
-                               </div>
-                               
-                               <button 
-                                 onClick={() => handleDelete(booking.id)} 
-                                 className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-2xl group shadow-sm"
-                                 title="Hapus Data Booking"
-                               >
-                                 <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                               </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile View Card List */}
-              <div className="lg:hidden p-4 space-y-4">
-                {filteredBookings.length === 0 ? (
-                  <div className="py-20 text-center italic text-gray-300 font-bold">Data booking tidak ditemukan...</div>
-                ) : (
-                  filteredBookings.map((booking, idx) => (
-                    <motion.div 
-                      key={booking.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-black text-gray-900 text-lg">{booking.customerName}</p>
-                          <p className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tighter">
-                            {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </p>
-                        </div>
-                        {getStatusBadge(booking.status)}
-                      </div>
-
-                      <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <p className="text-sm font-bold text-gray-700">{booking.purpose}</p>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Zap className="w-4 h-4 text-gray-400" />
-                            <p className="text-sm font-black text-primary">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
-                          </div>
-                          <button 
-                            onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border shadow-sm active:scale-95 ${
-                              booking.paymentStatus === 'paid' 
-                                ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
-                                : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
-                            }`}
-                          >
-                            {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                        <button onClick={() => setSelectedBookingForLayoutReview(booking)} className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-indigo-100">
-                          <LayoutGrid className="w-4 h-4" /> Denah
-                        </button>
-                        <a href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100">
-                          <MessageCircle className="w-4 h-4" /> WhatsApp
-                        </a>
-                        <button onClick={() => generateContract(booking)} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100" title="Unduh Perjanjian Sewa">
-                          <FileText className="w-4 h-4" /> Kontrak
-                        </button>
-                        <button onClick={() => generateReceipt(booking)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-emerald-100" title="Unduh Kuitansi Pembayaran">
-                          <Receipt className="w-4 h-4" /> Kuitansi
-                        </button>
-                        <button onClick={() => handleDelete(booking.id)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-
-                      {booking.status === 'pending' && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <button onClick={() => handleStatusChange(booking.id, 'approved')} className="bg-green-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-green-200">Setujui</button>
-                          <button onClick={() => handleStatusChange(booking.id, 'rejected')} className="bg-red-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-red-200">Tolak</button>
-                        </div>
-                      )}
-                    </motion.div>
-                  ))
-                )}
-              </div>
+              <BookingTable 
+                filteredBookings={filteredBookings}
+                handlePaymentStatusChange={handlePaymentStatusChange}
+                setSelectedBookingForLayoutReview={setSelectedBookingForLayoutReview}
+                generateContract={generateContract}
+                generateReceipt={generateReceipt}
+                handleDelete={handleDelete}
+                handleStatusChange={handleStatusChange}
+              />
             </motion.div>
           ) : (
-            <motion.div key="calendar" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="p-8">
-              <div className="grid grid-cols-7 gap-px bg-gray-100 border border-gray-100 rounded-[2rem] overflow-hidden">
-                {['Ming', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map(d => (
-                  <div key={d} className="bg-gray-50 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">{d}</div>
-                ))}
-                {calendarDays.map((dayObj, i) => (
-                  <div key={i} className={`min-h-[100px] bg-white p-3 transition-colors ${!dayObj ? 'bg-gray-50/50' : 'hover:bg-gray-50/30'}`}>
-                    {dayObj && (
-                      <>
-                        <span className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg ${dayObj.day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() ? 'bg-primary text-white shadow-lg' : 'text-gray-300 font-bold'}`}>{dayObj.day}</span>
-                        <div className="mt-2 space-y-1">
-                          {dayObj.bookings.map((b: any) => (
-                            <div key={b.id} className="p-1 px-1.5 bg-primary/5 rounded border-l-2 border-primary text-[8px] font-black text-primary truncate leading-tight group relative cursor-help">
-                              {b.purpose}
-                              <div className="absolute z-20 hidden group-hover:block bg-gray-900 text-white p-2 rounded-xl text-[10px] left-0 bottom-full mb-2 w-32 shadow-xl whitespace-normal font-bold">
-                                {b.customerName}: {b.purpose}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <motion.div key="calendar" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}>
+              <BookingCalendar 
+                calendarDays={calendarDays}
+                currentMonth={currentMonth}
+              />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <AnimatePresence>
-        {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-gray-900/60 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh]">
-              <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <div>
-                  <h3 className="text-xl font-black text-gray-900">Input Booking Gedung</h3>
-                  <p className="text-xs text-gray-500 font-bold mt-1">Sertakan detail acara dengan lengkap.</p>
-                </div>
-                <button onClick={() => setIsAddModalOpen(false)} className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-2xl"><XCircle className="w-6 h-6" /></button>
-              </div>
+      <BookingFormModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleSubmit}
+      />
 
-              <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyewa</label>
-                    <input required type="text" value={formData.customerName} onChange={(e) => setFormData({...formData, customerName: e.target.value})} placeholder="Nama Bpk/Ibu..." className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">WhatsApp</label>
-                    <input required type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="08..." className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">NIK (Opsional)</label>
-                    <input type="text" value={formData.nik} onChange={(e) => setFormData({...formData, nik: e.target.value})} placeholder="16 Digit NIK" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Instansi</label>
-                    <input type="text" value={formData.organization} onChange={(e) => setFormData({...formData, organization: e.target.value})} placeholder="Jika ada..." className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Alamat Domisili</label>
-                  <textarea rows={2} value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} placeholder="Alamat lengkap pemohon..." className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tujuan / Nama Acara</label>
-                  <input required type="text" value={formData.purpose} onChange={(e) => setFormData({...formData, purpose: e.target.value})} placeholder="Contoh: Resepsi Pernikahan..." className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Mulai Acara</label>
-                    <input required type="date" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Selesai Acara (Opsional)</label>
-                    <input type="date" value={formData.endDate} onChange={(e) => setFormData({...formData, endDate: e.target.value})} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-
-                  {formData.startDate && formData.endDate && formData.startDate !== formData.endDate && (
-                    <div className="md:col-span-2 px-5 py-3 bg-blue-50 rounded-2xl flex items-center gap-3">
-                      <Zap className="w-4 h-4 text-primary" />
-                      <p className="text-[10px] font-bold text-primary uppercase">
-                        Sewa Multi-Hari Terdeteksi: {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 3600 * 24)) + 1} Hari Terblokir
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
-                      {formData.endDate && formData.endDate !== formData.startDate ? 'Jam Mulai (Hari Ke-1)' : 'Jam Mulai'}
-                    </label>
-                    <input type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
-                      {formData.endDate && formData.endDate !== formData.startDate ? 'Jam Selesai (Hari Terakhir)' : 'Jam Selesai'}
-                    </label>
-                    <input type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Estimasi Tamu</label>
-                    <input type="number" value={formData.guests} onChange={(e) => setFormData({...formData, guests: e.target.value})} placeholder="Orang" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Biaya Sewa (Rp)</label>
-                    <input required type="number" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} placeholder="500000" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-900 shadow-inner text-lg" />
-                  </div>
-                </div>
-                
-                <button type="submit" className="w-full bg-primary text-white py-5 rounded-[2rem] font-black shadow-xl shadow-primary/30 hover:-translate-y-1 transition-all mt-4">SIMPAN JADWAL BOOKING</button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <LayoutReviewModal 
+        selectedBooking={selectedBookingForLayoutReview}
+        onClose={() => setSelectedBookingForLayoutReview(null)}
+        inventoryList={inventoryList}
+      />
 
       <ConfirmModal 
         isOpen={confirmConfig.isOpen}

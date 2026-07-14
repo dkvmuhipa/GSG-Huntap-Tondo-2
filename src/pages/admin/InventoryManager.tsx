@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useAppStore } from '../../store/useAppStore';
 
 interface InventoryItem {
   id: string;
@@ -37,9 +38,8 @@ interface MaintenanceLog {
 }
 
 export default function InventoryManager() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const items = useAppStore(state => state.inventory);
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'inventory' | 'logs'>('inventory');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,17 +55,11 @@ export default function InventoryManager() {
   });
 
   useEffect(() => {
-    const unsubItems = onSnapshot(query(collection(db, 'inventory'), orderBy('name')), (snap) => {
-      setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem)));
-      setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'inventory'));
-
     const unsubLogs = onSnapshot(query(collection(db, 'maintenance_logs'), orderBy('date', 'desc')), (snap) => {
       setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceLog)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'maintenance_logs'));
 
     return () => {
-      unsubItems();
       unsubLogs();
     };
   }, []);

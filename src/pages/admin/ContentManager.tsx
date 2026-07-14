@@ -15,7 +15,8 @@ import {
   Image as ImageIcon,
   Upload
 } from 'lucide-react';
-import { subscribeToConfig, updateGlobalConfig, subscribeToFacilities, upsertFacility, removeFacility } from '../../lib/db';
+import { updateGlobalConfig, upsertFacility, removeFacility } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
 import { useOutletContext } from 'react-router-dom';
@@ -25,9 +26,9 @@ export default function ContentManager() {
   const isAuthorized = ['owner', 'admin', 'editor', 'bendahara'].includes(userRole);
   const canEditFinancials = ['owner', 'admin', 'bendahara'].includes(userRole);
 
+  const storeConfig = useAppStore(state => state.config);
+  const facilities = useAppStore(state => state.facilities);
   const [config, setConfig] = useState<any>(null);
-
-  const [facilities, setFacilities] = useState<any[]>([]);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
 
   // Confirm Modal State
@@ -56,13 +57,10 @@ export default function ContentManager() {
   });
 
   useEffect(() => {
-    const unsubConfig = subscribeToConfig(data => setConfig(data));
-    const unsubFac = subscribeToFacilities(data => setFacilities(data));
-    return () => {
-      unsubConfig();
-      unsubFac();
-    };
-  }, []);
+    if (storeConfig) {
+      setConfig(storeConfig);
+    }
+  }, [storeConfig]);
 
   const handleDeleteFacility = (id: string, title: string) => {
     setConfirmModal({

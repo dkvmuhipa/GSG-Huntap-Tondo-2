@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown } from 'lucide-react';
-import { subscribeToConfig, subscribeToTransactions } from '../lib/db';
+import { useAppStore } from '../store/useAppStore';
 import { 
   BarChart, 
   Bar, 
@@ -40,21 +40,11 @@ export default function TransparencyDashboard() {
     return map[cat] || cat || 'Umum';
   };
 
-  const [config, setConfig] = useState<any>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const config = useAppStore(state => state.config);
+  const transactions = useAppStore(state => state.transactions);
   const [activeMonth, setActiveMonth] = useState('all');
   const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
   const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
-
-  useEffect(() => {
-    const unsubConfig = subscribeToConfig((data) => setConfig(data));
-    // Subscribe to all to keep balances accurate, filter list/charts client-side
-    const unsubTx = subscribeToTransactions((data) => setTransactions(data));
-    return () => {
-      unsubConfig();
-      unsubTx();
-    };
-  }, []);
 
   const totalDevFund = transactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
   const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);

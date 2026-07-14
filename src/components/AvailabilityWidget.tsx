@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, MapPin, Search, FileDown, CheckCircle, AlertTriangle, FileText, Receipt } from 'lucide-react';
-import { subscribeToBookings, checkCurrentAvailability, subscribeToConfig } from '../lib/db';
+import { checkCurrentAvailability } from '../lib/db';
+import { useAppStore } from '../store/useAppStore';
 import CalendarModal from './ui/CalendarModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,22 +10,13 @@ import { generateContract, generateReceipt } from '../services/contractService';
 import { getTransparentPNG } from '../lib/cloudinary';
 
 export default function AvailabilityWidget() {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
+  const bookings = useAppStore(state => state.bookings);
+  const config = useAppStore(state => state.config);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [phoneToTrack, setPhoneToTrack] = useState('');
   const [trackedBooking, setTrackedBooking] = useState<any>(null);
   const [trackingError, setTrackingError] = useState('');
   const [isTracking, setIsTracking] = useState(false);
-
-  useEffect(() => {
-    const unsubBookings = subscribeToBookings((data) => setBookings(data));
-    const unsubConfig = subscribeToConfig((data) => setConfig(data));
-    return () => {
-      unsubBookings();
-      unsubConfig();
-    };
-  }, []);
 
   const handleTrack = () => {
     if (!phoneToTrack) return;

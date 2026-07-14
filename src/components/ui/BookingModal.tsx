@@ -24,9 +24,8 @@ import {
   Warehouse,
   Flame
 } from 'lucide-react';
-import { addBooking, subscribeToFacilities, subscribeToBookings } from '../../lib/db';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { addBooking } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas, { HallLayoutData, LayoutTemplate, StagePosition } from './HallLayoutCanvas';
 
 // Fallback Inventory items with standard pricing if Firestore behaves empty
@@ -49,9 +48,9 @@ interface BookingModalProps {
 export default function BookingModal({ isOpen, onClose, selectedPackage }: BookingModalProps) {
   const [step, setStep] = useState(1);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [dbInventory, setDbInventory] = useState<any[]>([]);
+  const packages = useAppStore(state => state.facilities);
+  const bookings = useAppStore(state => state.bookings);
+  const dbInventory = useAppStore(state => state.inventory);
 
   const TERMS = [
     "Pembayaran DP minimal 30% dilakukan maksimal 3 hari setelah permohonan disetujui.",
@@ -114,41 +113,17 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return;
-    
-    const unsubFac = subscribeToFacilities((data) => {
-      setPackages(data);
-      if (selectedPackage) {
-        const pkg = data.find(p => p.title === selectedPackage);
-        if (pkg) {
-          const numericPrice = parseInt(pkg.price.replace(/[^0-9]/g, '')) || 0;
-          setFormData(prev => ({ 
-            ...prev, 
-            packageName: pkg.title, 
-            amount: numericPrice 
-          }));
-        }
-      }
-    });
-
-    const unsubBook = subscribeToBookings((data) => {
-      setBookings(data);
-    });
-
-    // Subscribe to Firestore warehouse inventory items
-    const unsubInv = onSnapshot(query(collection(db, 'inventory'), orderBy('name')), (snap) => {
-      const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDbInventory(items);
-    }, (err) => {
-      console.warn("Inventory subscription error: using default presets", err);
-    });
-
-    return () => {
-      unsubFac();
-      unsubBook();
-      unsubInv();
-    };
-  }, [isOpen, selectedPackage]);
+    if (!isOpen || !selectedPackage || packages.length === 0) return;
+    const pkg = packages.find(p => p.title === selectedPackage);
+    if (pkg) {
+      const numericPrice = parseInt(pkg.price.replace(/[^0-9]/g, '')) || 0;
+      setFormData(prev => ({ 
+        ...prev, 
+        packageName: pkg.title, 
+        amount: numericPrice 
+      }));
+    }
+  }, [isOpen, selectedPackage, packages]);
 
   // Combine DB inventory and default inventory to ensure data is always present
   const availableInventory = React.useMemo(() => {

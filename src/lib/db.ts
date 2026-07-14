@@ -127,7 +127,7 @@ export const subscribeToTransactions = (
 ) => {
   const colRef = collection(db, 'transactions');
   // Avoid composite index requirement by using only one orderBy
-  // We'll sort secondary fields client-side if needed
+  // We'll sort secondary fields client-side to prevent app crash if composite index is not set up
   let q = query(colRef, orderBy('date', 'desc'));
   if (limitCount && limitCount > 0) {
     q = query(colRef, orderBy('date', 'desc'), limit(limitCount));
@@ -136,7 +136,7 @@ export const subscribeToTransactions = (
   return onSnapshot(q, (snapshot) => {
     let txs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    // Secondary sort: if dates are same, sort by createdAt desc
+    // Secondary sort client-side: if dates are same, sort by createdAt desc
     txs.sort((a: any, b: any) => {
       if (a.date > b.date) return -1;
       if (a.date < b.date) return 1;
@@ -382,3 +382,13 @@ export const recordBookingToFinance = async (booking: any, authorInfo?: { email:
     handleFirestoreError(err, OperationType.WRITE, 'integration/booking-finance');
   }
 };
+
+// Inventory
+export const subscribeToInventory = (callback: (data: any[]) => void) => {
+  const colRef = collection(db, 'inventory');
+  const q = query(colRef, orderBy('name'));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory'));
+};
+

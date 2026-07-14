@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { PartyPopper, Dumbbell, Users2, Music, Check, Info, Building2, Calendar, Heart, Utensils, Clock } from 'lucide-react';
-import { subscribeToFacilities, subscribeToBookings, checkCurrentAvailability, subscribeToConfig } from '../lib/db';
+import { checkCurrentAvailability } from '../lib/db';
+import { useAppStore } from '../store/useAppStore';
 
 const ICON_MAP: { [key: string]: any } = {
   PartyPopper,
@@ -19,20 +20,9 @@ interface FacilitiesGridProps {
 }
 
 export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
-  const [facilities, setFacilities] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
-
-  useEffect(() => {
-    const unsubFac = subscribeToFacilities((data) => setFacilities(data));
-    const unsubBook = subscribeToBookings((data) => setBookings(data));
-    const unsubConfig = subscribeToConfig((data) => setConfig(data));
-    return () => {
-      unsubFac();
-      unsubBook();
-      unsubConfig();
-    };
-  }, []);
+  const facilities = useAppStore(state => state.facilities);
+  const bookings = useAppStore(state => state.bookings);
+  const config = useAppStore(state => state.config);
 
   const displayFacilities = facilities.length > 0 ? facilities : [
     {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, Info } from 'lucide-react';
-import { subscribeToBookings } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import '../../calendar.css'; // We'll create this for custom styling
@@ -12,18 +12,16 @@ interface CalendarModalProps {
 }
 
 export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const bookingsFromStore = useAppStore(state => state.bookings);
+  const bookingsLoaded = useAppStore(state => state.isBookingsLoaded);
+
+  const bookings = React.useMemo(() => {
+    return bookingsFromStore.filter(b => b.status === 'approved' || b.status === 'completed');
+  }, [bookingsFromStore]);
+
+  const loading = !bookingsLoaded;
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [activeDateBookings, setActiveDateBookings] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    return subscribeToBookings((data) => {
-      setBookings(data.filter(b => b.status === 'approved' || b.status === 'completed'));
-      setLoading(false);
-    });
-  }, [isOpen]);
 
   useEffect(() => {
     if (!selectedDate) {

@@ -114,7 +114,7 @@ service cloud.firestore {
 
     function isValidContract(data) {
       return data.keys().hasAll(['bookingId', 'generatedAt', 'status']) &&
-             data.bookingId is string &&
+             isValidId(data.bookingId) &&
              data.generatedAt is timestamp &&
              data.status in ['draft', 'signed', 'archived'];
     }
@@ -194,9 +194,9 @@ service cloud.firestore {
 
     // Kontrak Digital
     match /e_contracts/{docId} {
-      allow read: if hasAnyRole(['owner', 'admin', 'bendahara']);
-      allow create, update: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidContract(incoming());
-      allow delete: if isSuperAdmin();
+      allow read: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidId(docId);
+      allow create, update: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidId(docId) && isValidContract(incoming());
+      allow delete: if isSuperAdmin() && isValidId(docId);
     }
   }
 }

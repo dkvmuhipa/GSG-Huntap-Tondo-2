@@ -19,7 +19,20 @@ async function startServer() {
   }
 
   // Multer for file uploads - use memory storage for serverless environments (prevents read/write permission errors)
-  const upload = multer({ storage: multer.memoryStorage() });
+  const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedMimeTypes = ['image/png', 'image/jpeg', 'application/pdf'];
+      if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Jenis file tidak diizinkan. Hanya file PDF, PNG, dan JPEG/JPG yang diperbolehkan.'));
+      }
+    }
+  });
 
   app.use(express.json());
 
@@ -35,7 +48,19 @@ async function startServer() {
   });
 
   // Upload API
-  app.post('/api/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/upload', (req, res, next) => {
+    upload.single('file')(req, res, (err: any) => {
+      if (err) {
+        console.error('Multer upload error:', err.message);
+        let errMsg = err.message;
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          errMsg = 'Ukuran file melebihi batas maksimal 5MB.';
+        }
+        return res.status(400).json({ error: errMsg });
+      }
+      next();
+    });
+  }, async (req, res) => {
     console.log('Received upload request:', req.file?.originalname);
     try {
       if (!req.file) {
@@ -122,8 +147,20 @@ async function startServer() {
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Express Error:', err);
     if (res.headersSent) return next(err);
-    res.status(err.status || 500).json({
-      error: err.message || 'Internal Server Error'
+    
+    let status = err.status || 500;
+    let errorMessage = err.message || 'Internal Server Error';
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      status = 400;
+      errorMessage = 'Ukuran file terlalu besar. Maksimal ukuran file adalah 5MB.';
+    } else if (err.message && err.message.includes('Jenis file tidak diizinkan')) {
+      status = 400;
+      errorMessage = err.message;
+    }
+
+    res.status(status).json({
+      error: errorMessage
     });
   });
 

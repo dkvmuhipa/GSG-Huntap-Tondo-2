@@ -23,30 +23,18 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { subscribeToTransactions, subscribeToConfig, syncFinanceTotals, subscribeToAdmins, subscribeToBookings, checkCurrentAvailability } from '../../lib/db';
+import { syncFinanceTotals, checkCurrentAvailability } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 
 import { useOutletContext } from 'react-router-dom';
 import QuickMenuGrid from '../../components/admin/QuickMenuGrid';
 
 export default function DashboardOverview() {
   const { userRole } = useOutletContext<{ userRole: string }>();
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
-  const [adminCount, setAdminCount] = useState(0);
-
-  useEffect(() => {
-    const unsubTx = subscribeToTransactions(setTransactions);
-    const unsubConfig = subscribeToConfig(setConfig);
-    const unsubAdmins = subscribeToAdmins((data) => setAdminCount(data.length));
-    const unsubBookings = subscribeToBookings(setBookings);
-    return () => {
-      unsubTx();
-      unsubConfig();
-      unsubAdmins();
-      unsubBookings();
-    };
-  }, []);
+  const transactions = useAppStore(state => state.transactions);
+  const bookings = useAppStore(state => state.bookings);
+  const config = useAppStore(state => state.config);
+  const adminCount = useAppStore(state => state.admins.length);
 
   const availability = checkCurrentAvailability(bookings, config, 'all');
 

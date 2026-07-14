@@ -14,13 +14,12 @@ import {
   Upload
 } from 'lucide-react';
 import { 
-  subscribeToAdmins, 
   addAdminAccount, 
   updateAdminAccount,
   removeAdminAccount,
-  subscribeToConfig,
   updateGlobalConfig
 } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmModal from '../../components/ui/ConfirmModal';
@@ -38,9 +37,10 @@ export default function AccountRules() {
   const { userRole } = useOutletContext<{ userRole: string }>();
   const isAuthorized = ['owner', 'admin'].includes(userRole);
   
-  const [admins, setAdmins] = useState<AdminAccount[]>([]);
+  const admins = useAppStore(state => state.admins);
+  const storeConfig = useAppStore(state => state.config);
+  const isLoaded = useAppStore(state => state.isAdminsLoaded && state.isConfigLoaded);
   const [config, setConfig] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -110,22 +110,10 @@ export default function AccountRules() {
   });
 
   useEffect(() => {
-    if (!isAuthorized) return;
-    
-    const unsubAdmins = subscribeToAdmins((data) => {
-      setAdmins(data as AdminAccount[]);
-      setLoading(false);
-    });
-
-    const unsubConfig = subscribeToConfig((data) => {
-      setConfig(data);
-    });
-
-    return () => {
-      unsubAdmins();
-      unsubConfig();
-    };
-  }, [isAuthorized]);
+    if (storeConfig) {
+      setConfig(storeConfig);
+    }
+  }, [storeConfig]);
 
   const handleSaveConfig = async () => {
     if (!isAuthorized) return;
@@ -619,7 +607,7 @@ export default function AccountRules() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {loading ? (
+                  {!isLoaded ? (
                     <tr>
                       <td colSpan={3} className="px-8 py-20 text-center">
                         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />

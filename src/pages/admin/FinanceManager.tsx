@@ -38,16 +38,13 @@ import {
   Pie
 } from 'recharts';
 import { 
-  subscribeToTransactions, 
-  getAllTransactions,
   addTransaction, 
   updateTransaction, 
   removeTransaction, 
   syncFinanceTotals, 
-  subscribeToConfig, 
-  updateGlobalConfig,
-  subscribeToAdmins
+  updateGlobalConfig
 } from '../../lib/db';
+import { useAppStore } from '../../store/useAppStore';
 import { uploadToCloudinary, getTransparentPNG } from '../../lib/cloudinary';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { auth } from '../../lib/firebase';
@@ -56,6 +53,11 @@ import autoTable from 'jspdf-autotable';
 import { terbilang } from '../../services/contractService';
 
 import { useOutletContext } from 'react-router-dom';
+
+import FinanceCharts from '../../components/admin/finance/FinanceCharts';
+import ExportButton from '../../components/admin/finance/ExportButton';
+import TransactionTable from '../../components/admin/finance/TransactionTable';
+import TransactionFormModal from '../../components/admin/finance/TransactionFormModal';
 
 const AUTO_CATEGORIES = [
   {
@@ -94,22 +96,18 @@ export default function FinanceManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
   const isAuthorized = ['owner', 'admin', 'finance', 'bendahara'].includes(userRole);
   
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [allTransactions, setAllTransactions] = useState<any[]>(() => {
-    try {
-      const cached = localStorage.getItem('gsg_all_transactions_cache');
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      console.error("Error reading financial local cache:", e);
-      return [];
-    }
-  });
+  const allTransactions = useAppStore(state => state.transactions);
+  const config = useAppStore(state => state.config);
+  const admins = useAppStore(state => state.admins);
   const [limitCount, setLimitCount] = useState(20);
+
+  const transactions = useMemo(() => {
+    return allTransactions.slice(0, limitCount);
+  }, [allTransactions, limitCount]);
+
   const [isMainLoading, setIsMainLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const [admins, setAdmins] = useState<any[]>([]);
-  const [config, setConfig] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -278,61 +276,12 @@ export default function FinanceManager() {
     });
   };
 
-  // 1. Silent Background Full Sync on mount (for robust, 100% accurate statistics & offline availability)
+  // Sync transactions cache for offline resilience
   useEffect(() => {
-    const fetchFullTransactions = async () => {
-      setIsMainLoading(true);
-      try {
-        const fullList = await getAllTransactions();
-        if (fullList && fullList.length > 0) {
-          setAllTransactions(fullList);
-          localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(fullList));
-        }
-      } catch (err) {
-        console.error("Failed to fetch all transactions for cache/stats:", err);
-      } finally {
-        setIsMainLoading(false);
-      }
-    };
-    fetchFullTransactions();
-  }, []);
-
-  // 2. Real-time Subscription with limit for rendering efficiency
-  useEffect(() => {
-    setIsLoadingMore(true);
-    const unsubTx = subscribeToTransactions((data) => {
-      setTransactions(data);
-      setIsLoadingMore(false);
-    }, undefined, limitCount);
-    
-    const unsubConfig = subscribeToConfig(setConfig);
-    const unsubAdmins = subscribeToAdmins(setAdmins);
-    
-    return () => {
-      unsubTx();
-      unsubConfig();
-      unsubAdmins();
-    };
-  }, [limitCount]);
-
-  // 3. Keep real-time edits, additions within the limit synchronized in the local full list
-  useEffect(() => {
-    if (transactions.length > 0) {
-      setAllTransactions(prev => {
-        const map = new Map(prev.map(t => [t.id, t]));
-        transactions.forEach(t => {
-          map.set(t.id, t);
-        });
-        const merged = Array.from(map.values()).sort((a: any, b: any) => {
-          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-          if (dateDiff !== 0) return dateDiff;
-          return String(b.id || '').localeCompare(String(a.id || ''));
-        });
-        localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(merged));
-        return merged;
-      });
+    if (allTransactions.length > 0) {
+      localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(allTransactions));
     }
-  }, [transactions]);
+  }, [allTransactions]);
 
   useEffect(() => {
     if (config?.devFundRate) {
@@ -567,7 +516,9 @@ export default function FinanceManager() {
     
     doc.setTextColor(textDark[0], textDark[1], textDark[2]);
     doc.setFont('helvetica', 'normal');
-    const paymentText = `${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'RESERVASI GEDUNG'}`;
+    const paymentText = tx.type === 'income'
+      ? (tx.notes ? tx.notes.toUpperCase() : `RESERVASI GEDUNG - ${displayCategory(tx.category).toUpperCase()}`)
+      : `${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'PENGELUARAN'}`;
     const paymentLines = doc.splitTextToSize(paymentText, 152);
     doc.text(paymentLines, valueX, paymentY + 3.5);
     const paymentHeight = (paymentLines.length - 1) * 4.5;
@@ -1002,11 +953,6 @@ export default function FinanceManager() {
   const confirmDeleteTransaction = async () => {
     try {
       await removeTransaction(confirmModal.transactionId);
-      setAllTransactions(prev => {
-        const next = prev.filter(t => t.id !== confirmModal.transactionId);
-        localStorage.setItem('gsg_all_transactions_cache', JSON.stringify(next));
-        return next;
-      });
     } catch (err) {
       console.error("Delete error:", err);
     }
@@ -1754,13 +1700,10 @@ export default function FinanceManager() {
               </div>
             </div>
 
-            <button 
+            <ExportButton 
+              type="csv"
               onClick={exportCSV}
-              className="px-5 py-3 rounded-2xl bg-white border border-gray-100 text-gray-700 text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
-            >
-              <Download className="w-4 h-4 text-primary" />
-              EKSPOR CSV
-            </button>
+            />
 
             <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block" />
 
@@ -1791,13 +1734,10 @@ export default function FinanceManager() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 md:justify-end shrink-0">
-          <button 
+          <ExportButton 
+            type="pdf"
             onClick={exportToPDF}
-            className="flex items-center gap-2 px-6 py-4 rounded-3xl bg-gray-900 text-white text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200"
-          >
-            <Download className="w-4 h-4" />
-            Download PDF
-          </button>
+          />
           <button 
             onClick={() => {
               setIsCategoryManuallySelected(false);
@@ -1915,98 +1855,11 @@ export default function FinanceManager() {
       </div>
 
       {/* Charts & Insights Section */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
-        >
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Arus Kas Bulanan</h3>
-              <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tighter">Income vs Expense (6 Bulan Terakhir)</p>
-            </div>
-            <div className="flex gap-3 text-[8px] font-black uppercase tracking-widest">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-primary" />
-                <span>Masuk</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-400" />
-                <span>Keluar</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                  formatter={(value: number) => [`Rp ${value.toLocaleString()}`, '']}
-                />
-                <Bar dataKey="income" fill="#1E40AF" radius={[4, 4, 0, 0]} barSize={32} />
-                <Bar dataKey="expense" fill="#F87171" radius={[4, 4, 0, 0]} barSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
-        >
-          <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs mb-8">Alokasi Biaya Keluar</h3>
-          <div className="h-[200px] w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData.length > 0 ? categoryData : [{ name: 'EMPTY', value: 1 }]}
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                  {categoryData.length === 0 && <Cell key="empty-cell" fill="#f1f5f9" />}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[10px] font-black text-gray-400 uppercase leading-none">Total</span>
-              <span className="text-lg font-black text-gray-900">Cat.</span>
-            </div>
-          </div>
-          <div className="mt-6 space-y-2">
-            {categoryData.slice(0, 3).map((cat, i) => (
-              <div key={cat.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">{cat.name}</span>
-                </div>
-                <span className="text-[10px] font-black text-gray-900">Rp {cat.value.toLocaleString()}</span>
-              </div>
-            ))}
-            {categoryData.length === 0 && (
-              <p className="text-[10px] text-gray-400 text-center italic">Belum ada pengeluaran</p>
-            )}
-          </div>
-        </motion.div>
-      </div>
+      <FinanceCharts 
+        chartData={chartData}
+        categoryData={categoryData}
+        COLORS={COLORS}
+      />
 
       {/* Control Bar */}
       <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
@@ -2033,819 +1886,75 @@ export default function FinanceManager() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-        {/* Desktop View Table */}
-        <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50/50 text-[10px] uppercase font-bold text-gray-400 tracking-widest">
-                <th className="px-8 py-5">Status</th>
-                <th className="px-8 py-5">Tanggal</th>
-                <th className="px-8 py-5">Keterangan</th>
-                <th className="px-8 py-5">Total Transaksi</th>
-                <th className="px-8 py-5 text-accent text-center">Alokasi Dana Peng.</th>
-                <th className="px-8 py-5">Input Oleh</th>
-                <th className="px-8 py-5 text-right pr-12">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              <AnimatePresence mode="popLayout">
-                {filteredTransactions.length === 0 ? (
-                  <tr key="no-data">
-                    <td colSpan={7} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                          <Search className="w-8 h-8 text-gray-300" />
-                        </div>
-                        <p className="font-bold text-gray-900">Data Tidak Ditemukan</p>
-                        <p className="text-sm text-gray-400">Coba ubah filter atau kata kunci pencarian anda.</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTransactions.map((t) => (
-                    <motion.tr 
-                      key={t.id}
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="group hover:bg-gray-50/50 transition-all"
-                    >
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-2">
-                          {t.status === 'completed' ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <Clock className="w-4 h-4 text-amber-500" />
-                          )}
-                          <span className={`text-[10px] font-black uppercase tracking-tighter ${t.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'}`}>
-                            {t.status === 'completed' ? 'SELESAI' : t.status === 'pending' ? 'PENDING' : 'BATAL'}
-                          </span>
-                          {t.type === 'reallocation' && (
-                             <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-1">Transfer</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-8 py-6">
-                        <span className="text-xs font-bold text-gray-700">{t.date}</span>
-                      </td>
-                      <td className="px-8 py-6">
-                        <p className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">{t.source}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                          {t.receiptNo && (
-                            <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wide border border-indigo-100 font-mono">
-                              {t.receiptNo}
-                            </span>
-                          )}
-                          <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 bg-gray-100 rounded-md uppercase tracking-wider">
-                            {displayCategory(t.category)}
-                          </span>
-                          <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-widest italic">
-                            {t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER'}
-                          </span>
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${t.type === 'income' ? 'text-emerald-500' : t.type === 'reallocation' ? 'text-accent' : 'text-red-500'}`}>
-                            {t.type === 'income' ? '• Pemasukan' : t.type === 'reallocation' ? '• Reallokasi' : '• Pengeluaran'}
-                          </span>
-                        </div>
-                        {t.notes && (
-                          <p className="text-[10px] text-gray-400 mt-2 italic max-w-md line-clamp-1">"{t.notes}"</p>
-                        )}
-                      </td>
-                      <td className="px-8 py-6">
-                        <span className={`text-sm font-black ${t.type === 'income' ? 'text-gray-900' : t.type === 'reallocation' ? 'text-accent italic' : 'text-red-500'}`}>
-                           {t.type === 'income' ? '+' : t.type === 'reallocation' ? '' : '-'} {t.type === 'reallocation' ? 'PENYESUAIAN' : `Rp ${Math.abs(t.amount).toLocaleString('id-ID')}`}
-                        </span>
-                      </td>
-                      <td className="px-8 py-6">
-                        <div className="flex justify-center">
-                          {t.devFund !== 0 ? (
-                            <div className="flex flex-col items-center">
-                              <span className={`${t.devFund > 0 ? 'bg-accent/10 text-accent' : 'bg-red-50 text-accent'} px-3 py-1 rounded-full text-[10px] font-black tracking-tight`}>
-                                {t.devFund > 0 ? '+' : ''}Rp {Math.floor(t.devFund).toLocaleString('id-ID')}
-                              </span>
-                              {t.type === 'income' && (
-                                <span className="text-[8px] font-bold text-gray-300 uppercase mt-1">
-                                  {t.allocationMode === 'full_dev' ? 'MANUAL 100%' : t.allocationMode === 'full_ops' ? 'MANUAL 0%' : 'AUTO SPLIT'}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-300">—</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
-                            <UserIcon className="w-3 h-3 text-gray-400" />
-                          </div>
-                          <span className="text-[10px] font-bold text-gray-500 truncate max-w-[100px]">{t.addedBy?.split('@')[0]}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-6 text-right pr-12">
-                        <div className="flex justify-end items-center gap-2">
-                          {t.receiptUrl && (
-                            <a 
-                              href={t.receiptUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              referrerPolicy="no-referrer"
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-primary bg-blue-50 hover:bg-blue-100 transition-all shadow-sm"
-                              title="Lihat Bukti Upload"
-                            >
-                              <Upload className="w-4 h-4" />
-                            </a>
-                          )}
-                          {t.type === 'income' && (
-                            <button 
-                              onClick={() => downloadKwitansi(t)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all shadow-sm"
-                              title="Download Kwitansi PDF"
-                            >
-                              <Receipt className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button 
-                            onClick={() => handleEdit(t)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:bg-blue-50 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
-                            title="Edit Transaksi"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteTransaction(t.id, `${t.source} - Rp ${t.amount.toLocaleString()}`)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile View Card List */}
-        <div className="lg:hidden p-4 space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filteredTransactions.length === 0 ? (
-              <div className="py-20 text-center italic text-gray-300 font-bold">Data transaksi tidak ditemukan...</div>
-            ) : (
-              filteredTransactions.map((t) => (
-                <motion.div
-                  key={t.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.date}</p>
-                        {t.receiptNo && (
-                          <span className="text-[8px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-mono">
-                            {t.receiptNo}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="font-black text-gray-900 mt-1 leading-tight">{t.source}</h4>
-                    </div>
-                    <div className={`px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 ${t.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                      {t.status === 'completed' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                      {t.status.toUpperCase()}
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Nominal</p>
-                      <p className={`text-lg font-black ${t.type === 'income' ? 'text-gray-900' : t.type === 'reallocation' ? 'text-amber-600' : 'text-red-500'}`}>
-                        {t.type === 'income' ? '+' : t.type === 'reallocation' ? '' : '-'} Rp {Math.abs(t.amount).toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    {t.devFund !== 0 && (
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Saving 20%</p>
-                        <p className="text-xs font-black text-accent">{t.devFund > 0 ? '+' : ''}Rp {Math.floor(Math.abs(t.devFund)).toLocaleString('id-ID')}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-[9px] font-bold text-gray-400 px-2 py-1 bg-gray-100 rounded-md uppercase tracking-wider">{displayCategory(t.category)}</span>
-                    <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-tighter italic">{t.paymentMethod?.toUpperCase()}</span>
-                  </div>
-
-                  <div className="flex gap-2 pt-2 border-t border-gray-100">
-                    {t.receiptUrl && (
-                      <a href={t.receiptUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-primary py-3 rounded-xl border border-blue-100 font-black text-[10px] uppercase tracking-widest">
-                        <Upload className="w-4 h-4" /> Bukti
-                      </a>
-                    )}
-                    {t.type === 'income' && (
-                      <button onClick={() => downloadKwitansi(t)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl border border-emerald-100 font-black text-[10px] uppercase tracking-widest">
-                        <Receipt className="w-4 h-4" /> Kwitansi
-                      </button>
-                    )}
-                    <button onClick={() => handleEdit(t)} className="w-12 h-12 flex items-center justify-center bg-gray-50 text-gray-500 rounded-xl border border-gray-100">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDeleteTransaction(t.id, `${t.source} - Rp ${t.amount.toLocaleString()}`)} className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Pagination controls */}
-        <div className="border-t border-gray-100 px-8 py-6 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-gray-500 font-medium">
-            {isLoadingMore ? (
-              <div className="flex items-center gap-2">
-                <Loader className="w-3.5 h-3.5 text-primary animate-spin" />
-                <span>Menghubungkan ke server & menyinkronkan data...</span>
-              </div>
-            ) : filteredTransactions.length === 0 ? (
-              <span>Tidak ada data transaksi yang dapat ditampilkan.</span>
-            ) : transactions.length >= allTransactions.length ? (
-              <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                Semua total {allTransactions.length} riwayat transaksi telah termuat & tersedia offline ✨
-              </span>
-            ) : (
-              <span>
-                Menampilkan <strong className="text-gray-900 font-semibold">{filteredTransactions.length}</strong> dari <strong className="text-gray-900 font-semibold">{transactions.length}</strong> data terunduh (Total: <strong className="text-gray-900 font-semibold">{allTransactions.length}</strong> transaksi di sistem)
-              </span>
-            )}
-          </div>
-
-          {transactions.length < allTransactions.length && (
-            <button
-              onClick={() => setLimitCount(prev => prev + 20)}
-              disabled={isLoadingMore}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-white border border-gray-200 hover:border-primary text-gray-700 hover:text-primary font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              id="btn-load-more"
-            >
-              {isLoadingMore ? (
-                <>
-                  <Loader className="w-3.5 h-3.5 animate-spin text-primary" />
-                  Memuat...
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3.5 h-3.5" />
-                  Muat Lebih Banyak
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
+      <TransactionTable 
+        filteredTransactions={filteredTransactions}
+        allTransactions={allTransactions}
+        transactions={transactions}
+        displayCategory={displayCategory}
+        downloadKwitansi={downloadKwitansi}
+        handleEdit={handleEdit}
+        handleDeleteTransaction={handleDeleteTransaction}
+        isLoadingMore={isLoadingMore}
+        limitCount={limitCount}
+        setLimitCount={setLimitCount}
+      />
 
       {/* Modal Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white rounded-[3rem] p-8 md:p-10 w-full max-w-xl shadow-2xl relative my-auto overflow-y-auto max-h-[calc(100vh-2rem)] scrollbar-none"
-          >
-            <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
-            
-            <div className="flex justify-between items-start mb-8">
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tight">
-                  {editingId ? 'Edit Transaksi' : 'Pencatatan Keuangan'}
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  {editingId ? 'Perbarui data arus kas.' : 'Input data arus kas secara akurat.'}
-                </p>
-              </div>
-              <button 
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingId(null);
-                  setIsCategoryManuallySelected(false);
-                  setAutoSuggestedFromKeyword(null);
-                  setFormData({
-                    date: getLocalDateString(new Date()),
-                    eventDate: '',
-                    source: '',
-                    amount: '',
-                    type: 'income',
-                    category: 'umum',
-                    customCategory: '',
-                    paymentMethod: 'transfer',
-                    notes: '',
-                    status: 'completed',
-                    receiptUrl: '',
-                    allocationMode: 'auto',
-                    expenseSource: 'ops',
-                    transferDirection: 'ops_to_dev',
-                    receiptNo: '',
-                  });
-                  setIsReceiptNoManuallyEdited(false);
-                }}
-                className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {error && (
-              <div className="mb-8 p-5 bg-red-50 text-red-600 rounded-[2rem] text-xs font-bold border border-red-100 flex items-start gap-3 animate-pulse">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tipe Transaksi</label>
-                <div className="grid grid-cols-3 bg-gray-50 p-1.5 rounded-2xl">
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, type: 'income'})}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${formData.type === 'income' ? 'bg-white text-primary shadow-lg shadow-blue-900/5' : 'text-gray-400'}`}
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    Pemasukan
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, type: 'expense'})}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${formData.type === 'expense' ? 'bg-white text-red-500 shadow-lg shadow-red-900/5' : 'text-gray-400'}`}
-                  >
-                    <X className="w-4 h-4" />
-                    Pengeluaran
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({...formData, type: 'reallocation'})}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black transition-all ${formData.type === 'reallocation' ? 'bg-white text-accent shadow-lg shadow-amber-900/5' : 'text-gray-400'}`}
-                  >
-                    <TrendingUp className="w-4 h-4" />
-                    Pindah Dana
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tanggal Transaksi</label>
-                  <input 
-                    type="date" 
-                    required
-                    value={formData.date}
-                    onChange={(e) => {
-                      const nextDate = e.target.value;
-                      setFormData(prev => ({
-                        ...prev,
-                        date: nextDate,
-                        receiptNo: !isReceiptNoManuallyEdited 
-                          ? generateUniqueReceiptNo(nextDate, allTransactions) 
-                          : prev.receiptNo
-                      }));
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tanggal Kegiatan/Acara (Opsional)</label>
-                  <input 
-                    type="date" 
-                    value={formData.eventDate || ''}
-                    onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nominal (Rp)</label>
-                  <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rp</span>
-                    <input 
-                      type="text"
-                      inputMode="numeric"
-                      required
-                      placeholder="0"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({...formData, amount: formatRupiahInput(e.target.value)})}
-                      className={`w-full border rounded-2xl pl-12 pr-5 py-3.5 text-sm font-black outline-none transition-all ${
-                        isInsufficientOps || isInsufficientDev
-                          ? 'border-red-300 bg-red-50/20 focus:border-red-500'
-                          : isBudgetExceeded
-                          ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
-                          : 'bg-gray-50 border-gray-100 focus:border-emerald-500'
-                      }`}
-                    />
-                  </div>
-                  {isInsufficientOps && (
-                    <span className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0 animate-pulse">
-                      ⚠️ Melebihi Kas Operasional (Rp {Math.floor(availableOps).toLocaleString('id-ID')})
-                    </span>
-                  )}
-                  {isInsufficientDev && (
-                    <span className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0 animate-pulse">
-                      ⚠️ Melebihi Kas Pengembangan (Rp {Math.floor(availableDevFund).toLocaleString('id-ID')})
-                    </span>
-                  )}
-                  {isBudgetExceeded && !isInsufficientOps && (
-                    <span className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 mt-1.5 pl-1 shrink-0">
-                      ⚠️ Over-Budget Bulanan! (Sisa plafon: Rp {Math.floor((config?.monthlyBudget ?? 0) - currentMonthOpsExpense).toLocaleString('id-ID')})
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-5">
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Kategori</label>
-                    {isCategoryManuallySelected && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCategoryManuallySelected(false);
-                          // Re-detect category based on description
-                          const mockVal = formData.source;
-                          const nextFormData = { ...formData };
-                          const lower = mockVal.toLowerCase();
-                          let matched = false;
-                          for (const item of AUTO_CATEGORIES) {
-                            for (const kw of item.keywords) {
-                              if (lower.includes(kw)) {
-                                nextFormData.category = item.category;
-                                setAutoSuggestedFromKeyword({
-                                  keyword: kw,
-                                  categoryName: item.label,
-                                  categoryId: item.category
-                                });
-                                matched = true;
-                                break;
-                              }
-                            }
-                            if (matched) break;
-                          }
-                          if (!matched) {
-                            nextFormData.category = 'umum';
-                            setAutoSuggestedFromKeyword(null);
-                          }
-                          setFormData(nextFormData);
-                        }}
-                        className="text-[9px] text-primary hover:text-blue-800 font-black flex items-center gap-0.5 tracking-tight uppercase"
-                        title="Klik untuk kembali menggunakan pencocokan otomatis berdasarkan kolom uraian"
-                      >
-                        ✨ AUTO DETEKSI
-                      </button>
-                    )}
-                  </div>
-                  <select 
-                    value={formData.category}
-                    onChange={(e) => {
-                      setFormData({...formData, category: e.target.value});
-                      setIsCategoryManuallySelected(true);
-                      setAutoSuggestedFromKeyword(null);
-                    }}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none cursor-pointer"
-                  >
-                    <option value="sewa">Sewa Gedung</option>
-                    <option value="iuran">Sumbangan</option>
-                    <option value="listrik">Listrik</option>
-                    <option value="perbaikan">Perbaikan</option>
-                    <option value="peralatan">Peralatan</option>
-                    <option value="kebersihan">Kebersihan & Keamanan</option>
-                    <option value="umum">Lainnya / Manual</option>
-                  </select>
-                  {autoSuggestedFromKeyword && (
-                    <span className="text-[10px] text-emerald-600 font-black block mt-2 animate-bounce flex items-center gap-1 pl-1">
-                      🪄 Disarankan otomatis: {autoSuggestedFromKeyword.categoryName} <span className="text-gray-400 font-medium font-mono text-[9px]">({autoSuggestedFromKeyword.keyword})</span>
-                    </span>
-                  )}
-                </div>
-                {formData.category === 'umum' && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                  >
-                    <label className="block text-[10px] font-black text-primary uppercase tracking-widest mb-3">Sebutkan Kategori Lainnya</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="Contoh: Honor Staf"
-                      value={formData.customCategory}
-                      onChange={(e) => setFormData({...formData, customCategory: e.target.value})}
-                      className="w-full bg-blue-50/50 border border-blue-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
-                    />
-                  </motion.div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Sumber / Keterangan Singkat</label>
-                <textarea 
-                  required
-                  rows={2}
-                  placeholder="Contoh: Sewa Resepsi Pernikahan (Bpk. Ahmad)"
-                  value={formData.source}
-                  onChange={(e) => handleSourceChange(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                    {formData.type === 'income' ? 'Metode Alokasi' : formData.type === 'reallocation' ? 'Arah Pemindahan' : 'Sumber Dana'}
-                  </label>
-                  <select 
-                    value={formData.type === 'income' ? formData.allocationMode : formData.type === 'reallocation' ? formData.transferDirection : formData.expenseSource}
-                    onChange={(e) => {
-                      if (formData.type === 'income') {
-                        setFormData({...formData, allocationMode: e.target.value as any});
-                      } else if (formData.type === 'reallocation') {
-                        setFormData({...formData, transferDirection: e.target.value as any});
-                      } else {
-                        setFormData({...formData, expenseSource: e.target.value as any});
-                      }
-                    }}
-                    className={`w-full border rounded-2xl px-5 py-3.5 text-sm font-bold outline-none appearance-none cursor-pointer ${
-                      formData.type === 'income' 
-                      ? 'bg-blue-50/50 border-blue-100 focus:border-primary' 
-                      : formData.type === 'reallocation'
-                      ? 'bg-amber-50/50 border-amber-100 focus:border-accent'
-                      : 'bg-red-50/50 border-red-100 focus:border-red-400'
-                    }`}
-                  >
-                    {formData.type === 'income' ? (
-                      <>
-                        <option value="auto">Bagi Otomatis (Rate)</option>
-                        <option value="full_ops">100% Operasional</option>
-                        <option value="full_dev">100% Pengembangan</option>
-                      </>
-                    ) : formData.type === 'reallocation' ? (
-                      <>
-                        <option value="ops_to_dev">Operasional ➔ Pengembangan</option>
-                        <option value="dev_to_ops">Pengembangan ➔ Operasional</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="ops">Dana Operasional</option>
-                        <option value="dev">Dana Pengembangan</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Metode Pembayaran</label>
-                  <select 
-                    value={formData.paymentMethod}
-                    onChange={(e) => setFormData({...formData, paymentMethod: e.target.value as any})}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none cursor-pointer"
-                  >
-                    <option value="transfer">Transfer Bank</option>
-                    <option value="cash">Tunai (Cash)</option>
-                    <option value="qris">QRIS / E-Wallet</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nomor Kwitansi</label>
-                  <input 
-                    type="text"
-                    value={formData.receiptNo || ''}
-                    onChange={(e) => {
-                      setFormData({...formData, receiptNo: e.target.value});
-                      setIsReceiptNoManuallyEdited(true);
-                    }}
-                    placeholder="Contoh: KW/2026/07/001"
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Catatan Detil (Opsional)</label>
-                <textarea 
-                  rows={3}
-                  placeholder="Detail tambahan: Garansi, No. Invoice, atau spesifikasi barang..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nota / Kwitansi (Opsional)</label>
-                <div className="relative group/upload">
-                   <div className={`w-full border-2 border-dashed rounded-[2rem] p-8 flex flex-col items-center justify-center gap-3 transition-all ${receiptFile ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100 bg-gray-50/50 hover:border-primary/20 hover:bg-blue-50/30'}`}>
-                      {receiptFile ? (
-                        <>
-                          <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                          <p className="text-xs font-bold text-emerald-700">{receiptFile.name}</p>
-                          <button 
-                            type="button" 
-                            onClick={() => setReceiptFile(null)}
-                            className="text-[10px] uppercase font-black text-red-400 hover:text-red-500"
-                          >
-                            Hapus File
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-gray-300 group-hover/upload:text-primary transition-colors">
-                             <Upload className="w-6 h-6" />
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs font-bold text-gray-900">Upload Bukti Transaksi</p>
-                            <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, PDF (Maks. 5MB)</p>
-                          </div>
-                        </>
-                      )}
-                      <input 
-                        type="file" 
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setReceiptFile(file);
-                        }}
-                      />
-                   </div>
-                </div>
-              </div>
-
-              {parseRupiahInput(formData.amount) > 0 && (
-                <div className="space-y-3">
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className={`${
-                      formData.type === 'income' 
-                        ? 'bg-emerald-50 border-emerald-150 text-emerald-900' 
-                        : formData.type === 'reallocation' 
-                        ? 'bg-amber-50 border-amber-150 text-amber-900' 
-                        : (isInsufficientOps || isInsufficientDev)
-                        ? 'bg-red-50 border-red-200 text-red-900'
-                        : 'bg-rose-50 border-rose-150 text-rose-900'
-                    } p-6 rounded-[2rem] border`}
-                  >
-                    <div className="flex items-center gap-2 mb-4">
-                      <Shield className={`w-4 h-4 ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : (isInsufficientOps || isInsufficientDev) ? 'text-red-600' : 'text-rose-600'}`} />
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${formData.type === 'income' ? 'text-emerald-600' : formData.type === 'reallocation' ? 'text-amber-600' : (isInsufficientOps || isInsufficientDev) ? 'text-red-600' : 'text-rose-600'}`}>
-                        {formData.type === 'income' ? 'Simulasi Alokasi' : formData.type === 'reallocation' ? 'Detail Reallokasi' : 'Detail Pengurangan'}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {formData.type === 'income' ? (
-                        <div className="space-y-3.5 pt-1">
-                          <div className="text-[10px] font-black tracking-widest uppercase text-emerald-800/60 flex items-center justify-between border-b border-emerald-150 pb-2 mb-1.5">
-                            <span>Estimasi Alokasi Dana</span>
-                            <span>{formData.allocationMode === 'auto' ? 'Bagi Otomatis' : formData.allocationMode === 'full_ops' ? '100% Ops' : '100% Saving'}</span>
-                          </div>
-                          
-                          <div>
-                            <div className="flex justify-between text-xs items-center">
-                              <span className="text-gray-600 font-bold flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-accent shrink-0 animate-pulse" />
-                                Tabungan Renovasi (Saving):
-                              </span>
-                              <span className="font-black text-accent text-sm">
-                                Rp {Math.floor(formData.allocationMode === 'full_ops' ? 0 : formData.allocationMode === 'full_dev' ? inputAmount : (inputAmount * (config?.devFundRate ?? 0.2))).toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-[10px] text-gray-400 font-medium pl-4 mt-0.5">
-                              <span>Porsi {formData.allocationMode === 'full_ops' ? 0 : formData.allocationMode === 'full_dev' ? 100 : Math.round((config?.devFundRate ?? 0.2) * 100)}%</span>
-                              <span>Penyelamatan Gedung</span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between text-xs items-center">
-                              <span className="text-gray-600 font-bold flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
-                                Dana Operasional:
-                              </span>
-                              <span className="font-black text-primary text-sm">
-                                Rp {Math.floor(formData.allocationMode === 'full_dev' ? 0 : formData.allocationMode === 'full_ops' ? inputAmount : (inputAmount * (1 - (config?.devFundRate ?? 0.2)))).toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-[10px] text-gray-400 font-medium pl-4 mt-0.5">
-                              <span>Porsi {formData.allocationMode === 'full_dev' ? 0 : formData.allocationMode === 'full_ops' ? 100 : (100 - Math.round((config?.devFundRate ?? 0.2) * 100))}%</span>
-                              <span>Kebutuhan Harian</span>
-                            </div>
-                          </div>
-
-                          {/* Live Visual Progress Strip representing the split percentage */}
-                          <div className="h-3 bg-gray-200/60 rounded-full overflow-hidden flex shadow-inner mt-2">
-                            {(formData.allocationMode !== 'full_ops') && (
-                              <div 
-                                style={{ width: `${formData.allocationMode === 'full_dev' ? 100 : (config?.devFundRate ?? 0.2) * 100}%` }}
-                                className="bg-accent h-full transition-all duration-500 ease-out"
-                              />
-                            )}
-                            {(formData.allocationMode !== 'full_dev') && (
-                              <div 
-                                style={{ width: `${formData.allocationMode === 'full_ops' ? 100 : (1 - (config?.devFundRate ?? 0.2)) * 100}%` }}
-                                className="bg-primary h-full transition-all duration-500 ease-out"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      ) : formData.type === 'reallocation' ? (
-                        <>
-                          <div className="flex justify-between text-xs items-center">
-                            <span className="text-gray-500 font-medium whitespace-nowrap">Dari Pos:</span>
-                            <span className="font-black text-sm text-gray-900 border-b border-gray-200">
-                              {formData.transferDirection === 'ops_to_dev' ? 'Dana Operasional' : 'Dana Pengembangan'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs items-center">
-                            <span className="text-gray-500 font-medium whitespace-nowrap">Saldo Tersedia:</span>
-                            <span className="font-extrabold text-xs text-gray-700">
-                              Rp {Math.floor(formData.transferDirection === 'ops_to_dev' ? availableOps : availableDevFund).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs items-center">
-                            <span className="text-gray-500 font-medium whitespace-nowrap">Ke Pos:</span>
-                            <span className="font-black text-xs text-emerald-600">
-                              {formData.transferDirection === 'ops_to_dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="flex justify-between text-xs items-center">
-                            <span className="text-gray-500 font-medium whitespace-nowrap">Diambil Dari:</span>
-                            <span className={`font-black text-sm ${formData.expenseSource === 'dev' ? 'text-accent' : 'text-primary'}`}>
-                              {formData.expenseSource === 'dev' ? 'Dana Pengembangan' : 'Dana Operasional'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs items-center">
-                            <span className="text-gray-500 font-medium whitespace-nowrap">Saldo Tersedia:</span>
-                            <span className="font-extrabold text-xs text-gray-700">
-                              Rp {Math.floor(formData.expenseSource === 'dev' ? availableDevFund : availableOps).toLocaleString('id-ID')}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  {/* Insufficient Funds Warning Alert */}
-                  {(isInsufficientOps || isInsufficientDev) && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-5 bg-red-50 border border-red-200 rounded-[2rem] text-xs text-red-800 font-medium flex items-start gap-3"
-                    >
-                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-black text-red-900 uppercase tracking-wide">Saldo Tidak Mencukupi</p>
-                        <p className="text-[11px] text-red-700 mt-1 leading-relaxed">
-                          Anda menginput nominal <span className="font-extrabold">Rp {inputAmount.toLocaleString('id-ID')}</span> yang melampaui saldo kas tersedia pada pos tersebut yaitu <span className="font-extrabold">Rp {Math.floor(formData.type === 'reallocation' ? (formData.transferDirection === 'ops_to_dev' ? availableOps : availableDevFund) : (formData.expenseSource === 'dev' ? availableDevFund : availableOps)).toLocaleString('id-ID')}</span>. Harap tinjau kembali nominal atau ubah sumber pos dana.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Over Budget Operational Warning Alert */}
-                  {isBudgetExceeded && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="p-5 bg-amber-50 border border-amber-200 rounded-[2rem] text-xs text-amber-800 font-medium flex items-start gap-3"
-                    >
-                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-black text-amber-900 uppercase tracking-wide">Over-Budget Bulanan</p>
-                        <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
-                          Pencatatan ini akan menyebabkan total pengeluaran operasional bulan ini melampaui sisa plafon anggaran bulanan gedung (Batas Anggaran Bulanan: <span className="font-bold">Rp {config?.monthlyBudget?.toLocaleString('id-ID')}</span>). Harap koordinasikan dengan penilai anggaran.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-              )}
-
-              <button 
-                type="submit"
-                disabled={isLoggingIn || isUploadingReceipt}
-                className="w-full bg-primary text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isUploadingReceipt ? 'Mengupload Nota...' : isLoggingIn ? 'Memproses...' : editingId ? 'Simpan Perubahan' : 'Simpan Entri Keuangan'}
-                </span>
-                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-              </button>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      <TransactionFormModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingId(null);
+          setIsCategoryManuallySelected(false);
+          setAutoSuggestedFromKeyword(null);
+          setFormData({
+            date: getLocalDateString(new Date()),
+            eventDate: '',
+            source: '',
+            amount: '',
+            type: 'income',
+            category: 'umum',
+            customCategory: '',
+            paymentMethod: 'transfer',
+            notes: '',
+            status: 'completed',
+            receiptUrl: '',
+            allocationMode: 'auto',
+            expenseSource: 'ops',
+            transferDirection: 'ops_to_dev',
+            receiptNo: ''
+          });
+          setIsReceiptNoManuallyEdited(false);
+          setReceiptFile(null);
+        }}
+        editingId={editingId}
+        error={error}
+        formData={formData}
+        setFormData={setFormData}
+        allTransactions={allTransactions}
+        generateUniqueReceiptNo={generateUniqueReceiptNo}
+        formatRupiahInput={formatRupiahInput}
+        parseRupiahInput={parseRupiahInput}
+        isInsufficientOps={isInsufficientOps}
+        isInsufficientDev={isInsufficientDev}
+        isBudgetExceeded={isBudgetExceeded}
+        availableOps={availableOps}
+        availableDevFund={availableDevFund}
+        config={config}
+        currentMonthOpsExpense={currentMonthOpsExpense}
+        isCategoryManuallySelected={isCategoryManuallySelected}
+        setIsCategoryManuallySelected={setIsCategoryManuallySelected}
+        autoSuggestedFromKeyword={autoSuggestedFromKeyword}
+        setAutoSuggestedFromKeyword={setAutoSuggestedFromKeyword}
+        AUTO_CATEGORIES={AUTO_CATEGORIES}
+        handleSourceChange={handleSourceChange}
+        receiptFile={receiptFile}
+        setReceiptFile={setReceiptFile}
+        isReceiptNoManuallyEdited={isReceiptNoManuallyEdited}
+        setIsReceiptNoManuallyEdited={setIsReceiptNoManuallyEdited}
+        isLoggingIn={isLoggingIn}
+        handleSubmit={handleSubmit}
+      />
 
       {/* Rate Adjust Modal */}
       {isRateModalOpen && (

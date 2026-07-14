@@ -72,7 +72,16 @@ function LandingPage() {
   );
 }
 
+import { useAppStore } from './store/useAppStore';
+
 export default function App() {
+  const initSubscriptions = useAppStore(state => state.initSubscriptions);
+
+  React.useEffect(() => {
+    const unsub = initSubscriptions();
+    return () => unsub();
+  }, [initSubscriptions]);
+
   return (
     <BrowserRouter>
       <Routes>

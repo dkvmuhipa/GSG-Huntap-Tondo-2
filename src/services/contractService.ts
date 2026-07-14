@@ -11,6 +11,7 @@ interface BookingData {
   startDate: string;
   endDate?: string;
   amount: number;
+  organization?: string;
   packageTitle?: string;
   packageName?: string; // fallback
   status: string;
@@ -413,19 +414,22 @@ export const generateReceipt = async (booking: BookingData) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-  doc.text('DITAGIHKAN KEPADA / BILLED TO:', 22, gridY + 6);
+  doc.text('DITERIMA DARI / RECEIVED FROM:', 22, gridY + 6);
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-  doc.text(booking.customerName.toUpperCase(), 22, gridY + 12);
+  const displayName = booking.organization 
+    ? `${booking.organization} (${booking.customerName})` 
+    : booking.customerName;
+  doc.text(displayName.toUpperCase(), 22, gridY + 12);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
   doc.text(`No. Telp : ${booking.phone || '-'}`, 22, gridY + 18);
   
-  const purposeText = `Keperluan : Sewa Gedung (${booking.purpose})`;
+  const purposeText = `Keperluan: ${booking.purpose}`;
   const splitPurpose = doc.splitTextToSize(purposeText, cardWidth - 8);
   doc.text(splitPurpose, 22, gridY + 23.5);
 
