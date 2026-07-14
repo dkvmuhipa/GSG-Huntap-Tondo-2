@@ -7,6 +7,8 @@ import {
   subscribeToTransactions,
   subscribeToInventory
 } from '../lib/db';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface AppState {
   config: any;
@@ -43,6 +45,7 @@ let unsubscribeBookings: (() => void) | null = null;
 let unsubscribeAdmins: (() => void) | null = null;
 let unsubscribeTransactions: (() => void) | null = null;
 let unsubscribeInventory: (() => void) | null = null;
+let unsubscribeAuth: (() => void) | null = null;
 let subscriptionCount = 0;
 
 export const useAppStore = create<AppState>((set) => ({
@@ -94,19 +97,33 @@ export const useAppStore = create<AppState>((set) => ({
           set({ bookings: data, isBookingsLoaded: true });
         });
       }
-      if (!unsubscribeAdmins) {
-        unsubscribeAdmins = subscribeToAdmins((data) => {
-          set({ admins: data, isAdminsLoaded: true });
-        });
-      }
       if (!unsubscribeTransactions) {
         unsubscribeTransactions = subscribeToTransactions((data) => {
           set({ transactions: data, isTransactionsLoaded: true });
         });
       }
-      if (!unsubscribeInventory) {
-        unsubscribeInventory = subscribeToInventory((data) => {
-          set({ inventory: data, isInventoryLoaded: true });
+
+      // Dynamic listener for admin-only data using Firebase Auth state
+      if (!unsubscribeAuth) {
+        unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            // Logged in: subscribe to admin-only collections
+            if (!unsubscribeAdmins) {
+              unsubscribeAdmins = subscribeToAdmins((data) => {
+                set({ admins: data, isAdminsLoaded: true });
+              });
+            }
+            if (!unsubscribeInventory) {
+              unsubscribeInventory = subscribeToInventory((data) => {
+                set({ inventory: data, isInventoryLoaded: true });
+              });
+            }
+          } else {
+            // Logged out: clean up admin subscriptions to prevent "Missing or insufficient permissions"
+            if (unsubscribeAdmins) { unsubscribeAdmins(); unsubscribeAdmins = null; }
+            if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }
+            set({ admins: [], isAdminsLoaded: false, inventory: [], isInventoryLoaded: false });
+          }
         });
       }
     }
@@ -119,9 +136,11 @@ export const useAppStore = create<AppState>((set) => ({
         if (unsubscribeConfig) { unsubscribeConfig(); unsubscribeConfig = null; }
         if (unsubscribeFacilities) { unsubscribeFacilities(); unsubscribeFacilities = null; }
         if (unsubscribeBookings) { unsubscribeBookings(); unsubscribeBookings = null; }
-        if (unsubscribeAdmins) { unsubscribeAdmins(); unsubscribeAdmins = null; }
         if (unsubscribeTransactions) { unsubscribeTransactions(); unsubscribeTransactions = null; }
+        
+        if (unsubscribeAdmins) { unsubscribeAdmins(); unsubscribeAdmins = null; }
         if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }
+        if (unsubscribeAuth) { unsubscribeAuth(); unsubscribeAuth = null; }
       }
     };
   }
