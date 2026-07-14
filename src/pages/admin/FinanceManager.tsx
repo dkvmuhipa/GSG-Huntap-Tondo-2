@@ -195,6 +195,7 @@ export default function FinanceManager() {
 
   const [formData, setFormData] = useState({
     date: getLocalMonthKey(new Date()) + '-' + String(new Date().getDate()).padStart(2, '0'),
+    eventDate: '',
     source: '',
     amount: '',
     type: 'income' as 'income' | 'expense' | 'reallocation',
@@ -550,8 +551,37 @@ export default function FinanceManager() {
     doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
     doc.line(valueX, paymentY + paymentHeight + 4.5, 200, paymentY + paymentHeight + 4.5);
 
+    // Row: Tanggal Kegiatan / Acara
+    const eventDateY = paymentY + paymentHeight + rowHeight;
+    doc.setFontSize(8.5);
+    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Tanggal Kegiatan', labelX, eventDateY + 3.5);
+    doc.text(':', valueX - 3, eventDateY + 3.5);
+
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.setFont('helvetica', 'bold');
+    let eventDateText = '-';
+    if (tx.eventDate) {
+      try {
+        eventDateText = new Date(tx.eventDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      } catch (e) {
+        eventDateText = tx.eventDate;
+      }
+    } else {
+      try {
+        eventDateText = new Date(tx.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' (Sesuai Transaksi)';
+      } catch (e) {
+        eventDateText = tx.date;
+      }
+    }
+    doc.text(eventDateText, valueX, eventDateY + 3.5);
+
+    doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
+    doc.line(valueX, eventDateY + 4.5, 200, eventDateY + 4.5);
+
     // 3. FULL-WIDTH TERBILANG BANNER (Visual Highlight)
-    const terbilangY = paymentY + paymentHeight + rowHeight + 1.5;
+    const terbilangY = eventDateY + 4.5 + 1.5;
     const fullWidth = 186; // 14 to 200
     doc.setFillColor(bgLight[0], bgLight[1], bgLight[2]);
     doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
@@ -583,7 +613,7 @@ export default function FinanceManager() {
     doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 18, footerY + 7);
 
     // --- SIGNATURES SECTION ---
-    const dateStr = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     
     const rightSigX = 172;
     const leftSigX = 132;
@@ -593,7 +623,7 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-    doc.text(`Palu, ${dateStr}`, rightSigX, footerY - 5, { align: 'center' });
+    doc.text(`Palu, ${todayStr}`, rightSigX, footerY - 5, { align: 'center' });
 
     if (sigMode === 'both') {
       // Left: Finance Staff
@@ -915,6 +945,7 @@ export default function FinanceManager() {
 
     setFormData({
       date: tx.date,
+      eventDate: tx.eventDate || '',
       source: tx.source,
       amount: formatRupiahInput(Math.abs(tx.amount).toString()),
       type: tx.type,
@@ -1516,6 +1547,7 @@ export default function FinanceManager() {
       setAutoSuggestedFromKeyword(null);
       setFormData({
         date: getLocalDateString(new Date()),
+        eventDate: '',
         source: '',
         amount: '',
         type: 'income',
@@ -2296,7 +2328,7 @@ export default function FinanceManager() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
+              <div className="grid md:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tanggal Transaksi</label>
                   <input 
@@ -2304,6 +2336,15 @@ export default function FinanceManager() {
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Tanggal Kegiatan/Acara (Opsional)</label>
+                  <input 
+                    type="date" 
+                    value={formData.eventDate || ''}
+                    onChange={(e) => setFormData({...formData, eventDate: e.target.value})}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
                   />
                 </div>
