@@ -317,6 +317,19 @@ export default function AccountRules() {
                 />
               </div>
             </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Tanda Tangan pada Kwitansi / Receipt PDF</label>
+              <select 
+                value={config?.receiptSignatureMode || 'both'}
+                onChange={(e) => setConfig({...config, receiptSignatureMode: e.target.value})}
+                className="w-full bg-gray-50 border-none rounded-2xl px-4 py-4 font-bold text-gray-900 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm appearance-none cursor-pointer"
+              >
+                <option value="both">Tampilkan Keduanya (Staf Keuangan & Bendahara)</option>
+                <option value="finance">Tampilkan Staf Keuangan Saja</option>
+                <option value="bendahara">Tampilkan Bendahara Saja</option>
+              </select>
+            </div>
           </div>
         </div>
 
