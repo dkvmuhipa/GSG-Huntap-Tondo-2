@@ -10,7 +10,8 @@ import {
   Edit2,
   Save,
   X,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react';
 import { 
   subscribeToAdmins, 
@@ -20,6 +21,7 @@ import {
   subscribeToConfig,
   updateGlobalConfig
 } from '../../lib/db';
+import { uploadToCloudinary } from '../../lib/cloudinary';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { useOutletContext } from 'react-router-dom';
@@ -48,6 +50,53 @@ export default function AccountRules() {
   const [editName, setEditName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  const [uploadingFields, setUploadingFields] = useState<{ [key: string]: boolean }>({});
+
+  const handleFileUpload = async (field: string, file: File) => {
+    if (!file) return;
+    setUploadingFields(prev => ({ ...prev, [field]: true }));
+    setError(null);
+    setSuccess(null);
+    try {
+      const { url } = await uploadToCloudinary(file);
+      setConfig((prev: any) => ({
+        ...prev,
+        [field]: url
+      }));
+      setSuccess(`Berhasil mengunggah berkas.`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || "Gagal mengunggah berkas.");
+    } finally {
+      setUploadingFields(prev => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const handleRemoveField = (field: string) => {
+    setConfig((prev: any) => ({
+      ...prev,
+      [field]: null
+    }));
+    setSuccess(`Berkas berhasil dihapus.`);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent, field: string) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setError("Berkas harus berupa gambar.");
+        return;
+      }
+      handleFileUpload(field, file);
+    }
+  };
 
   // Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -271,18 +320,178 @@ export default function AccountRules() {
           </div>
         </div>
 
-        <div className="bg-gray-50/50 p-8 rounded-[2rem] border border-dashed border-gray-200 flex flex-col justify-center">
-          <div className="flex items-start gap-4">
-             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-primary shadow-sm">
-                <AlertCircle className="w-6 h-6" />
-             </div>
-             <div>
-                <h4 className="font-bold text-gray-900 mb-1">Informasi Penandatangan</h4>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                   Nama-nama yang diatur di samping akan muncul secara otomatis pada bagian bawah laporan PDF (Excel) sebagai penanggung jawab dan saksi transaksi. 
-                   Pastikan nama sesuai dengan SK kepengurusan yang berlaku.
-                </p>
-             </div>
+        {/* Upload TTD & Cap Stempel Settings */}
+        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Upload className="w-6 h-6 text-primary" />
+              <h3 className="font-bold text-gray-900">Upload Tanda Tangan & Cap Stempel</h3>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* TTD Bendahara */}
+              <div className="flex flex-col gap-2">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider px-1">TTD Bendahara</label>
+                <div 
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'reportBendaharaSignature')}
+                  className="relative border-2 border-dashed border-gray-200 hover:border-primary/40 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[140px] text-center transition-all bg-gray-50/50 group"
+                >
+                  {uploadingFields['reportBendaharaSignature'] ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-[9px] font-bold text-gray-400">Mengunggah...</span>
+                    </div>
+                  ) : config?.reportBendaharaSignature ? (
+                    <div className="relative w-full flex flex-col items-center justify-center">
+                      <img 
+                        src={config.reportBendaharaSignature} 
+                        alt="TTD Bendahara" 
+                        className="max-h-16 object-contain rounded-lg border border-gray-100 p-1 bg-white"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveField('reportBendaharaSignature')}
+                        className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors shadow-md"
+                        title="Hapus"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <span className="text-[9px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Terunggah
+                      </span>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer w-full flex flex-col items-center justify-center gap-1">
+                      <Upload className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] font-bold text-gray-500">Klik / Tarik berkas</span>
+                      <span className="text-[8px] text-gray-400">PNG / JPG</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload('reportBendaharaSignature', file);
+                        }} 
+                        className="hidden" 
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* TTD Keuangan */}
+              <div className="flex flex-col gap-2">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider px-1">TTD Keuangan</label>
+                <div 
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'reportFinanceSignature')}
+                  className="relative border-2 border-dashed border-gray-200 hover:border-primary/40 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[140px] text-center transition-all bg-gray-50/50 group"
+                >
+                  {uploadingFields['reportFinanceSignature'] ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-[9px] font-bold text-gray-400">Mengunggah...</span>
+                    </div>
+                  ) : config?.reportFinanceSignature ? (
+                    <div className="relative w-full flex flex-col items-center justify-center">
+                      <img 
+                        src={config.reportFinanceSignature} 
+                        alt="TTD Keuangan" 
+                        className="max-h-16 object-contain rounded-lg border border-gray-100 p-1 bg-white"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveField('reportFinanceSignature')}
+                        className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors shadow-md"
+                        title="Hapus"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <span className="text-[9px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Terunggah
+                      </span>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer w-full flex flex-col items-center justify-center gap-1">
+                      <Upload className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] font-bold text-gray-500">Klik / Tarik berkas</span>
+                      <span className="text-[8px] text-gray-400">PNG / JPG</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload('reportFinanceSignature', file);
+                        }} 
+                        className="hidden" 
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Cap Stempel Resmi */}
+              <div className="flex flex-col gap-2">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider px-1">Cap / Stempel</label>
+                <div 
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'reportStamp')}
+                  className="relative border-2 border-dashed border-gray-200 hover:border-primary/40 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[140px] text-center transition-all bg-gray-50/50 group"
+                >
+                  {uploadingFields['reportStamp'] ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-[9px] font-bold text-gray-400">Mengunggah...</span>
+                    </div>
+                  ) : config?.reportStamp ? (
+                    <div className="relative w-full flex flex-col items-center justify-center">
+                      <img 
+                        src={config.reportStamp} 
+                        alt="Cap Stempel" 
+                        className="max-h-16 object-contain rounded-lg border border-gray-100 p-1 bg-white"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveField('reportStamp')}
+                        className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors shadow-md"
+                        title="Hapus"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <span className="text-[9px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Terunggah
+                      </span>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer w-full flex flex-col items-center justify-center gap-1">
+                      <Upload className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] font-bold text-gray-500">Klik / Tarik berkas</span>
+                      <span className="text-[8px] text-gray-400">PNG / JPG</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload('reportStamp', file);
+                        }} 
+                        className="hidden" 
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50/50 border border-blue-100/50 rounded-xl flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-[10px] text-gray-500 leading-normal">
+              Unggah berkas tanda tangan transparan (PNG) dan cap stempel resmi. TTD dan cap akan disematkan secara otomatis di dokumen laporan PDF. Jangan lupa klik <strong>Simpan Semua Aturan</strong> di atas untuk menyimpan perubahan permanen.
+            </p>
           </div>
         </div>
       </div>

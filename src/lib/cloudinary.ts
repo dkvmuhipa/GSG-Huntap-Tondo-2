@@ -44,12 +44,14 @@ export async function compressImage(file: File, maxWidth = 1600, maxHeight = 160
 
         // Convert to highly-compressed JPEG (highly optimized for photos/receipts)
         // Except if it's png and we specifically want to preserve transparency, but for receipts, jpeg is ideal.
-        const outputType = 'image/jpeg';
+        const isPng = file.type === 'image/png';
+        const outputType = isPng ? 'image/png' : 'image/jpeg';
+        const fileExtension = isPng ? '.png' : '.jpg';
         
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + fileExtension, {
                 type: outputType,
                 lastModified: Date.now(),
               });
@@ -126,5 +128,51 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
   }
 
   throw new Error('Server mengembalikan format response yang tidak valid (bukan JSON).');
+}
+
+/**
+ * Loads any image URL (remote or local/data URL) and converts it to a transparent PNG Base64 data URL.
+ * This guarantees jsPDF renders it with perfect transparency and avoids CORS or black background issues.
+ */
+export function getTransparentPNG(url: string | null | undefined): Promise<string> {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve('');
+      return;
+    }
+    // If it's already a transparent base64 PNG, return it directly
+    if (url.startsWith('data:image/png;base64,')) {
+      resolve(url);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(url);
+          return;
+        }
+        // Ensure background is fully transparent
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/png');
+        resolve(dataUrl);
+      } catch (err) {
+        console.error('[imageUtils] Failed to convert image to transparent PNG:', err);
+        resolve(url); // Fallback to raw URL
+      }
+    };
+    img.onerror = (err) => {
+      console.error('[imageUtils] Failed to load image:', url, err);
+      resolve(url); // Fallback to raw URL
+    };
+    img.src = url;
+  });
 }
 

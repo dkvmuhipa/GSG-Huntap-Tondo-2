@@ -6,6 +6,7 @@ import CalendarModal from './ui/CalendarModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateContract, generateReceipt } from '../services/contractService';
+import { getTransparentPNG } from '../lib/cloudinary';
 
 export default function AvailabilityWidget() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -44,7 +45,9 @@ export default function AvailabilityWidget() {
     setIsTracking(false);
   };
 
-  const downloadConfirmation = (booking: any) => {
+  const downloadConfirmation = async (booking: any) => {
+    const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+    const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
     const doc = new jsPDF();
     const margin = 20;
     
@@ -115,10 +118,33 @@ export default function AvailabilityWidget() {
     // Signatures
     const sigY = finalY + 50;
     doc.setFont('helvetica', 'normal');
-    doc.text('Disetujui Oleh,', 130, sigY);
-    doc.text('Pengelola Gedung Serbaguna Huntap Tondo 2', 130, sigY + 25);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(130, sigY + 20, 190, sigY + 20);
+    
+    const rightSigX = 160;
+    const bendaharaName = config?.reportBendaharaName || 'Bendahara';
+
+    doc.text('Disetujui Oleh,', rightSigX, sigY, { align: 'center' });
+    doc.text('Pengelola Gedung Serbaguna', rightSigX, sigY + 5, { align: 'center' });
+    
+    if (bendaharaSig) {
+      try {
+        doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, sigY + 8, 30, 15);
+      } catch (e) {
+        console.error("Failed to add Bendahara signature to confirmation document:", e);
+      }
+    }
+
+    if (stampImg) {
+      try {
+        doc.addImage(stampImg, 'PNG', rightSigX - 22, sigY + 6, 24, 24);
+      } catch (e) {
+        console.error("Failed to add stamp to confirmation document:", e);
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(bendaharaName, rightSigX, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Bendahara/Pengelola', rightSigX, sigY + 36, { align: 'center' });
 
     doc.save(`Konfirmasi_Booking_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
   };

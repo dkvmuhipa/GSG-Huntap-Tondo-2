@@ -33,6 +33,7 @@ import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { generateContract, generateReceipt } from '../../services/contractService';
+import { getTransparentPNG } from '../../lib/cloudinary';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
@@ -244,7 +245,11 @@ export default function BookingManager() {
     window.open(url, '_blank');
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+    const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
+    const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
+
     const doc = new jsPDF();
     const generationDate = new Date().toLocaleString('id-ID', { 
       day: 'numeric', 
@@ -358,6 +363,68 @@ export default function BookingManager() {
         drawFooter(data.pageNumber);
       }
     });
+
+    // --- SIGNATURES SECTION ---
+    const finalY = (doc as any).lastAutoTable.finalY || 55;
+    const pageHeight = doc.internal.pageSize.height;
+    let sigY = finalY + 15;
+    if (sigY > pageHeight - 55) {
+      doc.addPage();
+      drawHeader(doc.getNumberOfPages());
+      drawFooter(doc.getNumberOfPages());
+      sigY = 40;
+    }
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    
+    const sigDate = `Palu, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    const signBlockWidth = 60;
+    const rightSigX = doc.internal.pageSize.width - 20 - (signBlockWidth / 2);
+    const leftSigX = 20 + (signBlockWidth / 2);
+    
+    const financeName = config?.reportFinanceName || 'Keuangan';
+    const bendaharaName = config?.reportBendaharaName || 'Bendahara';
+
+    // Right Side: Bendahara
+    doc.text(sigDate, rightSigX, sigY, { align: 'center' });
+    doc.text('Mengetahui / Menyetujui,', rightSigX, sigY + 5, { align: 'center' });
+    
+    if (bendaharaSig) {
+      try {
+        doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, sigY + 8, 30, 15);
+      } catch (e) {
+        console.error("Failed to add Bendahara signature to booking report:", e);
+      }
+    }
+
+    if (stampImg) {
+      try {
+        doc.addImage(stampImg, 'PNG', rightSigX - 22, sigY + 6, 24, 24);
+      } catch (e) {
+        console.error("Failed to add stamp to booking report:", e);
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(bendaharaName, rightSigX, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Bendahara', rightSigX, sigY + 36, { align: 'center' });
+
+    // Left Side: Pembuat Laporan
+    doc.text('Dibuat Oleh,', leftSigX, sigY + 5, { align: 'center' });
+    if (financeSig) {
+      try {
+        doc.addImage(financeSig, 'PNG', leftSigX - 15, sigY + 8, 30, 15);
+      } catch (e) {
+        console.error("Failed to add Finance signature to booking report:", e);
+      }
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.text(authorName, leftSigX, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(currentRole || 'Administrator', leftSigX, sigY + 36, { align: 'center' });
 
     doc.save(`Laporan_Booking_${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -642,12 +709,21 @@ export default function BookingManager() {
                           <FileText className="w-4 h-4 text-gray-400" />
                           <p className="text-sm font-bold text-gray-700">{booking.purpose}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-gray-400" />
-                          <p className="text-sm font-black text-primary">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${booking.paymentStatus === 'paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
-                            {booking.paymentStatus === 'paid' ? 'LUNAS' : 'BELUM LUNAS'}
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-gray-400" />
+                            <p className="text-sm font-black text-primary">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
+                          </div>
+                          <button 
+                            onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border shadow-sm active:scale-95 ${
+                              booking.paymentStatus === 'paid' 
+                                ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
+                                : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                            }`}
+                          >
+                            {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
+                          </button>
                         </div>
                       </div>
 

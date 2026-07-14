@@ -17,6 +17,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { auth } from '../lib/firebase';
+import { getTransparentPNG } from '../lib/cloudinary';
 
 export default function TransparencyDashboard() {
   const getLocalMonthKey = (d: Date) => {
@@ -111,9 +112,13 @@ export default function TransparencyDashboard() {
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (transactions.length === 0) return;
     
+    const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+    const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
+    const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
+
     const doc = new jsPDF();
     const generationDate = new Date().toLocaleString('id-ID', { 
       day: 'numeric', 
@@ -291,7 +296,7 @@ export default function TransparencyDashboard() {
     
     // Safety check for page capacity
     let finalRecapY = recapY;
-    if (finalRecapY > pageHeight - 70) {
+    if (finalRecapY > pageHeight - 110) {
       doc.addPage();
       drawHeader(doc.getNumberOfPages());
       drawFooter(doc.getNumberOfPages());
@@ -352,6 +357,59 @@ export default function TransparencyDashboard() {
     doc.setFont('helvetica', 'bold');
     doc.text('SALDO AKHIR PERIODE (TOTAL KAS)', margin + 5, finalRecapY + 36.5);
     doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 36.5, { align: 'right' });
+
+    // --- SIGNATURES SECTION ---
+    const sigY = finalRecapY + 50;
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    
+    const sigDate = `Palu, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    const signBlockWidth = 60;
+    const rightSigX = pageWidth - margin - (signBlockWidth / 2);
+    const leftSigX = margin + (signBlockWidth / 2);
+    
+    const financeName = config?.reportFinanceName || 'Keuangan';
+    const bendaharaName = config?.reportBendaharaName || 'Bendahara';
+
+    // Right Side: Bendahara
+    doc.text(sigDate, rightSigX, sigY, { align: 'center' });
+    doc.text('Mengetahui / Menyetujui,', rightSigX, sigY + 5, { align: 'center' });
+    
+    if (bendaharaSig) {
+      try {
+        doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, sigY + 8, 30, 15);
+      } catch (e) {
+        console.error("Failed to add Bendahara signature to transparency report:", e);
+      }
+    }
+
+    if (stampImg) {
+      try {
+        doc.addImage(stampImg, 'PNG', rightSigX - 22, sigY + 6, 24, 24);
+      } catch (e) {
+        console.error("Failed to add stamp to transparency report:", e);
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(bendaharaName, rightSigX, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Bendahara', rightSigX, sigY + 36, { align: 'center' });
+
+    // Left Side: Administrasi Keuangan
+    doc.text('Dibuat Oleh,', leftSigX, sigY + 5, { align: 'center' });
+    if (financeSig) {
+      try {
+        doc.addImage(financeSig, 'PNG', leftSigX - 15, sigY + 8, 30, 15);
+      } catch (e) {
+        console.error("Failed to add Finance signature to transparency report:", e);
+      }
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.text(financeName, leftSigX, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('Keuangan', leftSigX, sigY + 36, { align: 'center' });
 
     const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)

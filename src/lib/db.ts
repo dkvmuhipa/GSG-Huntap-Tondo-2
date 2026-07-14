@@ -63,6 +63,19 @@ export const updateGlobalConfig = async (data: Partial<any>) => {
   }
 };
 
+export const getGlobalConfig = async () => {
+  const docRef = doc(db, 'config', 'global');
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+  } catch (err) {
+    console.error("Error getting global config:", err);
+  }
+  return null;
+};
+
 // Facilities
 export const subscribeToFacilities = (callback: (data: any[]) => void) => {
   const colRef = collection(db, 'facilities');

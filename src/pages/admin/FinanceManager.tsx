@@ -48,7 +48,7 @@ import {
   updateGlobalConfig,
   subscribeToAdmins
 } from '../../lib/db';
-import { uploadToCloudinary } from '../../lib/cloudinary';
+import { uploadToCloudinary, getTransparentPNG } from '../../lib/cloudinary';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { auth } from '../../lib/firebase';
 import { jsPDF } from 'jspdf';
@@ -402,7 +402,11 @@ export default function FinanceManager() {
     return { income, expense };
   }, [allTransactions, activeMonth, activeYear, filterMode]);
 
-  const downloadKwitansi = (tx: any) => {
+  const downloadKwitansi = async (tx: any) => {
+    const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+    const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
+    const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
+
     const doc = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
@@ -419,142 +423,217 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'bold');
     doc.text('OFFICIAL RECEIPT', 40, 65, { angle: 15 });
 
+    // Subtle framing border for a high-end voucher card look
+    doc.setDrawColor(218, 224, 233);
+    doc.setLineWidth(0.4);
+    doc.rect(5, 5, 200, 100, 'S');
+
     // 1. HEADER AREA
     doc.setFillColor(30, 58, 138); // Primary Blue
-    doc.rect(0, 0, 5, 110, 'F'); // Left accent bar
+    doc.rect(5, 5, 3, 100, 'F'); // Left accent bar inside border
     
     // APP LOGO (Replicating logo.svg)
     doc.setFillColor(30, 58, 138); // #1e3a8a
-    doc.roundedRect(12, 10, 16, 16, 3, 3, 'F');
+    doc.roundedRect(14, 10, 16, 16, 3, 3, 'F');
     
     doc.setDrawColor(255, 255, 255); // White
     doc.setLineWidth(0.6);
     
     // Main building outline (Tall left, shorter right)
     // Left Wing (Tall)
-    doc.line(15, 23, 15, 14); // Left wall
-    doc.line(15, 14, 21, 14); // Left roof
-    doc.line(21, 14, 21, 23); // Inner wall (middle)
+    doc.line(17, 23, 17, 14); // Left wall
+    doc.line(17, 14, 23, 14); // Left roof
+    doc.line(23, 14, 23, 23); // Inner wall (middle)
     
     // Right Wing (Short)
-    doc.line(21, 17, 25, 17); // Right roof
-    doc.line(25, 17, 25, 23); // Right wall
+    doc.line(23, 17, 27, 17); // Right roof
+    doc.line(27, 17, 27, 23); // Right wall
     
     // Ground Line
     doc.setLineWidth(0.7);
-    doc.line(14, 23, 26, 23);
+    doc.line(16, 23, 28, 23);
     
     // Windows (3 horizontal lines on left wing)
     doc.setLineWidth(0.5);
-    doc.line(17, 16.5, 19.5, 16.5); // Window 1
-    doc.line(17, 18.5, 19.5, 18.5); // Window 2
-    doc.line(17, 20.5, 19.5, 20.5); // Window 3
+    doc.line(19, 16.5, 21.5, 16.5); // Window 1
+    doc.line(19, 18.5, 21.5, 18.5); // Window 2
+    doc.line(19, 20.5, 21.5, 20.5); // Window 3
 
     // Title
     doc.setTextColor(30, 58, 138);
-    doc.setFontSize(18);
-    doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', 32, 18);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2', 34, 17);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text('Pusat Kegiatan Warga Huntap Tondo 2, Palu - Sulawesi Tengah', 32, 23);
-    doc.text('Website: gsg-tondo2.web.app | Email: admin.gsg@tondo2.com', 32, 27);
+    doc.text('Pusat Kegiatan Warga Huntap Tondo 2, Palu - Sulawesi Tengah', 34, 22);
+    doc.text('Website: gsg-tondo2.web.app | Email: admin.gsg@tondo2.com', 34, 26);
 
     // Receipt Badge
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(155, 10, 45, 18, 2, 2, 'F');
     doc.setTextColor(30, 58, 138);
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('KWITANSI', 161, 19);
+    doc.text('KWITANSI', 161, 18);
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184);
-    doc.text(`NO: ${tx.id.substring(0, 12).toUpperCase()}`, 161, 24);
+    doc.text(`NO: ${tx.id.substring(0, 12).toUpperCase()}`, 161, 23);
 
     // Divider
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.5);
-    doc.line(12, 35, 200, 35);
+    doc.line(14, 33, 196, 33);
 
     // 2. CONTENT AREA
-    const startY = 45;
-    const labelX = 15;
-    const valueX = 55;
-    const rowHeight = 10;
+    const startY = 43;
+    const labelX = 16;
+    const valueX = 54;
+    const rowHeight = 9;
 
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(100);
     doc.setFont('helvetica', 'normal');
 
-    // Row: Teruma Dari
+    // Row: Terima Dari
     doc.text('Telah terima dari', labelX, startY);
-    doc.setTextColor(0);
+    doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
     
     const sourceText = `:  ${tx.source.toUpperCase()}`;
-    const sourceLines = doc.splitTextToSize(sourceText, 145);
+    const sourceLines = doc.splitTextToSize(sourceText, 142);
     doc.text(sourceLines, valueX, startY);
     
-    const sourceHeight = (sourceLines.length - 1) * 5;
-    doc.line(valueX + 2, startY + sourceHeight + 2, 200, startY + sourceHeight + 2);
+    const sourceHeight = (sourceLines.length - 1) * 4.5;
+    doc.setDrawColor(241, 245, 249);
+    doc.line(valueX + 2, startY + sourceHeight + 1.5, 196, startY + sourceHeight + 1.5);
 
     // Row: Uang Sejumlah
     const amountY = startY + rowHeight + sourceHeight;
     doc.setTextColor(100);
     doc.setFont('helvetica', 'normal');
     doc.text('Uang sejumlah', labelX, amountY);
-    doc.setTextColor(0);
+    doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
     doc.text(`:  Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, valueX, amountY);
-    doc.line(valueX + 2, amountY + 2, 200, amountY + 2);
+    doc.line(valueX + 2, amountY + 1.5, 196, amountY + 1.5);
 
     // Row: Untuk Pembayaran
     const paymentY = amountY + rowHeight;
     doc.setTextColor(100);
     doc.setFont('helvetica', 'normal');
     doc.text('Untuk pembayaran', labelX, paymentY);
-    doc.setTextColor(0);
+    doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
     
     const paymentText = `:  ${displayCategory(tx.category).toUpperCase()} - ${tx.notes || 'RESERVASI GEDUNG'}`;
-    const paymentLines = doc.splitTextToSize(paymentText, 145);
+    const paymentLines = doc.splitTextToSize(paymentText, 142);
     doc.text(paymentLines, valueX, paymentY);
     
-    const paymentHeight = (paymentLines.length - 1) * 5;
-    doc.line(valueX + 2, paymentY + paymentHeight + 2, 200, paymentY + paymentHeight + 2);
+    const paymentHeight = (paymentLines.length - 1) * 4.5;
+    doc.line(valueX + 2, paymentY + paymentHeight + 1.5, 196, paymentY + paymentHeight + 1.5);
 
     // 3. TERBILANG BOX (Visual Highlight) & FOOTER
-    const footerY = Math.max(82, paymentY + paymentHeight + 12);
+    const footerY = Math.max(76, paymentY + paymentHeight + 10);
     
-    doc.setFillColor(241, 245, 249);
-    doc.roundedRect(12, footerY - 5, 100, 15, 2, 2, 'F');
-    doc.setFontSize(14);
-    doc.setTextColor(30, 58, 138);
-    doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 18, footerY + 5);
+    // Amount Box on the left
+    doc.setFillColor(241, 253, 245); // Soft emerald tint
+    doc.roundedRect(16, footerY - 4, 85, 14, 2, 2, 'F');
+    doc.setDrawColor(167, 243, 208);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(16, footerY - 4, 85, 14, 2, 2, 'S');
+
+    doc.setFontSize(13);
+    doc.setTextColor(5, 150, 105); // Emerald-600
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Rp ${Math.abs(tx.amount).toLocaleString('id-ID')},-`, 22, footerY + 5);
     
-    // 4. FOOTER & SIGNATURE
+    // --- SIGNATURES DUAL COLUMNS (Keuangan & Bendahara) ---
     doc.setTextColor(71, 85, 105);
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
+    
     const dateStr = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.text(`Palu, ${dateStr}`, 170, footerY - 5, { align: 'center' });
-    doc.text('Penerima / Bendahara,', 170, footerY, { align: 'center' });
+    
+    // Left Sig Center: X = 135
+    // Right Sig Center: X = 172
+    const leftSigX = 132;
+    const rightSigX = 172;
 
-    // Stamp Placeholder
-    doc.setDrawColor(30, 58, 138);
-    doc.setLineWidth(0.2);
-    doc.setLineDashPattern([2, 1], 0);
-    doc.circle(150, footerY + 7, 10);
-    doc.setFontSize(6);
-    doc.text('STEMPEL', 150, footerY + 7.5, { align: 'center' });
-    doc.setLineDashPattern([], 0);
+    // Date printed right above the Bendahara block
+    doc.text(`Palu, ${dateStr}`, rightSigX, footerY - 5, { align: 'center' });
 
-    const bendaharaName = config?.reportBendaharaName || 'Admin Gedung Serbaguna Huntap Tondo 2';
-    doc.setFontSize(10);
+    // 1. Column Keuangan
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Dibuat Oleh,', leftSigX, footerY, { align: 'center' });
+    doc.text('Staf Keuangan', leftSigX, footerY + 4, { align: 'center' });
+
+    if (financeSig) {
+      try {
+        doc.addImage(financeSig, 'PNG', leftSigX - 15, footerY + 5, 30, 12);
+      } catch (e) {
+        console.error("Failed to add Finance signature to receipt:", e);
+      }
+    }
+
+    const financeName = config?.reportFinanceName || 'Keuangan';
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 58, 138);
-    doc.text(bendaharaName, 170, footerY + 18, { align: 'center' });
-    doc.line(145, footerY + 20, 195, footerY + 20);
+    doc.text(financeName, leftSigX, footerY + 20, { align: 'center' });
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.2);
+    doc.line(leftSigX - 18, footerY + 21, leftSigX + 18, footerY + 21);
+
+    // 2. Column Bendahara
+    doc.setTextColor(100);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Penerima / Mengetahui,', rightSigX, footerY, { align: 'center' });
+    doc.text('Bendahara', rightSigX, footerY + 4, { align: 'center' });
+
+    if (bendaharaSig) {
+      try {
+        doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, footerY + 5, 30, 12);
+      } catch (e) {
+        console.error("Failed to add Bendahara signature to receipt:", e);
+      }
+    }
+
+    // Overlay stamp on Bendahara Signature
+    if (stampImg) {
+      try {
+        doc.addImage(stampImg, 'PNG', rightSigX - 22, footerY + 1, 18, 18);
+      } catch (e) {
+        console.error("Failed to add stamp to receipt:", e);
+      }
+    } else {
+      // Small Stamp Placeholder
+      doc.setDrawColor(30, 58, 138);
+      doc.setLineWidth(0.15);
+      doc.setLineDashPattern([1.5, 1], 0);
+      doc.circle(rightSigX - 15, footerY + 10, 6);
+      doc.setFontSize(4.5);
+      doc.text('STEMPEL', rightSigX - 15, footerY + 10.5, { align: 'center' });
+      doc.setLineDashPattern([], 0);
+    }
+
+    const bendaharaName = config?.reportBendaharaName || 'Bendahara';
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text(bendaharaName, rightSigX, footerY + 20, { align: 'center' });
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.2);
+    doc.line(rightSigX - 18, footerY + 21, rightSigX + 18, footerY + 21);
+
+    // Subtle modern footer info inside border
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Kwitansi resmi ini diterbitkan secara elektronik dan sah sesuai regulasi keuangan Gedung Serbaguna.', 105, 102, { align: 'center' });
 
     doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
   };
@@ -777,9 +856,13 @@ export default function FinanceManager() {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (filteredReportTransactions.length === 0) return;
     
+    const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+    const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
+    const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
+
     const doc = new jsPDF();
     const generationDate = new Date().toLocaleString('id-ID', { 
       day: 'numeric', 
@@ -1070,14 +1153,22 @@ export default function FinanceManager() {
     doc.text('Mengetahui / Menyetujui,', rightSigX, sigY + 5, { align: 'center' });
     
     // Draw Bendahara Digital Signature
-    if (config?.reportBendaharaSignature) {
+    if (bendaharaSig) {
       try {
-        const sigData = config.reportBendaharaSignature;
-        const format = sigData.includes('jpeg') || sigData.includes('jpg') ? 'JPEG' : 'PNG';
         // Positioned centrally in the blank space
-        doc.addImage(sigData, format, rightSigX - 15, sigY + 8, 30, 16);
+        doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, sigY + 8, 30, 16);
       } catch (e) {
         console.error("Failed to add Bendahara digital signature:", e);
+      }
+    }
+
+    // Draw Stamp if available
+    if (stampImg) {
+      try {
+        // Overlapping the bendahara signature beautifully
+        doc.addImage(stampImg, 'PNG', rightSigX - 22, sigY + 6, 24, 24);
+      } catch (e) {
+        console.error("Failed to add stamp to report:", e);
       }
     }
 
@@ -1095,11 +1186,9 @@ export default function FinanceManager() {
     doc.text('Dibuat Oleh,', leftSigX, sigY + 5, { align: 'center' });
     
     // Draw Finance Digital Signature
-    if (config?.reportFinanceSignature) {
+    if (financeSig) {
       try {
-        const sigData = config.reportFinanceSignature;
-        const format = sigData.includes('jpeg') || sigData.includes('jpg') ? 'JPEG' : 'PNG';
-        doc.addImage(sigData, format, leftSigX - 15, sigY + 8, 30, 16);
+        doc.addImage(financeSig, 'PNG', leftSigX - 15, sigY + 8, 30, 16);
       } catch (e) {
         console.error("Failed to add Finance digital signature:", e);
       }

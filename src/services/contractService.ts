@@ -1,5 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getGlobalConfig } from '../lib/db';
+import { getTransparentPNG } from '../lib/cloudinary';
 
 interface BookingData {
   id: string;
@@ -53,7 +55,18 @@ export function terbilang(angka: number): string {
 /**
  * Renders a highly authentic, transparent-style local admin stamp (Stempel Resmi Gedung Serbaguna Huntap Tondo 2)
  */
-function drawDigitalStamp(doc: jsPDF, x: number, y: number) {
+function drawDigitalStamp(doc: jsPDF, x: number, y: number, stampUrl?: string | null) {
+  if (stampUrl) {
+    try {
+      const format = stampUrl.includes('jpeg') || stampUrl.includes('jpg') ? 'JPEG' : 'PNG';
+      // Center the image around (x, y) with a radius of approx 18 (so size 36x36)
+      doc.addImage(stampUrl, format, x - 18, y - 18, 36, 36);
+      return;
+    } catch (e) {
+      console.error("Failed to add custom stamp to document:", e);
+    }
+  }
+
   // Save current styling states
   const oldLineWidth = doc.getLineWidth();
   const oldDrawColor = doc.getDrawColor();
@@ -105,6 +118,9 @@ function drawDigitalStamp(doc: jsPDF, x: number, y: number) {
  * Generate PDF: 1. Surat Perjanjian Sewa Digital (Formal Digital Lease Contract)
  */
 export const generateContract = async (booking: BookingData) => {
+  const config = await getGlobalConfig();
+  const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+  const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
   const doc = new jsPDF();
   const primaryColor = [30, 64, 175]; // Royal Blue
   const darkSlate = [15, 23, 42]; // Off-black base
@@ -260,8 +276,17 @@ export const generateContract = async (booking: BookingData) => {
   doc.text('PENGELOLA GEDUNG SERBAGUNA', margin + 32, sigY + 26, { align: 'center' });
   doc.text(booking.customerName.toUpperCase(), pageWidth - margin - 32, sigY + 26, { align: 'center' });
 
+  // Draw Bendahara Signature if uploaded
+  if (bendaharaSig) {
+    try {
+      doc.addImage(bendaharaSig, 'PNG', margin + 17, sigY + 4, 30, 15);
+    } catch (e) {
+      console.error("Failed to add Bendahara signature to contract:", e);
+    }
+  }
+
   // RENDER THE AUTHENTIC DIGITAL STAMP OVER PIHAK PERTAMA'S SIGNATURE
-  drawDigitalStamp(doc, margin + 32, sigY + 15);
+  drawDigitalStamp(doc, margin + 32, sigY + 15, stampImg);
 
   // --- FOOTER LANDING ---
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -278,6 +303,10 @@ export const generateContract = async (booking: BookingData) => {
  * Generate PDF: 2. Kuitansi / Invoice Pembayaran resmi (Receipt Document with dynamic breakdowns)
  */
 export const generateReceipt = async (booking: BookingData) => {
+  const config = await getGlobalConfig();
+  const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
+  const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
+  const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
   const doc = new jsPDF();
   const primaryColor = [16, 185, 129]; // Emerald Green for financial transactions
   const darkSlate = [15, 23, 42]; 
@@ -466,25 +495,76 @@ export const generateReceipt = async (booking: BookingData) => {
   const sigY = tableY + 22;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text('Tanggal: ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), pageWidth - margin - 40, sigY);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Penerima / Bendahara Gedung,', pageWidth - margin - 40, sigY + 6, { align: 'center' });
   
-  doc.setDrawColor(226, 232, 240);
-  doc.line(pageWidth - margin - 55, sigY + 28, pageWidth - margin - 5, sigY + 28);
+  const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   
-  doc.setFontSize(7.5);
-  doc.text('BENDAHARA GEDUNG SERBAGUNA', pageWidth - margin - 40, sigY + 32, { align: 'center' });
+  // Left Column (Keuangan) Center: X = 55
+  // Right Column (Bendahara) Center: X = 155
+  const leftSigX = 55;
+  const rightSigX = 155;
 
-  // Seal with dynamic transparent stamp overlaying bendahara's signature block
-  drawDigitalStamp(doc, pageWidth - margin - 40, sigY + 20);
+  // Print Date above right column
+  doc.text(`Palu, ${dateStr}`, rightSigX, sigY, { align: 'center' });
+
+  // 1. Left Column: Keuangan
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Dibuat Oleh,', leftSigX, sigY + 6, { align: 'center' });
+  doc.text('Administrasi Keuangan', leftSigX, sigY + 11, { align: 'center' });
+
+  if (financeSig) {
+    try {
+      doc.addImage(financeSig, 'PNG', leftSigX - 15, sigY + 14, 30, 14);
+    } catch (e) {
+      console.error("Failed to add Finance signature to receipt:", e);
+    }
+  }
+
+  const financeName = config?.reportFinanceName || 'Keuangan';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text(financeName, leftSigX, sigY + 31, { align: 'center' });
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.line(leftSigX - 25, sigY + 33, leftSigX + 25, sigY + 33);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text('STAF KEUANGAN GEDUNG', leftSigX, sigY + 37, { align: 'center' });
+
+  // 2. Right Column: Bendahara
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Penerima / Mengetahui,', rightSigX, sigY + 6, { align: 'center' });
+  doc.text('Bendahara Gedung,', rightSigX, sigY + 11, { align: 'center' });
+
+  if (bendaharaSig) {
+    try {
+      doc.addImage(bendaharaSig, 'PNG', rightSigX - 15, sigY + 14, 30, 14);
+    } catch (e) {
+      console.error("Failed to add Bendahara signature to receipt:", e);
+    }
+  }
+
+  // Draw the official stamp centered/overlaying the Bendahara signature
+  drawDigitalStamp(doc, rightSigX, sigY + 23, stampImg);
+
+  const bendaharaName = config?.reportBendaharaName || 'Bendahara';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text(bendaharaName, rightSigX, sigY + 31, { align: 'center' });
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.line(rightSigX - 25, sigY + 33, rightSigX + 25, sigY + 33);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text('BENDAHARA & PENGELOLA', rightSigX, sigY + 37, { align: 'center' });
 
   // Footer bar
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 286, pageWidth, 11, 'F');
   doc.setTextColor(255);
   doc.setFontSize(8);
-  doc.text(`Kuitansi ini dicetak digital secara otomatis dan sah tanpa tanda tangan basah. Ref: ${booking.id.substring(0,8).toUpperCase()}`, pageWidth / 2, 292, { align: 'center' });
+  doc.text(`Kuitansi ini dicetak digital secara otomatis dan sah. Ref: ${booking.id.substring(0,8).toUpperCase()}`, pageWidth / 2, 292, { align: 'center' });
 
   // Save/Download Action
   doc.save(`Kuitansi_Pembayaran_Gedung_Serbaguna_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
