@@ -122,6 +122,7 @@ export default function FinanceManager() {
   const [newRate, setNewRate] = useState('20');
   const [newBudget, setNewBudget] = useState('5000000');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isReceiptNoManuallyEdited, setIsReceiptNoManuallyEdited] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,6 +169,28 @@ export default function FinanceManager() {
     return `${year}-${month}`;
   };
 
+  const generateUniqueReceiptNo = (dateStr: string, txsList: any[]) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    const year = parts[0] || new Date().getFullYear().toString();
+    const month = parts[1] || String(new Date().getMonth() + 1).padStart(2, '0');
+    
+    let seq = 1;
+    let receiptNo = '';
+    let isUnique = false;
+    
+    while (!isUnique) {
+      receiptNo = `KW/${year}/${month}/${String(seq).padStart(3, '0')}`;
+      const exists = txsList.some(t => t.receiptNo === receiptNo && t.id !== editingId);
+      if (!exists) {
+        isUnique = true;
+      } else {
+        seq++;
+      }
+    }
+    return receiptNo;
+  };
+
   const displayCategory = (cat: string) => {
     const map: { [key: string]: string } = {
       'sewa': 'Sewa Gedung',
@@ -207,7 +230,8 @@ export default function FinanceManager() {
     receiptUrl: '',
     allocationMode: 'auto' as 'auto' | 'full_ops' | 'full_dev',
     expenseSource: 'ops' as 'ops' | 'dev',
-    transferDirection: 'ops_to_dev' as 'ops_to_dev' | 'dev_to_ops'
+    transferDirection: 'ops_to_dev' as 'ops_to_dev' | 'dev_to_ops',
+    receiptNo: ''
   });
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -487,7 +511,7 @@ export default function FinanceManager() {
     
     doc.setFontSize(6.8);
     doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-    doc.text(`REF: KW-${tx.id.substring(0, 8).toUpperCase()}`, 159, 21);
+    doc.text(`REF: ${tx.receiptNo || 'KW-' + tx.id.substring(0, 8).toUpperCase()}`, 159, 21);
 
     // Header Divider line
     doc.setDrawColor(borderLight[0], borderLight[1], borderLight[2]);
@@ -800,7 +824,10 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'normal');
     doc.text('Kwitansi resmi ini diterbitkan secara elektronik dan merupakan bukti transaksi pembayaran yang sah.', 105, 103.8, { align: 'center' });
 
-    doc.save(`Kwitansi_${tx.id.substring(0, 8)}_${tx.source.replace(/\s+/g, '_')}.pdf`);
+    const receiptNameStr = tx.receiptNo 
+      ? tx.receiptNo.replace(/[^a-zA-Z0-9]/g, '_') 
+      : tx.id.substring(0, 8);
+    doc.save(`Kwitansi_${receiptNameStr}_${tx.source.replace(/\s+/g, '_')}.pdf`);
   };
 
   const exportCSV = () => {
@@ -957,8 +984,10 @@ export default function FinanceManager() {
       receiptUrl: tx.receiptUrl || '',
       allocationMode: tx.allocationMode || 'auto',
       expenseSource: tx.expenseSource || 'ops',
-      transferDirection: tx.transferDirection || 'ops_to_dev'
+      transferDirection: tx.transferDirection || 'ops_to_dev',
+      receiptNo: tx.receiptNo || generateUniqueReceiptNo(tx.date, allTransactions)
     });
+    setIsReceiptNoManuallyEdited(!!tx.receiptNo);
     setReceiptFile(null);
     setIsModalOpen(true);
   };
@@ -1559,8 +1588,10 @@ export default function FinanceManager() {
         receiptUrl: '',
         allocationMode: 'auto',
         expenseSource: 'ops',
-        transferDirection: 'ops_to_dev'
+        transferDirection: 'ops_to_dev',
+        receiptNo: ''
       });
+      setIsReceiptNoManuallyEdited(false);
       setReceiptFile(null);
       setError(null);
     } catch (err: any) {
@@ -1771,6 +1802,25 @@ export default function FinanceManager() {
             onClick={() => {
               setIsCategoryManuallySelected(false);
               setAutoSuggestedFromKeyword(null);
+              const initialDate = getLocalDateString(new Date());
+              setFormData({
+                date: initialDate,
+                eventDate: '',
+                source: '',
+                amount: '',
+                type: 'income',
+                category: 'umum',
+                customCategory: '',
+                paymentMethod: 'transfer',
+                notes: '',
+                status: 'completed',
+                receiptUrl: '',
+                allocationMode: 'auto',
+                expenseSource: 'ops',
+                transferDirection: 'ops_to_dev',
+                receiptNo: generateUniqueReceiptNo(initialDate, allTransactions),
+              });
+              setIsReceiptNoManuallyEdited(false);
               setIsModalOpen(true);
             }}
             className="bg-primary text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
@@ -2042,7 +2092,12 @@ export default function FinanceManager() {
                       </td>
                       <td className="px-8 py-6">
                         <p className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">{t.source}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                          {t.receiptNo && (
+                            <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wide border border-indigo-100 font-mono">
+                              {t.receiptNo}
+                            </span>
+                          )}
                           <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 bg-gray-100 rounded-md uppercase tracking-wider">
                             {displayCategory(t.category)}
                           </span>
@@ -2149,7 +2204,14 @@ export default function FinanceManager() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.date}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.date}</p>
+                        {t.receiptNo && (
+                          <span className="text-[8px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-mono">
+                            {t.receiptNo}
+                          </span>
+                        )}
+                      </div>
                       <h4 className="font-black text-gray-900 mt-1 leading-tight">{t.source}</h4>
                     </div>
                     <div className={`px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 ${t.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -2273,16 +2335,23 @@ export default function FinanceManager() {
                   setIsCategoryManuallySelected(false);
                   setAutoSuggestedFromKeyword(null);
                   setFormData({
-                    date: new Date().toISOString().split('T')[0],
+                    date: getLocalDateString(new Date()),
+                    eventDate: '',
                     source: '',
                     amount: '',
                     type: 'income',
                     category: 'umum',
+                    customCategory: '',
+                    paymentMethod: 'transfer',
+                    notes: '',
                     status: 'completed',
                     receiptUrl: '',
                     allocationMode: 'auto',
-                    expenseSource: 'ops'
+                    expenseSource: 'ops',
+                    transferDirection: 'ops_to_dev',
+                    receiptNo: '',
                   });
+                  setIsReceiptNoManuallyEdited(false);
                 }}
                 className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
               >
@@ -2335,7 +2404,16 @@ export default function FinanceManager() {
                     type="date" 
                     required
                     value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    onChange={(e) => {
+                      const nextDate = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        date: nextDate,
+                        receiptNo: !isReceiptNoManuallyEdited 
+                          ? generateUniqueReceiptNo(nextDate, allTransactions) 
+                          : prev.receiptNo
+                      }));
+                    }}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
                   />
                 </div>
@@ -2481,7 +2559,7 @@ export default function FinanceManager() {
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
+              <div className="grid md:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                     {formData.type === 'income' ? 'Metode Alokasi' : formData.type === 'reallocation' ? 'Arah Pemindahan' : 'Sumber Dana'}
@@ -2535,6 +2613,19 @@ export default function FinanceManager() {
                     <option value="cash">Tunai (Cash)</option>
                     <option value="qris">QRIS / E-Wallet</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nomor Kwitansi</label>
+                  <input 
+                    type="text"
+                    value={formData.receiptNo || ''}
+                    onChange={(e) => {
+                      setFormData({...formData, receiptNo: e.target.value});
+                      setIsReceiptNoManuallyEdited(true);
+                    }}
+                    placeholder="Contoh: KW/2026/07/001"
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all font-mono"
+                  />
                 </div>
               </div>
 
