@@ -630,7 +630,7 @@ export default function FinanceManager() {
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
       doc.setFont('helvetica', 'normal');
       doc.text('Dibuat Oleh,', leftSigX, footerY, { align: 'center' });
-      doc.text('Staf Keuangan', leftSigX, footerY + 3.5, { align: 'center' });
+      doc.text('Administrasi Keuangan', leftSigX, footerY + 3.5, { align: 'center' });
 
       if (financeSig) {
         try {
@@ -651,7 +651,7 @@ export default function FinanceManager() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.5);
       doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-      doc.text('STAF KEUANGAN', leftSigX, footerY + 23, { align: 'center' });
+      doc.text('ADMINISTRASI KEUANGAN', leftSigX, footerY + 23, { align: 'center' });
 
       // Right: Treasurer
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
@@ -704,7 +704,7 @@ export default function FinanceManager() {
       doc.setTextColor(textDark[0], textDark[1], textDark[2]);
       doc.setFont('helvetica', 'normal');
       doc.text('Dibuat / Penerima,', rightSigX, footerY, { align: 'center' });
-      doc.text('Staf Keuangan', rightSigX, footerY + 3.5, { align: 'center' });
+      doc.text('Administrasi Keuangan', rightSigX, footerY + 3.5, { align: 'center' });
 
       if (financeSig) {
         try {
@@ -742,7 +742,7 @@ export default function FinanceManager() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.5);
       doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-      doc.text('STAF KEUANGAN GEDUNG', rightSigX, footerY + 23, { align: 'center' });
+      doc.text('ADMINISTRASI KEUANGAN GEDUNG', rightSigX, footerY + 23, { align: 'center' });
 
     } else {
       // Only Treasurer
@@ -1581,7 +1581,7 @@ export default function FinanceManager() {
           <h2 className="text-2xl font-black text-gray-900 mb-4 tracking-tight">Akses Terbatas</h2>
           <p className="text-gray-500 leading-relaxed mb-8">
             Maaf, anda tidak memiliki izin untuk mengakses modul Manajemen Keuangan. 
-            Modul ini hanya dapat diakses oleh Owner, Admin, Bendahara, atau Staf Keuangan.
+            Modul ini hanya dapat diakses oleh Owner, Admin, Bendahara, atau Administrasi Keuangan.
           </p>
           <div className="p-4 bg-gray-50 rounded-2xl text-xs font-bold text-gray-400 uppercase tracking-widest">
             Level Akses Anda: {
@@ -3041,8 +3041,8 @@ export default function FinanceManager() {
                   onChange={(e) => setLocalReceiptSignatureMode(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-900 outline-none focus:border-indigo-500 transition-all text-xs cursor-pointer"
                 >
-                  <option value="both">Tampilkan Keduanya (Staf Keuangan & Bendahara)</option>
-                  <option value="finance">Tampilkan Staf Keuangan Saja</option>
+                  <option value="both">Tampilkan Keduanya (Administrasi Keuangan & Bendahara)</option>
+                  <option value="finance">Tampilkan Administrasi Keuangan Saja</option>
                   <option value="bendahara">Tampilkan Bendahara Saja</option>
                 </select>
               </div>
