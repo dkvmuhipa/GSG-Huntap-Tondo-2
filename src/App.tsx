@@ -16,6 +16,7 @@ import FAQSection from './components/FAQSection';
 import FeedbackSection from './components/FeedbackSection';
 import ContactSection from './components/ContactSection';
 import AnnouncementTicker from './components/AnnouncementTicker';
+import UpcomingEvents from './components/UpcomingEvents';
 import Footer from './components/Footer';
 import AdminLayout from './components/admin/AdminLayout';
 import DashboardOverview from './pages/admin/DashboardOverview';
@@ -62,6 +63,7 @@ function LandingPage() {
     <main>
       <Hero onOpenBooking={() => openBooking()} />
       <AvailabilityWidget />
+      <UpcomingEvents />
       <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
       <GallerySection />
       <FAQSection />

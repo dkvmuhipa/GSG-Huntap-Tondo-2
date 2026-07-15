@@ -23,6 +23,8 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Send,
+  MessageSquare,
   X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -33,6 +35,46 @@ export default function RulesProcedures() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // States for interactive public booking message template generator
+  const [templateName, setTemplateName] = useState('');
+  const [templateDate, setTemplateDate] = useState('');
+  const [templatePurpose, setTemplatePurpose] = useState('');
+  const [templatePackage, setTemplatePackage] = useState('Paket Pernikahan Lengkap');
+  const [templateCopied, setTemplateCopied] = useState(false);
+
+  const getPublicWAMessage = () => {
+    const name = templateName.trim() || '[Nama Anda]';
+    const date = templateDate || '[Tanggal Rencana]';
+    const purpose = templatePurpose.trim() || '[Tujuan Acara, misal: Pernikahan]';
+    const pkg = templatePackage || '[Paket Pilihan]';
+    
+    return `Yth. Pengelola Gedung Serbaguna Huntap 2 Tondo,
+
+Saya ingin mengajukan permohonan penyewaan gedung dengan rincian berikut:
+
+📌 *IDENTITAS PENYEWA*
+- Nama Lengkap: ${name}
+- Hubungi Via: WhatsApp
+
+📅 *WAKTU & DETIL ACARA*
+- Hari/Tanggal: ${date}
+- Paket Pilihan: ${pkg}
+- Tujuan Acara: ${purpose}
+
+Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah verifikasi selanjutnya. Terima kasih.`;
+  };
+
+  const handleCopyPublicTemplate = () => {
+    navigator.clipboard.writeText(getPublicWAMessage());
+    setTemplateCopied(true);
+    setTimeout(() => setTemplateCopied(false), 2000);
+  };
+
+  const getPublicWALink = () => {
+    const text = encodeURIComponent(getPublicWAMessage());
+    return `https://wa.me/6281234567890?text=${text}`;
+  };
 
   // Quick Steps Workflow
   const steps = [
@@ -408,6 +450,146 @@ export default function RulesProcedures() {
                   </div>
                 );
               })}
+            </div>
+          </section>
+
+          {/* Interactive Message Template Section (Hidden in Print) */}
+          <section className="mt-14 print:hidden bg-white border border-gray-100 rounded-[2.5rem] p-6 sm:p-8 md:p-10 shadow-sm">
+            <div className="mb-8">
+              <span className="text-indigo-600 text-xs font-black uppercase tracking-widest block mb-1">
+                Pemesanan & Pertanyaan Manual
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                Template Pesan WhatsApp
+              </h2>
+              <p className="text-gray-500 text-sm mt-2 max-w-xl font-medium leading-relaxed">
+                Ingin bertanya atau memesan langsung lewat WhatsApp? Isi data di bawah ini untuk menghasilkan template pesan yang rapi dan siap dikirim ke pengurus gedung.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {/* Left Side: Interactive Inputs */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase text-gray-400 tracking-wider mb-2">
+                  1. Isi Data Acara
+                </h3>
+                
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5">
+                    Nama Lengkap Anda
+                  </label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Contoh: Budi Santoso"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-semibold transition-all outline-none text-gray-800 placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5">
+                      Tanggal Rencana Acara
+                    </label>
+                    <input
+                      type="date"
+                      value={templateDate}
+                      onChange={(e) => setTemplateDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-semibold transition-all outline-none text-gray-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5">
+                      Jenis / Tujuan Acara
+                    </label>
+                    <input
+                      type="text"
+                      value={templatePurpose}
+                      onChange={(e) => setTemplatePurpose(e.target.value)}
+                      placeholder="Contoh: Resepsi Pernikahan"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-semibold transition-all outline-none text-gray-800 placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5">
+                    Pilihan Paket Sewa
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={templatePackage}
+                      onChange={(e) => setTemplatePackage(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-semibold transition-all outline-none text-gray-800 appearance-none cursor-pointer"
+                    >
+                      <option value="Paket Pernikahan Lengkap">Paket Pernikahan Lengkap</option>
+                      <option value="Paket Acara Umum / Komersil">Paket Acara Umum / Komersil</option>
+                      <option value="Paket Kegiatan Kemasyarakatan">Paket Kegiatan Kemasyarakatan</option>
+                      <option value="Sewa Gedung Saja (Harian)">Sewa Gedung Saja (Harian)</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Chat Bubble Preview */}
+              <div>
+                <h3 className="text-sm font-black uppercase text-gray-400 tracking-wider mb-2">
+                  2. Preview & Kirim Pesan
+                </h3>
+                
+                <div className="bg-slate-900 rounded-[2rem] p-5 sm:p-6 border border-slate-800 relative shadow-inner overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+                  
+                  {/* Header Chat */}
+                  <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-4">
+                    <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center font-black text-xs">
+                      WA
+                    </div>
+                    <div>
+                      <span className="block text-xs font-black text-white leading-none">WhatsApp Admin GSG</span>
+                      <span className="block text-[10px] text-emerald-400 font-semibold mt-1">Online • +62 812-3456-7890</span>
+                    </div>
+                  </div>
+
+                  {/* Message Body */}
+                  <div className="bg-slate-850 rounded-2xl p-4 border border-slate-800 mb-5 relative max-h-64 overflow-y-auto scrollbar-none">
+                    <button
+                      onClick={handleCopyPublicTemplate}
+                      className="absolute top-3 right-3 bg-white/5 hover:bg-white/10 active:scale-95 text-white p-2 rounded-xl text-xs flex items-center gap-1.5 transition-all font-bold border border-white/5 cursor-pointer"
+                      title="Salin Template"
+                    >
+                      {templateCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400 text-[10px]">Tersalin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-slate-400 text-[10px]">Salin</span>
+                        </>
+                      )}
+                    </button>
+                    <pre className="text-[11px] sm:text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed select-all">
+                      {getPublicWAMessage()}
+                    </pre>
+                  </div>
+
+                  {/* Action Link */}
+                  <a
+                    href={getPublicWALink()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Kirim via WhatsApp
+                  </a>
+                </div>
+              </div>
             </div>
           </section>
 

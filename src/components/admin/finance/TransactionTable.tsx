@@ -98,6 +98,15 @@ export default function TransactionTable({
                     </td>
                     <td className="px-8 py-6">
                       <p className="text-sm font-bold text-gray-900 group-hover:text-primary transition-colors">{t.source}</p>
+                      {t.organizerName ? (
+                        <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                          Penyelenggara: {t.organizerName} ({t.organizerType || 'Perorangan'})
+                        </p>
+                      ) : (t.organizerType && t.organizerType !== 'Perorangan / Keluarga' && (
+                        <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                          Kategori Penyelenggara: {t.organizerType}
+                        </p>
+                      ))}
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
                         {t.receiptNo && (
                           <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wide border border-indigo-100 font-mono">
@@ -220,6 +229,15 @@ export default function TransactionTable({
                       )}
                     </div>
                     <h4 className="font-black text-gray-900 mt-1 leading-tight">{t.source}</h4>
+                    {t.organizerName ? (
+                      <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                        Penyelenggara: {t.organizerName} ({t.organizerType || 'Perorangan'})
+                      </p>
+                    ) : (t.organizerType && t.organizerType !== 'Perorangan / Keluarga' && (
+                      <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                        Kategori Penyelenggara: {t.organizerType}
+                      </p>
+                    ))}
                   </div>
                   <div className={`px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 ${t.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                     {t.status === 'completed' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}

@@ -80,6 +80,8 @@ export default function BookingManager() {
     nik: '',
     address: '',
     organization: '',
+    organizerType: 'Perorangan / Keluarga',
+    organizerName: '',
     purpose: '',
     startDate: '',
     endDate: '',
@@ -188,6 +190,8 @@ export default function BookingManager() {
           nik: '',
           address: '',
           organization: '',
+          organizerType: 'Perorangan / Keluarga',
+          organizerName: '',
           purpose: '',
           startDate: '',
           endDate: '',
@@ -620,6 +624,9 @@ export default function BookingManager() {
                   <div>
                     <h3 className="text-xl font-black text-gray-900">Denah Ruang & Alat Dipesan</h3>
                     <p className="text-xs text-gray-500 font-bold mt-1">Pemohon: {selectedBookingForLayoutReview.customerName}</p>
+                    <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                      Penyelenggara: {selectedBookingForLayoutReview.organizerName || selectedBookingForLayoutReview.organization || selectedBookingForLayoutReview.customerName} ({selectedBookingForLayoutReview.organizerType || 'Perorangan'})
+                    </p>
                   </div>
                 </div>
                 <button onClick={() => setSelectedBookingForLayoutReview(null)} className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-2xl"><XCircle className="w-6 h-6" /></button>

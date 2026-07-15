@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { XCircle, Zap } from 'lucide-react';
+import { XCircle, Zap, ChevronDown } from 'lucide-react';
 
 interface BookingFormModalProps {
   isOpen: boolean;
@@ -83,13 +83,30 @@ export default function BookingFormModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Instansi</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Kategori Penyelenggara</label>
+                <div className="relative">
+                  <select 
+                    required
+                    value={formData.organizerType || 'Perorangan / Keluarga'}
+                    onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
+                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-700 appearance-none shadow-inner text-sm"
+                  >
+                    <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
+                    <option value="Instansi Pemerintah">Instansi Pemerintah</option>
+                    <option value="Organisasi Kemasyarakatan / Komunitas">Organisasi / Komunitas</option>
+                    <option value="Swasta / Perusahaan / Komersil">Swasta / Komersil</option>
+                  </select>
+                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyelenggara / Kepanitiaan (Opsional)</label>
                 <input 
                   type="text" 
-                  value={formData.organization} 
-                  onChange={(e) => setFormData({...formData, organization: e.target.value})} 
-                  placeholder="Jika ada..." 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
+                  value={formData.organizerName || ''} 
+                  onChange={(e) => setFormData({...formData, organizerName: e.target.value, organization: e.target.value})} 
+                  placeholder="Contoh: Keluarga Budi / Karang Taruna..." 
+                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm" 
                 />
               </div>
             </div>

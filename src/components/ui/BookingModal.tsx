@@ -22,7 +22,9 @@ import {
   Zap,
   Tag,
   Warehouse,
-  Flame
+  Flame,
+  Copy,
+  Check
 } from 'lucide-react';
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
@@ -48,6 +50,7 @@ interface BookingModalProps {
 export default function BookingModal({ isOpen, onClose, selectedPackage }: BookingModalProps) {
   const [step, setStep] = useState(1);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [copiedMsg, setCopiedMsg] = useState(false);
   const packages = useAppStore(state => state.facilities);
   const bookings = useAppStore(state => state.bookings);
   const dbInventory = useAppStore(state => state.inventory);
@@ -68,6 +71,8 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
     nik: '',
     address: '',
     organization: '',
+    organizerType: 'Perorangan / Keluarga',
+    organizerName: '',
     purpose: '',
     isPublic: true,
     startDate: '',
@@ -279,6 +284,84 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
     setStep(step - 1);
   };
 
+  const handleResetAndClose = () => {
+    setIsSuccess(false);
+    onClose();
+    setStep(1);
+    setFormData({
+      customerName: '',
+      phone: '',
+      nik: '',
+      address: '',
+      organization: '',
+      organizerType: 'Perorangan / Keluarga',
+      organizerName: '',
+      purpose: '',
+      isPublic: true,
+      startDate: '',
+      startTime: '08:00',
+      endTime: '17:00',
+      guests: '',
+      amount: 0,
+      notes: '',
+      packageName: '',
+      agreeTerms: false
+    });
+    setLayout({
+      template: 'wedding',
+      stagePosition: 'depan',
+      tableQuantity: 6,
+      chairQuantity: 36,
+      selectedElementIds: []
+    });
+    setSelectedInventory({});
+  };
+
+  const generateWAMessage = () => {
+    return `Yth. Pengelola Gedung Serbaguna Huntap 2 Tondo,
+
+Saya ingin mengonfirmasi pengajuan sewa gedung yang telah saya kirimkan melalui website. Berikut adalah detail permohonan saya:
+
+📌 *IDENTITAS PENYEWA*
+- Nama Pemohon: ${formData.customerName}
+- Kategori Penyelenggara: ${formData.organizerType}
+- Nama Penyelenggara/Lembaga: ${formData.organizerName || formData.customerName}
+- No. WhatsApp: ${formData.phone}
+- NIK KTP: ${formData.nik}
+- Domisili: ${formData.address || '-'}
+
+📅 *WAKTU & DETIL ACARA*
+- Hari/Tanggal: ${formData.startDate}
+- Estimasi Jam: ${formData.startTime} s/d ${formData.endTime}
+- Paket Sewa: ${formData.packageName}
+- Tujuan Acara: ${formData.purpose}
+- Jumlah Tamu: ${formData.guests || '-'} Orang
+
+📐 *TATA LETAK & INVENTARIS*
+- Rencana Tata Letak: ${layout.template.toUpperCase()} (${layout.chairQuantity} Kursi, ${layout.tableQuantity} Meja)
+${Object.entries(selectedInventory).some(([_, qty]) => (qty as number) > 0) ? `\n- Fasilitas Tambahan:\n${Object.entries(selectedInventory).map(([id, qty]) => {
+  if ((qty as number) <= 0) return '';
+  const item = availableInventory.find(inv => inv.id === id);
+  return item ? `  • ${item.name} (x${qty})` : '';
+}).filter(Boolean).join('\n')}` : ''}
+
+💰 *ESTIMASI BIAYA*
+- Total Biaya: Rp ${calculatedBills.grandTotal.toLocaleString('id-ID')}
+
+Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pembayaran uang muka (DP). Terima kasih.`;
+  };
+
+  const getWALink = () => {
+    const text = encodeURIComponent(generateWAMessage());
+    return `https://wa.me/6281234567890?text=${text}`;
+  };
+
+  const copyWAMessage = () => {
+    navigator.clipboard.writeText(generateWAMessage());
+    setCopiedMsg(true);
+    setTimeout(() => setCopiedMsg(false), 2000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -329,36 +412,6 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
       });
       
       setIsSuccess(true);
-      setTimeout(() => {
-        setIsSuccess(false);
-        onClose();
-        setStep(1);
-        setFormData({
-          customerName: '',
-          phone: '',
-          nik: '',
-          address: '',
-          organization: '',
-          purpose: '',
-          isPublic: true,
-          startDate: '',
-          startTime: '08:00',
-          endTime: '17:00',
-          guests: '',
-          amount: 0,
-          notes: '',
-          packageName: '',
-          agreeTerms: false
-        });
-        setLayout({
-          template: 'wedding',
-          stagePosition: 'depan',
-          tableQuantity: 6,
-          chairQuantity: 36,
-          selectedElementIds: []
-        });
-        setSelectedInventory({});
-      }, 3000);
     } catch (err: any) {
       setError('Gagal mengirimkan permohonan. Silakan coba lagi.');
     } finally {
@@ -385,12 +438,63 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
             className="relative bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[min(900px,90vh)] flex flex-col transition-all"
           >
             {isSuccess ? (
-              <div className="p-8 sm:p-12 text-center text-balance flex-1 flex flex-col justify-center">
-                <div className="w-20 h-20 bg-green-50 text-green-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-10 h-10" />
+              <div className="p-6 sm:p-10 text-center flex-1 flex flex-col justify-between overflow-y-auto max-h-[90vh]">
+                <div>
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">Permohonan Terkirim!</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto mb-6">
+                    Data Anda telah tercatat di sistem kami. <strong>Sangat Direkomendasikan:</strong> Kirim salinan rincian pengajuan ini langsung ke WhatsApp Admin agar diverifikasi lebih cepat.
+                  </p>
+
+                  {/* Copyable Template Box */}
+                  <div className="text-left bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-850 relative group mb-6">
+                    <button
+                      onClick={copyWAMessage}
+                      type="button"
+                      className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white p-2 rounded-xl text-xs flex items-center gap-1.5 transition-all font-bold"
+                      title="Salin Template"
+                    >
+                      {copiedMsg ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Salin</span>
+                        </>
+                      )}
+                    </button>
+                    <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider block mb-2">Template Pesan Konfirmasi</span>
+                    <pre className="text-[11px] sm:text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto scrollbar-none select-all pr-2">
+                      {generateWAMessage()}
+                    </pre>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-black text-gray-900 mb-2">Permohonan Terkirim!</h3>
-                <p className="text-gray-500 mb-0">Admin akan segera menghubungi Anda melalui WhatsApp untuk konfirmasi paket, tata letak gedung, dan detail pembayaran.</p>
+
+                {/* Direct Action Buttons */}
+                <div className="space-y-2.5 pt-4 border-t border-gray-100">
+                  <a
+                    href={getWALink()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                    Kirim Konfirmasi ke WhatsApp Admin
+                  </a>
+
+                  <button
+                    onClick={handleResetAndClose}
+                    type="button"
+                    className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-700 font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+                  >
+                    Tutup & Selesai
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -482,12 +586,30 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Organisasi/Lembaga (Opsional)</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Kategori Penyelenggara</label>
+                            <div className="relative">
+                              <select 
+                                required
+                                value={formData.organizerType}
+                                onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
+                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-700 appearance-none text-sm shadow-inner"
+                              >
+                                <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
+                                <option value="Instansi Pemerintah">Instansi Pemerintah</option>
+                                <option value="Organisasi Kemasyarakatan / Komunitas">Organisasi / Komunitas</option>
+                                <option value="Swasta / Perusahaan / Komersil">Swasta / Komersil</option>
+                              </select>
+                              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyelenggara / Kepanitiaan (Opsional)</label>
                             <input 
                               type="text" 
-                              value={formData.organization}
-                              onChange={(e) => setFormData({...formData, organization: e.target.value})}
-                              placeholder="Karang Taruna / CV..."
+                              value={formData.organizerName}
+                              onChange={(e) => setFormData({...formData, organizerName: e.target.value, organization: e.target.value})}
+                              placeholder="Contoh: Keluarga Budi / Karang Taruna..."
                               className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
                             />
                           </div>

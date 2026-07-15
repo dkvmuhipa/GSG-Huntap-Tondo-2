@@ -292,17 +292,46 @@ export default function TransactionFormModal({
 
           <div>
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-              {formData.type === 'income' ? 'Diterima Dari (Nama Penyewa)' : 'Sumber / Keterangan Singkat'}
+              {formData.type === 'income' ? 'Diterima Dari (Nama Penyewa / Pemohon)' : 'Sumber / Keterangan Singkat'}
             </label>
             <textarea 
               required
               rows={2}
-              placeholder={formData.type === 'income' ? 'Contoh: SMAN 5 Palu (Chintiya)' : 'Contoh: Pembelian Alat Kebersihan'}
+              placeholder={formData.type === 'income' ? 'Contoh: Chintiya' : 'Contoh: Pembelian Alat Kebersihan'}
               value={formData.source}
               onChange={(e) => handleSourceChange(e.target.value)}
               className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-primary transition-all resize-none"
             />
           </div>
+
+          {formData.type === 'income' && (
+            <div className="grid md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Kategori Penyelenggara</label>
+                <select 
+                  value={formData.organizerType || 'Perorangan / Keluarga'}
+                  onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary appearance-none cursor-pointer"
+                >
+                  <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
+                  <option value="Instansi Pemerintah">Instansi Pemerintah</option>
+                  <option value="Organisasi Kemasyarakatan / NGO">Organisasi / NGO / Sekolah</option>
+                  <option value="Perusahaan Swasta / Komersial">Perusahaan / Komersial</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nama Penyelenggara / Instansi (Opsional)</label>
+                <input 
+                  type="text"
+                  placeholder="Contoh: OSIS SMAN 5 Palu"
+                  value={formData.organizerName || ''}
+                  onChange={(e) => setFormData({...formData, organizerName: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-sm font-bold outline-none focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-3 gap-5">
             <div>

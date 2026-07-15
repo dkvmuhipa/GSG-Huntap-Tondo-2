@@ -12,6 +12,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const navLinks = [
     { name: 'Jadwal', href: '/#jadwal' },
+    { name: 'Agenda Acara', href: '/#agenda-kegiatan' },
     { name: 'Transparansi', href: '/#transparansi' },
     { name: 'Galeri', href: '/#galeri' },
     { name: 'Aturan', href: '/rules' },

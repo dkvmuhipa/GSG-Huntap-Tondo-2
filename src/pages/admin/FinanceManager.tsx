@@ -229,7 +229,9 @@ export default function FinanceManager() {
     allocationMode: 'auto' as 'auto' | 'full_ops' | 'full_dev',
     expenseSource: 'ops' as 'ops' | 'dev',
     transferDirection: 'ops_to_dev' as 'ops_to_dev' | 'dev_to_ops',
-    receiptNo: ''
+    receiptNo: '',
+    organizerType: 'Perorangan / Keluarga',
+    organizerName: ''
   });
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
@@ -482,7 +484,10 @@ export default function FinanceManager() {
     
     doc.setTextColor(textDark[0], textDark[1], textDark[2]);
     doc.setFont('helvetica', 'bold');
-    const sourceText = tx.source.toUpperCase();
+    const organizerSuffix = tx.organizerName 
+      ? ` [PENYELENGGARA: ${tx.organizerName.toUpperCase()} (${(tx.organizerType || 'Perorangan').toUpperCase()})]` 
+      : '';
+    const sourceText = `${tx.source.toUpperCase()}${organizerSuffix}`;
     const sourceLines = doc.splitTextToSize(sourceText, 152);
     doc.text(sourceLines, valueX, startY + 3.5);
     const sourceHeight = (sourceLines.length - 1) * 4.5;
@@ -936,7 +941,9 @@ export default function FinanceManager() {
       allocationMode: tx.allocationMode || 'auto',
       expenseSource: tx.expenseSource || 'ops',
       transferDirection: tx.transferDirection || 'ops_to_dev',
-      receiptNo: tx.receiptNo || generateUniqueReceiptNo(tx.date, allTransactions)
+      receiptNo: tx.receiptNo || generateUniqueReceiptNo(tx.date, allTransactions),
+      organizerType: tx.organizerType || 'Perorangan / Keluarga',
+      organizerName: tx.organizerName || ''
     });
     setIsReceiptNoManuallyEdited(!!tx.receiptNo);
     setReceiptFile(null);
@@ -1535,7 +1542,9 @@ export default function FinanceManager() {
         allocationMode: 'auto',
         expenseSource: 'ops',
         transferDirection: 'ops_to_dev',
-        receiptNo: ''
+        receiptNo: '',
+        organizerType: 'Perorangan / Keluarga',
+        organizerName: ''
       });
       setIsReceiptNoManuallyEdited(false);
       setReceiptFile(null);
@@ -1759,6 +1768,8 @@ export default function FinanceManager() {
                 expenseSource: 'ops',
                 transferDirection: 'ops_to_dev',
                 receiptNo: generateUniqueReceiptNo(initialDate, allTransactions),
+                organizerType: 'Perorangan / Keluarga',
+                organizerName: ''
               });
               setIsReceiptNoManuallyEdited(false);
               setIsModalOpen(true);
@@ -1922,7 +1933,9 @@ export default function FinanceManager() {
             allocationMode: 'auto',
             expenseSource: 'ops',
             transferDirection: 'ops_to_dev',
-            receiptNo: ''
+            receiptNo: '',
+            organizerType: 'Perorangan / Keluarga',
+            organizerName: ''
           });
           setIsReceiptNoManuallyEdited(false);
           setReceiptFile(null);

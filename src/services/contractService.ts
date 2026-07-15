@@ -12,6 +12,8 @@ interface BookingData {
   endDate?: string;
   amount: number;
   organization?: string;
+  organizerType?: string;
+  organizerName?: string;
   packageTitle?: string;
   packageName?: string; // fallback
   status: string;
@@ -186,9 +188,10 @@ export const generateContract = async (booking: BookingData) => {
   doc.setFont('helvetica', 'bold');
   doc.text('II. PIHAK KEDUA (PENYEWA)', margin, 97);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Nama       : ${booking.customerName.toUpperCase()}`, margin + 5, 102);
-  doc.text(`No. HP     : ${booking.phone}`, margin + 5, 107);
-  doc.text(`Peruntukan : ${booking.purpose}`, margin + 5, 112);
+  doc.text(`Nama Pemohon  : ${booking.customerName.toUpperCase()}`, margin + 5, 102);
+  doc.text(`Penyelenggara : ${booking.organizerName ? `${booking.organizerName.toUpperCase()} (${booking.organizerType || 'Perorangan'})` : (booking.organization ? `${booking.organization.toUpperCase()} (${booking.organizerType || 'Organisasi'})` : `${booking.customerName.toUpperCase()} (PERORANGAN)`)}`, margin + 5, 107);
+  doc.text(`No. HP / WA   : ${booking.phone}`, margin + 5, 112);
+  doc.text(`Peruntukan    : ${booking.purpose}`, margin + 5, 117);
 
   doc.text('Kedua belah pihak setuju untuk menaati kewajiban, ketentuan tata tertib lokal, serta persentasi sewa berikut:', margin, 122);
 
@@ -419,9 +422,11 @@ export const generateReceipt = async (booking: BookingData) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-  const displayName = booking.organization 
-    ? `${booking.organization} (${booking.customerName})` 
-    : booking.customerName;
+  const displayName = booking.organizerName
+    ? `${booking.organizerName} (${booking.customerName})`
+    : (booking.organization 
+      ? `${booking.organization} (${booking.customerName})` 
+      : booking.customerName);
   doc.text(displayName.toUpperCase(), 22, gridY + 12);
   
   doc.setFont('helvetica', 'normal');

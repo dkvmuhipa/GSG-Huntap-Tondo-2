@@ -365,6 +365,8 @@ export const recordBookingToFinance = async (booking: any, authorInfo?: { email:
       expenseSource: 'ops', // Default placeholder for income
       status: 'completed',
       bookingId: booking.id,
+      organizerType: booking.organizerType || 'Perorangan / Keluarga',
+      organizerName: booking.organizerName || '',
       addedBy: authorInfo?.email || 'system',
       addedByName: authorInfo?.displayName || authorInfo?.email?.split('@')[0] || 'Administrator',
       addedByRole: authorInfo?.role || 'system',
