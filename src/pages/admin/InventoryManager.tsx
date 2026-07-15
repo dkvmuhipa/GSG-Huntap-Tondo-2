@@ -13,8 +13,9 @@ import {
   History,
   ArrowRight
 } from 'lucide-react';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { db, handleFirestoreError, OperationType, auth } from '../../lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
 
 interface InventoryItem {
@@ -55,12 +56,27 @@ export default function InventoryManager() {
   });
 
   useEffect(() => {
-    const unsubLogs = onSnapshot(query(collection(db, 'maintenance_logs'), orderBy('date', 'desc')), (snap) => {
-      setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceLog)));
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'maintenance_logs'));
+    let unsubLogs: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubLogs = onSnapshot(query(collection(db, 'maintenance_logs'), orderBy('date', 'desc')), (snap) => {
+          setLogs(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceLog)));
+        }, (error) => handleFirestoreError(error, OperationType.LIST, 'maintenance_logs'));
+      } else {
+        if (unsubLogs) {
+          unsubLogs();
+          unsubLogs = null;
+        }
+        setLogs([]);
+      }
+    });
 
     return () => {
-      unsubLogs();
+      if (unsubLogs) {
+        unsubLogs();
+      }
+      unsubAuth();
     };
   }, []);
 
