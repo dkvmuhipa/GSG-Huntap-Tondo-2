@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateContract, generateReceipt } from '../services/contractService';
 import { getTransparentPNG } from '../lib/cloudinary';
+import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../lib/qrcode';
 
 export default function AvailabilityWidget() {
   const bookings = useAppStore(state => state.bookings);
@@ -137,6 +138,25 @@ export default function AvailabilityWidget() {
     doc.text(bendaharaName, rightSigX, sigY + 32, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.text('Bendahara/Pengelola', rightSigX, sigY + 36, { align: 'center' });
+
+    // Official Verification QR Code
+    try {
+      const qrUrl = getDocumentVerificationUrl(booking.id, 'booking');
+      const qrImg = await generateVerificationQRDataURL(qrUrl);
+      doc.addImage(qrImg, 'PNG', margin, sigY + 4, 22, 22);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 58, 138);
+      doc.text('VERIFIKASI RESMI DOKUMEN', margin + 26, sigY + 10);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Pindai QR Code untuk mengecek', margin + 26, sigY + 14);
+      doc.text('keabsahan surat konfirmasi booking', margin + 26, sigY + 17.5);
+      doc.text('langsung pada database GSG.', margin + 26, sigY + 21);
+    } catch (e) {
+      console.error('Gagal menambahkan QR code verifikasi:', e);
+    }
 
     doc.save(`Konfirmasi_Booking_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
   };

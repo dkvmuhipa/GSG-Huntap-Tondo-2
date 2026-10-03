@@ -50,6 +50,7 @@ import BookingTable from '../../components/admin/booking/BookingTable';
 import BookingCalendar from '../../components/admin/booking/BookingCalendar';
 import BookingFormModal from '../../components/admin/booking/BookingFormModal';
 import LayoutReviewModal from '../../components/admin/booking/LayoutReviewModal';
+import WhatsAppActionModal from '../../components/admin/booking/WhatsAppActionModal';
 
 export default function BookingManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
@@ -64,6 +65,7 @@ export default function BookingManager() {
 
   // Layout Review Modal State
   const [selectedBookingForLayoutReview, setSelectedBookingForLayoutReview] = useState<any | null>(null);
+  const [selectedBookingForWA, setSelectedBookingForWA] = useState<any | null>(null);
   const inventoryList = useAppStore(state => state.inventory);
 
   // Confirm Modal State
@@ -641,6 +643,7 @@ export default function BookingManager() {
                 generateReceipt={generateReceipt}
                 handleDelete={handleDelete}
                 handleStatusChange={handleStatusChange}
+                onOpenWhatsApp={(booking) => setSelectedBookingForWA(booking)}
               />
             </motion.div>
           ) : (
@@ -666,6 +669,13 @@ export default function BookingManager() {
         selectedBooking={selectedBookingForLayoutReview}
         onClose={() => setSelectedBookingForLayoutReview(null)}
         inventoryList={inventoryList}
+      />
+
+      <WhatsAppActionModal 
+        isOpen={!!selectedBookingForWA}
+        onClose={() => setSelectedBookingForWA(null)}
+        booking={selectedBookingForWA}
+        config={config}
       />
 
       <ConfirmModal 

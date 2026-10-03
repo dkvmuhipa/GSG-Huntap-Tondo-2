@@ -20,6 +20,7 @@ interface BookingTableProps {
   generateReceipt: (booking: any) => void;
   handleDelete: (id: string) => void;
   handleStatusChange: (id: string, newStatus: string) => void;
+  onOpenWhatsApp?: (booking: any) => void;
 }
 
 export default function BookingTable({
@@ -30,6 +31,7 @@ export default function BookingTable({
   generateReceipt,
   handleDelete,
   handleStatusChange,
+  onOpenWhatsApp,
 }: BookingTableProps) {
 
   const getStatusBadge = (status: string) => {
@@ -92,14 +94,14 @@ export default function BookingTable({
                   <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
                   <td className="px-6 py-6">
                     <p className="font-black text-gray-900 leading-none">{booking.customerName}</p>
-                    <a 
-                      href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter"
+                    <button 
+                      type="button"
+                      onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')}
+                      className="text-[10px] font-black text-green-600 bg-green-50 hover:bg-green-100 transition-colors px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter"
+                      title="Kirim Pesan WhatsApp Cepat"
                     >
                       <MessageCircle className="w-3 h-3" /> {booking.phone}
-                    </a>
+                    </button>
                   </td>
                   <td className="px-6 py-6">
                     <p className="font-black text-gray-900 leading-none">{booking.purpose}</p>
@@ -129,6 +131,13 @@ export default function BookingTable({
                   </td>
                   <td className="px-6 py-6">
                     <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')} 
+                        className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors" 
+                        title="Pesan Cepat WhatsApp (Template Siap Kirim)"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => setSelectedBookingForLayoutReview(booking)} 
                         className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors" 
@@ -236,14 +245,13 @@ export default function BookingTable({
                 >
                   <LayoutGrid className="w-4 h-4" /> Denah
                 </button>
-                <a 
-                  href={`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100"
+                <button 
+                  type="button"
+                  onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')} 
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100 hover:bg-green-100 transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" /> WhatsApp
-                </a>
+                </button>
                 <button 
                   onClick={() => generateContract(booking)} 
                   className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100" 

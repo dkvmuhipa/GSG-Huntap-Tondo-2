@@ -53,8 +53,8 @@ import { uploadToCloudinary, getTransparentPNG } from '../../lib/cloudinary';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { auth } from '../../lib/firebase';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { terbilang } from '../../services/contractService';
+import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../../lib/qrcode';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -790,6 +790,24 @@ export default function FinanceManager() {
       doc.setFontSize(6.5);
       doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
       doc.text('BENDAHARA & PENGELOLA', rightSigX, footerY + 23, { align: 'center' });
+    }
+
+    // Official Verification QR Code
+    try {
+      const qrUrl = getDocumentVerificationUrl(tx.id, 'receipt');
+      const qrImg = await generateVerificationQRDataURL(qrUrl);
+      doc.addImage(qrImg, 'PNG', 14, 86, 13, 13);
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('VERIFIKASI RESMI DOKUMEN', 29, 89.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(4.8);
+      doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+      doc.text('Pindai QR Code untuk cek keabsahan kwitansi', 29, 93.5);
+      doc.text('secara langsung pada database GSG.', 29, 96.5);
+    } catch (e) {
+      console.error('Gagal menambahkan QR code verifikasi ke kwitansi:', e);
     }
 
     // Bottom banner bar decoration inside border card

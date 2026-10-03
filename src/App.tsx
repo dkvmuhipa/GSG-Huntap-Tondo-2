@@ -31,6 +31,7 @@ const InventoryManager = React.lazy(() => import('./pages/admin/InventoryManager
 const AccountRules = React.lazy(() => import('./pages/admin/AccountRules'));
 const RulesProcedures = React.lazy(() => import('./pages/RulesProcedures'));
 const Login = React.lazy(() => import('./pages/admin/Login'));
+const DocumentVerification = React.lazy(() => import('./pages/DocumentVerification'));
 
 
 function MainLayout() {
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/rules" element={<RulesProcedures />} />
           </Route>
           <Route path="/login" element={<Login />} />
+          <Route path="/verifikasi" element={<DocumentVerification />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardOverview />} />
             <Route path="bookings" element={<BookingManager />} />

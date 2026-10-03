@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getGlobalConfig } from '../lib/db';
 import { getTransparentPNG } from '../lib/cloudinary';
+import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../lib/qrcode';
 
 interface BookingData {
   id: string;
@@ -291,6 +292,25 @@ export const generateContract = async (booking: BookingData) => {
 
   // RENDER THE AUTHENTIC DIGITAL STAMP OVER PIHAK PERTAMA'S SIGNATURE
   drawDigitalStamp(doc, margin + 32, sigY + 15, stampImg);
+
+  // Official Verification QR Code
+  try {
+    const qrUrl = getDocumentVerificationUrl(booking.id, 'contract');
+    const qrImg = await generateVerificationQRDataURL(qrUrl);
+    const qrSize = 18;
+    const qrX = (pageWidth / 2) - (qrSize / 2);
+    doc.addImage(qrImg, 'PNG', qrX, sigY + 4, qrSize, qrSize);
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('VERIFIKASI KEASLIAN', pageWidth / 2, sigY + 25, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(4.8);
+    doc.setTextColor(accentSlate[0], accentSlate[1], accentSlate[2]);
+    doc.text('Pindai untuk validasi dokumen', pageWidth / 2, sigY + 28, { align: 'center' });
+  } catch (e) {
+    console.error('Gagal menambahkan QR Code pada kontrak:', e);
+  }
 
   // --- FOOTER LANDING ---
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -750,6 +770,26 @@ export const generateReceipt = async (booking: BookingData) => {
     doc.setFontSize(7);
     doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
     doc.text('BENDAHARA & PENGELOLA', rightSigX, sigY + 37, { align: 'center' });
+  }
+
+  // Official Verification QR Code
+  try {
+    const qrUrl = getDocumentVerificationUrl(booking.id, 'receipt');
+    const qrImg = await generateVerificationQRDataURL(qrUrl);
+    const qrSize = 19;
+    const qrX = sigMode === 'both' ? (pageWidth / 2) - (qrSize / 2) : 55 - (qrSize / 2);
+    const qrCenter = sigMode === 'both' ? (pageWidth / 2) : 55;
+    doc.addImage(qrImg, 'PNG', qrX, sigY + 10, qrSize, qrSize);
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('VERIFIKASI RESMI DOKUMEN', qrCenter, sigY + 32, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(4.8);
+    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+    doc.text('Pindai untuk validasi keabsahan invoice', qrCenter, sigY + 35, { align: 'center' });
+  } catch (e) {
+    console.error('Gagal menambahkan QR code verifikasi pada invoice:', e);
   }
 
   // Footer bar decoration inside border card
