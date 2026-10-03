@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 
 interface ExportButtonProps {
   type: 'csv' | 'pdf';
@@ -27,11 +27,12 @@ export default function ExportButton({ type, onClick, className = '', disabled =
     <button 
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-2 px-6 py-4 rounded-3xl bg-gray-900 text-white text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200 disabled:opacity-50 ${className}`}
+      className={`flex items-center gap-2 px-6 py-4 rounded-3xl bg-gray-900 text-white text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200 active:scale-95 disabled:opacity-50 ${className}`}
       id="btn-export-pdf"
+      title="Pratinjau, Cetak Langsung, atau Unduh Laporan PDF"
     >
-      <Download className="w-4 h-4" />
-      Unduh PDF
+      <FileText className="w-4 h-4 text-blue-400" />
+      Cetak / Unduh PDF
     </button>
   );
 }

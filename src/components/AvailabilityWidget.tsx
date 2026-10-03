@@ -6,9 +6,10 @@ import { useAppStore } from '../store/useAppStore';
 import CalendarModal from './ui/CalendarModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { generateContract, generateReceipt } from '../services/contractService';
+import { generateContract, generateReceipt, buildContractDoc, buildReceiptDoc } from '../services/contractService';
 import { getTransparentPNG } from '../lib/cloudinary';
 import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../lib/qrcode';
+import PdfPreviewModal from './ui/PdfPreviewModal';
 
 export default function AvailabilityWidget() {
   const bookings = useAppStore(state => state.bookings);
@@ -18,6 +19,32 @@ export default function AvailabilityWidget() {
   const [trackedBooking, setTrackedBooking] = useState<any>(null);
   const [trackingError, setTrackingError] = useState('');
   const [isTracking, setIsTracking] = useState(false);
+
+  const [pdfPreviewModal, setPdfPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    loadPdf: () => Promise<{ doc: jsPDF; filename: string }>;
+  }>({
+    isOpen: false,
+    title: '',
+    loadPdf: async () => ({ doc: new jsPDF(), filename: '' })
+  });
+
+  const handlePreviewContract = (booking: any) => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Surat Perjanjian Sewa - ${booking.customerName}`,
+      loadPdf: () => buildContractDoc(booking)
+    });
+  };
+
+  const handlePreviewReceipt = (booking: any) => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Kuitansi Resmi Sewa - ${booking.customerName}`,
+      loadPdf: () => buildReceiptDoc(booking)
+    });
+  };
 
   const handleTrack = () => {
     if (!phoneToTrack) return;
@@ -300,17 +327,17 @@ export default function AvailabilityWidget() {
                     {trackedBooking.status === 'approved' || trackedBooking.status === 'completed' ? (
                       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                         <button 
-                          onClick={() => generateContract(trackedBooking)}
+                          onClick={() => handlePreviewContract(trackedBooking)}
                           className="flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-2xl font-black text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
-                          title="Unduh Surat Perjanjian Sewa Digital"
+                          title="Pratinjau, Cetak & Unduh Surat Perjanjian Sewa Digital"
                         >
                           <FileText className="w-4.5 h-4.5" />
                           SURAT PERJANJIAN SEWA
                         </button>
                         <button 
-                          onClick={() => generateReceipt(trackedBooking)}
+                          onClick={() => handlePreviewReceipt(trackedBooking)}
                           className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white py-4 px-6 rounded-2xl font-black text-xs flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/10 hover:scale-[1.01] active:scale-[0.99] transition-all"
-                          title="Unduh Kuitansi Resmi Lunas"
+                          title="Pratinjau, Cetak & Unduh Kuitansi Resmi Lunas"
                         >
                           <Receipt className="w-4.5 h-4.5" />
                           KUITANSI RESMI (LUNAS)
@@ -340,6 +367,13 @@ export default function AvailabilityWidget() {
           </AnimatePresence>
         </div>
       </div>
+
+      <PdfPreviewModal
+        isOpen={pdfPreviewModal.isOpen}
+        onClose={() => setPdfPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={pdfPreviewModal.title}
+        loadPdf={pdfPreviewModal.loadPdf}
+      />
     </div>
   );
 }

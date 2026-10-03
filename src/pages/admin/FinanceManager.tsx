@@ -53,8 +53,10 @@ import { uploadToCloudinary, getTransparentPNG } from '../../lib/cloudinary';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { auth } from '../../lib/firebase';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { terbilang } from '../../services/contractService';
 import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../../lib/qrcode';
+import PdfPreviewModal from '../../components/ui/PdfPreviewModal';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -175,6 +177,16 @@ export default function FinanceManager() {
     isOpen: false,
     transactionId: '',
     transactionInfo: ''
+  });
+
+  const [pdfPreviewModal, setPdfPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    loadPdf: () => Promise<{ doc: jsPDF; filename: string }>;
+  }>({
+    isOpen: false,
+    title: '',
+    loadPdf: async () => ({ doc: new jsPDF(), filename: '' })
   });
 
   const getLocalDateString = (d: Date) => {
@@ -424,7 +436,7 @@ export default function FinanceManager() {
     return { income, expense };
   }, [allTransactions, activeMonth, activeYear, filterMode, customStartDate, customEndDate]);
 
-  const downloadKwitansi = async (tx: any) => {
+  const buildKwitansiDoc = async (tx: any): Promise<{ doc: jsPDF; filename: string }> => {
     const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
     const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
     const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
@@ -844,7 +856,21 @@ export default function FinanceManager() {
     const receiptNameStr = tx.receiptNo 
       ? tx.receiptNo.replace(/[^a-zA-Z0-9]/g, '_') 
       : tx.id.substring(0, 8);
-    doc.save(`Kwitansi_${receiptNameStr}_${tx.source.replace(/\s+/g, '_')}.pdf`);
+    const filename = `Kwitansi_${receiptNameStr}_${tx.source.replace(/\s+/g, '_')}.pdf`;
+    return { doc, filename };
+  };
+
+  const downloadKwitansi = async (tx: any) => {
+    const { doc, filename } = await buildKwitansiDoc(tx);
+    doc.save(filename);
+  };
+
+  const handlePreviewKwitansi = (tx: any) => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Kwitansi Kasir - ${tx.receiptNo || tx.source}`,
+      loadPdf: () => buildKwitansiDoc(tx)
+    });
   };
 
   const exportCSV = () => {
@@ -1130,7 +1156,7 @@ export default function FinanceManager() {
     }
   };
 
-  const exportToPDF = async () => {
+  const buildFinanceReportDoc = async (): Promise<{ doc: jsPDF; filename: string }> => {
     const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
     const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
     const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
@@ -1538,7 +1564,21 @@ export default function FinanceManager() {
     }
 
     const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
-    doc.save(`Laporan_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.pdf`);
+    const filename = `Laporan_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.pdf`;
+    return { doc, filename };
+  };
+
+  const exportToPDF = async () => {
+    const { doc, filename } = await buildFinanceReportDoc();
+    doc.save(filename);
+  };
+
+  const handlePreviewReport = () => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: 'Laporan Manajemen Keuangan',
+      loadPdf: () => buildFinanceReportDoc()
+    });
   };
 
   const exportToCSV = () => {
@@ -2054,7 +2094,7 @@ export default function FinanceManager() {
         <div className="flex flex-wrap items-center gap-3 md:justify-end shrink-0">
           <ExportButton 
             type="pdf"
-            onClick={exportToPDF}
+            onClick={handlePreviewReport}
           />
           <button 
             onClick={() => {
@@ -2227,6 +2267,7 @@ export default function FinanceManager() {
         transactions={transactions}
         displayCategory={displayCategory}
         downloadKwitansi={downloadKwitansi}
+        onPreviewKwitansi={handlePreviewKwitansi}
         handleEdit={handleEdit}
         handleDeleteTransaction={handleDeleteTransaction}
         isLoadingMore={isLoadingMore}
@@ -2623,6 +2664,13 @@ export default function FinanceManager() {
         onConfirm={confirmDeleteTransaction}
         title="Hapus Transaksi?"
         message={`Apakah Anda yakin ingin menghapus data transaksi "${confirmModal.transactionInfo}"? Tindakan ini akan mempengaruhi saldo akumulasi dan laporan keuangan warga.`}
+      />
+
+      <PdfPreviewModal
+        isOpen={pdfPreviewModal.isOpen}
+        onClose={() => setPdfPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={pdfPreviewModal.title}
+        loadPdf={pdfPreviewModal.loadPdf}
       />
     </div>
   );

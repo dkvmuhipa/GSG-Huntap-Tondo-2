@@ -119,9 +119,9 @@ function drawDigitalStamp(doc: jsPDF, x: number, y: number, stampUrl?: string | 
 }
 
 /**
- * Generate PDF: 1. Surat Perjanjian Sewa Digital (Formal Digital Lease Contract)
+ * Build PDF: 1. Surat Perjanjian Sewa Digital (Formal Digital Lease Contract)
  */
-export const generateContract = async (booking: BookingData) => {
+export const buildContractDoc = async (booking: BookingData): Promise<{ doc: jsPDF; filename: string }> => {
   const config = await getGlobalConfig();
   const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
   const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
@@ -319,14 +319,19 @@ export const generateContract = async (booking: BookingData) => {
   doc.setFontSize(7.5);
   doc.text(`Dokumen ini sah secara hukum lokal berbasis Paperless Initiative Gedung Serbaguna Huntap Tondo 2. ID: ${booking.id}`, pageWidth / 2, 293, { align: 'center' });
 
-  // Download Action
-  doc.save(`Surat_Perjanjian_Sewa_Gedung_Serbaguna_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
+  const filename = `Surat_Perjanjian_Sewa_Gedung_Serbaguna_${booking.customerName.replace(/\s+/g, '_')}.pdf`;
+  return { doc, filename };
+};
+
+export const generateContract = async (booking: BookingData) => {
+  const { doc, filename } = await buildContractDoc(booking);
+  doc.save(filename);
 };
 
 /**
- * Generate PDF: 2. Kuitansi / Invoice Pembayaran resmi (Receipt Document with dynamic breakdowns)
+ * Build PDF: 2. Kuitansi / Invoice Pembayaran resmi (Receipt Document with dynamic breakdowns)
  */
-export const generateReceipt = async (booking: BookingData) => {
+export const buildReceiptDoc = async (booking: BookingData): Promise<{ doc: jsPDF; filename: string }> => {
   const config = await getGlobalConfig();
   const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
   const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
@@ -799,6 +804,11 @@ export const generateReceipt = async (booking: BookingData) => {
   doc.setFontSize(7.5);
   doc.text(`Invoice ini dicetak secara otomatis dan merupakan bukti pembayaran digital yang sah. Kode Ref: ${booking.id.substring(0,8).toUpperCase()}`, pageWidth / 2, 284.5, { align: 'center' });
 
-  // Save/Download Action
-  doc.save(`Invoice_Pembayaran_Gedung_Serbaguna_${booking.customerName.replace(/\s+/g, '_')}.pdf`);
+  const filename = `Invoice_Pembayaran_Gedung_Serbaguna_${booking.customerName.replace(/\s+/g, '_')}.pdf`;
+  return { doc, filename };
+};
+
+export const generateReceipt = async (booking: BookingData) => {
+  const { doc, filename } = await buildReceiptDoc(booking);
+  doc.save(filename);
 };

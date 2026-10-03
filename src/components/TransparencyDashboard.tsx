@@ -18,6 +18,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { auth } from '../lib/firebase';
 import { getTransparentPNG } from '../lib/cloudinary';
+import PdfPreviewModal from './ui/PdfPreviewModal';
 
 export default function TransparencyDashboard() {
   const getLocalMonthKey = (d: Date) => {
@@ -45,6 +46,15 @@ export default function TransparencyDashboard() {
   const [activeMonth, setActiveMonth] = useState('all');
   const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
   const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
+  const [pdfPreviewModal, setPdfPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    loadPdf: () => Promise<{ doc: jsPDF; filename: string }>;
+  }>({
+    isOpen: false,
+    title: '',
+    loadPdf: async () => ({ doc: new jsPDF(), filename: '' })
+  });
 
   const totalDevFund = transactions.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0);
   const totalOps = transactions.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0);
@@ -102,8 +112,7 @@ export default function TransparencyDashboard() {
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
-  const exportToPDF = async () => {
-    if (transactions.length === 0) return;
+  const buildTransparencyDoc = async (): Promise<{ doc: jsPDF; filename: string }> => {
     
     const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
     const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
@@ -405,7 +414,23 @@ export default function TransparencyDashboard() {
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
         .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
 
-    doc.save(`Laporan_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
+    const filename = `Laporan_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`;
+    return { doc, filename };
+  };
+
+  const exportToPDF = async () => {
+    if (transactions.length === 0) return;
+    const { doc, filename } = await buildTransparencyDoc();
+    doc.save(filename);
+  };
+
+  const handlePreviewReport = () => {
+    if (transactions.length === 0) return;
+    setPdfPreviewModal({
+      isOpen: true,
+      title: 'Laporan Transparansi Keuangan Warga',
+      loadPdf: () => buildTransparencyDoc()
+    });
   };
 
   const exportToCSV = () => {
@@ -654,11 +679,12 @@ export default function TransparencyDashboard() {
               Export CSV/Excel
             </button>
             <button 
-              onClick={exportToPDF}
-              className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform flex items-center justify-center gap-2 text-sm"
+              onClick={handlePreviewReport}
+              className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+              title="Pratinjau, Cetak & Unduh Laporan PDF"
             >
               <Download className="w-4 h-4" />
-              Unduh Laporan (PDF)
+              Cetak / Unduh PDF
             </button>
           </div>
         </div>
@@ -771,6 +797,12 @@ export default function TransparencyDashboard() {
           </div>
         </div>
       </div>
+      <PdfPreviewModal
+        isOpen={pdfPreviewModal.isOpen}
+        onClose={() => setPdfPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={pdfPreviewModal.title}
+        loadPdf={pdfPreviewModal.loadPdf}
+      />
     </section>
   );
 }

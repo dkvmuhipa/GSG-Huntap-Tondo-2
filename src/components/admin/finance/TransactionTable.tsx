@@ -19,6 +19,7 @@ interface TransactionTableProps {
   transactions: any[];
   displayCategory: (cat: string) => string;
   downloadKwitansi: (tx: any) => void;
+  onPreviewKwitansi?: (tx: any) => void;
   handleEdit: (tx: any) => void;
   handleDeleteTransaction: (id: string, info: string) => void;
   isLoadingMore: boolean;
@@ -32,6 +33,7 @@ export default function TransactionTable({
   transactions,
   displayCategory,
   downloadKwitansi,
+  onPreviewKwitansi,
   handleEdit,
   handleDeleteTransaction,
   isLoadingMore,
@@ -169,9 +171,9 @@ export default function TransactionTable({
                         )}
                         {t.type === 'income' && (
                           <button 
-                            onClick={() => downloadKwitansi(t)}
+                            onClick={() => onPreviewKwitansi ? onPreviewKwitansi(t) : downloadKwitansi(t)}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all shadow-sm"
-                            title="Download Kwitansi PDF"
+                            title="Pratinjau & Cetak Kwitansi Kasir"
                           >
                             <Receipt className="w-4 h-4" />
                           </button>
@@ -263,7 +265,11 @@ export default function TransactionTable({
                     </a>
                   )}
                   {t.type === 'income' && (
-                    <button onClick={() => downloadKwitansi(t)} className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl border border-emerald-100 font-black text-[10px] uppercase tracking-widest">
+                    <button 
+                      onClick={() => onPreviewKwitansi ? onPreviewKwitansi(t) : downloadKwitansi(t)} 
+                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl border border-emerald-100 font-black text-[10px] uppercase tracking-widest"
+                      title="Pratinjau & Cetak Kwitansi Kasir"
+                    >
                       <Receipt className="w-4 h-4" /> Kwitansi
                     </button>
                   )}

@@ -39,7 +39,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import { generateContract, generateReceipt } from '../../services/contractService';
+import { generateContract, generateReceipt, buildContractDoc, buildReceiptDoc } from '../../services/contractService';
 import { getTransparentPNG } from '../../lib/cloudinary';
 import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
@@ -51,6 +51,7 @@ import BookingCalendar from '../../components/admin/booking/BookingCalendar';
 import BookingFormModal from '../../components/admin/booking/BookingFormModal';
 import LayoutReviewModal from '../../components/admin/booking/LayoutReviewModal';
 import WhatsAppActionModal from '../../components/admin/booking/WhatsAppActionModal';
+import PdfPreviewModal from '../../components/ui/PdfPreviewModal';
 
 export default function BookingManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
@@ -66,7 +67,32 @@ export default function BookingManager() {
   // Layout Review Modal State
   const [selectedBookingForLayoutReview, setSelectedBookingForLayoutReview] = useState<any | null>(null);
   const [selectedBookingForWA, setSelectedBookingForWA] = useState<any | null>(null);
+  const [pdfPreviewModal, setPdfPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    loadPdf: () => Promise<any>;
+  }>({
+    isOpen: false,
+    title: '',
+    loadPdf: async () => ({ doc: new jsPDF(), filename: '' })
+  });
   const inventoryList = useAppStore(state => state.inventory);
+
+  const handlePreviewContract = (booking: any) => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Surat Perjanjian Sewa - ${booking.customerName}`,
+      loadPdf: () => buildContractDoc(booking)
+    });
+  };
+
+  const handlePreviewReceipt = (booking: any) => {
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Kuitansi / Invoice Pembayaran - ${booking.customerName}`,
+      loadPdf: () => buildReceiptDoc(booking)
+    });
+  };
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -641,6 +667,8 @@ export default function BookingManager() {
                 setSelectedBookingForLayoutReview={setSelectedBookingForLayoutReview}
                 generateContract={generateContract}
                 generateReceipt={generateReceipt}
+                onPreviewContract={handlePreviewContract}
+                onPreviewReceipt={handlePreviewReceipt}
                 handleDelete={handleDelete}
                 handleStatusChange={handleStatusChange}
                 onOpenWhatsApp={(booking) => setSelectedBookingForWA(booking)}
@@ -676,6 +704,13 @@ export default function BookingManager() {
         onClose={() => setSelectedBookingForWA(null)}
         booking={selectedBookingForWA}
         config={config}
+      />
+
+      <PdfPreviewModal 
+        isOpen={pdfPreviewModal.isOpen}
+        onClose={() => setPdfPreviewModal(prev => ({ ...prev, isOpen: false }))}
+        title={pdfPreviewModal.title}
+        loadPdf={pdfPreviewModal.loadPdf}
       />
 
       <ConfirmModal 

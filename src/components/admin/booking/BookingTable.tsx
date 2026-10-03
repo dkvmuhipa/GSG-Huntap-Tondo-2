@@ -18,6 +18,8 @@ interface BookingTableProps {
   setSelectedBookingForLayoutReview: (booking: any) => void;
   generateContract: (booking: any) => void;
   generateReceipt: (booking: any) => void;
+  onPreviewContract?: (booking: any) => void;
+  onPreviewReceipt?: (booking: any) => void;
   handleDelete: (id: string) => void;
   handleStatusChange: (id: string, newStatus: string) => void;
   onOpenWhatsApp?: (booking: any) => void;
@@ -29,6 +31,8 @@ export default function BookingTable({
   setSelectedBookingForLayoutReview,
   generateContract,
   generateReceipt,
+  onPreviewContract,
+  onPreviewReceipt,
   handleDelete,
   handleStatusChange,
   onOpenWhatsApp,
@@ -146,16 +150,16 @@ export default function BookingTable({
                         <LayoutGrid className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => generateContract(booking)} 
+                        onClick={() => onPreviewContract ? onPreviewContract(booking) : generateContract(booking)} 
                         className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" 
-                        title="Unduh Perjanjian Sewa"
+                        title="Pratinjau & Cetak Perjanjian Sewa"
                       >
                         <FileText className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => generateReceipt(booking)} 
+                        onClick={() => onPreviewReceipt ? onPreviewReceipt(booking) : generateReceipt(booking)} 
                         className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors" 
-                        title="Unduh Kuitansi Pembayaran"
+                        title="Pratinjau & Cetak Kuitansi Pembayaran"
                       >
                         <Receipt className="w-4 h-4" />
                       </button>
@@ -253,16 +257,16 @@ export default function BookingTable({
                   <MessageCircle className="w-4 h-4" /> WhatsApp
                 </button>
                 <button 
-                  onClick={() => generateContract(booking)} 
+                  onClick={() => onPreviewContract ? onPreviewContract(booking) : generateContract(booking)} 
                   className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100" 
-                  title="Unduh Perjanjian Sewa"
+                  title="Pratinjau & Cetak Perjanjian Sewa"
                 >
                   <FileText className="w-4 h-4" /> Kontrak
                 </button>
                 <button 
-                  onClick={() => generateReceipt(booking)} 
+                  onClick={() => onPreviewReceipt ? onPreviewReceipt(booking) : generateReceipt(booking)} 
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-emerald-100" 
-                  title="Unduh Kuitansi Pembayaran"
+                  title="Pratinjau & Cetak Kuitansi Pembayaran"
                 >
                   <Receipt className="w-4 h-4" /> Kuitansi
                 </button>
