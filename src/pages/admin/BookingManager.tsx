@@ -27,7 +27,14 @@ import {
   Warehouse,
   Sparkles
 } from 'lucide-react';
-import { updateBookingStatus, removeBooking, addBooking, recordBookingToFinance } from '../../lib/db';
+import { 
+  updateBookingStatus, 
+  removeBooking, 
+  addBooking, 
+  recordBookingToFinance,
+  approveBookingSafe,
+  logAdminActivity 
+} from '../../lib/db';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getAuth } from 'firebase/auth';
@@ -120,7 +127,37 @@ export default function BookingManager() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      await updateBookingStatus(id, { status: newStatus });
+      if (newStatus === 'approved') {
+        const result = await approveBookingSafe(id, bookings, {
+          email: auth.currentUser?.email || null,
+          displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+          role: userRole
+        });
+
+        if (!result.success && result.conflictBooking) {
+          setConfirmConfig({
+            isOpen: true,
+            title: '⚠️ Bentrok Jadwal Sewa Terdeteksi',
+            message: `Pemesanan ini TIDAK DAPAT disetujui karena tanggal ${result.conflictBooking.startDate} sudah disetujui sebelumnya untuk acara "${result.conflictBooking.purpose}" (${result.conflictBooking.customerName}).\n\nSistem secara otomatis mencegah double-booking. Silakan tolak atau atur jadwal pemesanan ulang.`,
+            onConfirm: () => {},
+            type: 'danger',
+            isAlert: true
+          });
+          return;
+        }
+      } else {
+        await updateBookingStatus(id, { status: newStatus });
+        await logAdminActivity({
+          action: `BOOKING_${newStatus.toUpperCase()}`,
+          description: `Mengubah status sewa menjadi "${newStatus.toUpperCase()}" untuk ID: ${id}`,
+          targetId: id,
+          actorInfo: {
+            email: auth.currentUser?.email || null,
+            displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+            role: userRole
+          }
+        });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -142,11 +179,31 @@ export default function BookingManager() {
               displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
               role: userRole
             });
+            await logAdminActivity({
+              action: 'PAYMENT_SYNCED_FINANCE',
+              description: `Mencatat pembayaran sewa Rp ${Number(booking.amount).toLocaleString('id-ID')} (${booking.customerName}) ke pembukuan kas`,
+              targetId: booking.id,
+              actorInfo: {
+                email: auth.currentUser?.email || null,
+                displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+                role: userRole
+              }
+            });
           },
           type: 'info'
         });
       } else {
         await updateBookingStatus(id, { paymentStatus: newStatus });
+        await logAdminActivity({
+          action: 'PAYMENT_STATUS_UPDATED',
+          description: `Mengubah status bayar menjadi "${newStatus.toUpperCase()}" untuk pemesan ${booking.customerName}`,
+          targetId: id,
+          actorInfo: {
+            email: auth.currentUser?.email || null,
+            displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+            role: userRole
+          }
+        });
       }
     } catch (error) {
       console.error(error);
@@ -164,6 +221,16 @@ export default function BookingManager() {
       onConfirm: async () => {
         try {
           await removeBooking(id);
+          await logAdminActivity({
+            action: 'BOOKING_DELETED',
+            description: `Menghapus data sewa: ${booking.purpose} (${booking.customerName})`,
+            targetId: id,
+            actorInfo: {
+              email: auth.currentUser?.email || null,
+              displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+              role: userRole
+            }
+          });
         } catch (error) {
           console.error(error);
         }

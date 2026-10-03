@@ -198,5 +198,13 @@ service cloud.firestore {
       allow create, update: if hasAnyRole(['owner', 'admin', 'bendahara']) && isValidId(docId) && isValidContract(incoming());
       allow delete: if isSuperAdmin() && isValidId(docId);
     }
+
+    // Audit Trail Log (Aktivitas Pengurus / Admin)
+    match /audit_logs/{docId} {
+      allow read: if hasAnyRole(['owner', 'admin', 'bendahara', 'finance', 'editor']);
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Immutable audit trail
+    }
   }
 }
+

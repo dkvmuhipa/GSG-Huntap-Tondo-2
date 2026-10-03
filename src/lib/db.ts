@@ -394,3 +394,98 @@ export const subscribeToInventory = (callback: (data: any[]) => void) => {
   }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory'));
 };
 
+/**
+ * Concurrency-safe booking approval: checks for schedule conflict before approving
+ */
+export const approveBookingSafe = async (
+  bookingId: string, 
+  allBookings: any[],
+  actorInfo?: { email: string | null; displayName?: string; role?: string }
+): Promise<{ success: boolean; conflictBooking?: any }> => {
+  try {
+    const targetBooking = allBookings.find(b => b.id === bookingId);
+    if (!targetBooking) {
+      throw new Error('Data pemesanan tidak ditemukan');
+    }
+
+    // Check if another approved/completed booking exists on the exact same date
+    const conflict = allBookings.find(b => 
+      b.id !== bookingId &&
+      b.startDate === targetBooking.startDate &&
+      (b.status === 'approved' || b.status === 'completed')
+    );
+
+    if (conflict) {
+      return { success: false, conflictBooking: conflict };
+    }
+
+    // Safe to approve
+    const docRef = doc(db, 'bookings', bookingId);
+    await updateDoc(docRef, {
+      status: 'approved',
+      approvedAt: serverTimestamp(),
+      approvedBy: actorInfo?.email || 'admin',
+      updatedAt: serverTimestamp()
+    });
+
+    // Write to audit trail
+    await logAdminActivity({
+      action: 'BOOKING_APPROVED',
+      description: `Menyetujui sewa tanggal ${targetBooking.startDate} (${targetBooking.purpose} - ${targetBooking.customerName})`,
+      targetId: bookingId,
+      actorInfo
+    });
+
+    return { success: true };
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}/approve`);
+    return { success: false };
+  }
+};
+
+export interface AdminActivityLog {
+  id?: string;
+  action: string;
+  description: string;
+  targetId?: string;
+  actorEmail: string;
+  actorName: string;
+  actorRole: string;
+  createdAt: any;
+}
+
+export const logAdminActivity = async (params: {
+  action: string;
+  description: string;
+  targetId?: string;
+  actorInfo?: { email: string | null; displayName?: string; role?: string };
+}) => {
+  try {
+    const colRef = collection(db, 'audit_logs');
+    await addDoc(colRef, {
+      action: params.action,
+      description: params.description,
+      targetId: params.targetId || null,
+      actorEmail: params.actorInfo?.email || 'admin@gsgtondo2.id',
+      actorName: params.actorInfo?.displayName || params.actorInfo?.email?.split('@')[0] || 'Administrator',
+      actorRole: params.actorInfo?.role || 'admin',
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn('Could not record audit log:', err);
+  }
+};
+
+export const subscribeToAuditLogs = (callback: (logs: AdminActivityLog[]) => void, limitCount = 20) => {
+  const colRef = collection(db, 'audit_logs');
+  const q = query(colRef, orderBy('createdAt', 'desc'), limit(limitCount));
+  return onSnapshot(q, (snapshot) => {
+    const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AdminActivityLog[];
+    callback(logs);
+  }, (err) => {
+    console.warn('Error reading audit logs:', err);
+    callback([]);
+  });
+};
+
+

@@ -28,6 +28,7 @@ import { useAppStore } from '../../store/useAppStore';
 
 import { useOutletContext } from 'react-router-dom';
 import QuickMenuGrid from '../../components/admin/QuickMenuGrid';
+import ActivityLogWidget from '../../components/admin/ActivityLogWidget';
 
 export default function DashboardOverview() {
   const { userRole } = useOutletContext<{ userRole: string }>();
@@ -286,6 +287,9 @@ export default function DashboardOverview() {
           </button>
         </div>
       </div>
+
+      {/* Catatan Aktivitas Admin / Audit Trail */}
+      <ActivityLogWidget />
     </div>
   );
 }

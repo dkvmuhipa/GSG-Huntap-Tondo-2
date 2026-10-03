@@ -18,16 +18,20 @@ import ContactSection from './components/ContactSection';
 import AnnouncementTicker from './components/AnnouncementTicker';
 import UpcomingEvents from './components/UpcomingEvents';
 import Footer from './components/Footer';
-import AdminLayout from './components/admin/AdminLayout';
-import DashboardOverview from './pages/admin/DashboardOverview';
-import FinanceManager from './pages/admin/FinanceManager';
-import BookingManager from './pages/admin/BookingManager';
-import ContentManager from './pages/admin/ContentManager';
-import InventoryManager from './pages/admin/InventoryManager';
-import AccountRules from './pages/admin/AccountRules';
-import RulesProcedures from './pages/RulesProcedures';
-import Login from './pages/admin/Login';
+import PageLoader from './components/ui/PageLoader';
 import BookingModal from './components/ui/BookingModal';
+
+// Lazy-loaded pages for optimal performance and smaller bundle size
+const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
+const DashboardOverview = React.lazy(() => import('./pages/admin/DashboardOverview'));
+const FinanceManager = React.lazy(() => import('./pages/admin/FinanceManager'));
+const BookingManager = React.lazy(() => import('./pages/admin/BookingManager'));
+const ContentManager = React.lazy(() => import('./pages/admin/ContentManager'));
+const InventoryManager = React.lazy(() => import('./pages/admin/InventoryManager'));
+const AccountRules = React.lazy(() => import('./pages/admin/AccountRules'));
+const RulesProcedures = React.lazy(() => import('./pages/RulesProcedures'));
+const Login = React.lazy(() => import('./pages/admin/Login'));
+
 
 function MainLayout() {
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
@@ -88,21 +92,23 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/rules" element={<RulesProcedures />} />
-        </Route>
-        <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<DashboardOverview />} />
-          <Route path="bookings" element={<BookingManager />} />
-          <Route path="finance" element={<FinanceManager />} />
-          <Route path="inventory" element={<InventoryManager />} />
-          <Route path="rules" element={<AccountRules />} />
-          <Route path="settings" element={<ContentManager />} />
-        </Route>
-      </Routes>
+      <React.Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/rules" element={<RulesProcedures />} />
+          </Route>
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardOverview />} />
+            <Route path="bookings" element={<BookingManager />} />
+            <Route path="finance" element={<FinanceManager />} />
+            <Route path="inventory" element={<InventoryManager />} />
+            <Route path="rules" element={<AccountRules />} />
+            <Route path="settings" element={<ContentManager />} />
+          </Route>
+        </Routes>
+      </React.Suspense>
     </BrowserRouter>
   );
 }
