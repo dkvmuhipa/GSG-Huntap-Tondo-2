@@ -1954,8 +1954,7 @@ export default function FinanceManager() {
 
       {/* Stats Section */}
       <div className="grid md:grid-cols-4 gap-6">
-        <div className="md:col-span-2 bg-gradient-to-br from-blue-900 to-blue-800 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-          <LayoutGrid className="absolute -right-4 -bottom-4 w-40 h-40 text-white/5 rotate-12" />
+        <div className="md:col-span-2 bg-gradient-to-br from-blue-900 to-blue-800 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md">
               <Wallet className="w-6 h-6" />
@@ -1983,7 +1982,7 @@ export default function FinanceManager() {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-primary/30 transition-all flex flex-col justify-between">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-primary/30 transition-colors flex flex-col justify-between">
           <div>
             <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <Receipt className="w-6 h-6" />
@@ -2024,7 +2023,7 @@ export default function FinanceManager() {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-accent/30 transition-all flex flex-col justify-between">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm group hover:border-accent/30 transition-colors flex flex-col justify-between">
           <div>
             <div className="w-12 h-12 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-6 h-6" />

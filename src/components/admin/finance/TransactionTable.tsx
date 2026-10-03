@@ -55,29 +55,24 @@ export default function TransactionTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            <AnimatePresence mode="popLayout">
-              {filteredTransactions.length === 0 ? (
-                <tr key="no-data">
-                  <td colSpan={7} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                        <Search className="w-8 h-8 text-gray-300" />
-                      </div>
-                      <p className="font-bold text-gray-900">Data Tidak Ditemukan</p>
-                      <p className="text-sm text-gray-400">Coba ubah filter atau kata kunci pencarian anda.</p>
+            {filteredTransactions.length === 0 ? (
+              <tr key="no-data">
+                <td colSpan={7} className="px-8 py-20 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <Search className="w-8 h-8 text-gray-300" />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredTransactions.map((t) => (
-                  <motion.tr 
-                    key={t.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="group hover:bg-gray-50/50 transition-all"
-                  >
+                    <p className="font-bold text-gray-900">Data Tidak Ditemukan</p>
+                    <p className="text-sm text-gray-400">Coba ubah filter atau kata kunci pencarian anda.</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredTransactions.map((t) => (
+                <tr 
+                  key={t.id}
+                  className="group hover:bg-gray-50/50 transition-colors"
+                >
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
                         {t.status === 'completed' ? (
@@ -197,27 +192,23 @@ export default function TransactionTable({
                         </button>
                       </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))
               )}
-            </AnimatePresence>
           </tbody>
         </table>
       </div>
 
       {/* Mobile View Card List */}
       <div className="lg:hidden p-4 space-y-4">
-        <AnimatePresence mode="popLayout">
-          {filteredTransactions.length === 0 ? (
-            <div className="py-20 text-center italic text-gray-300 font-bold">Data transaksi tidak ditemukan...</div>
-          ) : (
-            filteredTransactions.map((t) => (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
-              >
+        {filteredTransactions.length === 0 ? (
+          <div className="py-20 text-center italic text-gray-300 font-bold">Data transaksi tidak ditemukan...</div>
+        ) : (
+          filteredTransactions.map((t) => (
+            <div
+              key={t.id}
+              className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm space-y-4"
+            >
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -283,10 +274,9 @@ export default function TransactionTable({
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ))
           )}
-        </AnimatePresence>
       </div>
 
       {/* Pagination controls */}
