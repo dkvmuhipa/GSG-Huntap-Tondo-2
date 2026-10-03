@@ -5,10 +5,12 @@ import {
   subscribeToBookings, 
   subscribeToAdmins, 
   subscribeToTransactions,
-  subscribeToInventory
+  subscribeToInventory,
+  subscribeToVendors
 } from '../lib/db';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Vendor, DEFAULT_VENDORS } from '../types/vendor';
 
 interface AppState {
   config: any;
@@ -17,6 +19,7 @@ interface AppState {
   admins: any[];
   transactions: any[];
   inventory: any[];
+  vendors: Vendor[];
   
   // Loaded indicators
   isConfigLoaded: boolean;
@@ -25,6 +28,7 @@ interface AppState {
   isAdminsLoaded: boolean;
   isTransactionsLoaded: boolean;
   isInventoryLoaded: boolean;
+  isVendorsLoaded: boolean;
 
   // Setters
   setConfig: (config: any) => void;
@@ -33,6 +37,7 @@ interface AppState {
   setAdmins: (admins: any[]) => void;
   setTransactions: (transactions: any[]) => void;
   setInventory: (inventory: any[]) => void;
+  setVendors: (vendors: Vendor[]) => void;
 
   // Subscription initializer
   initSubscriptions: () => () => void;
@@ -45,6 +50,7 @@ let unsubscribeBookings: (() => void) | null = null;
 let unsubscribeAdmins: (() => void) | null = null;
 let unsubscribeTransactions: (() => void) | null = null;
 let unsubscribeInventory: (() => void) | null = null;
+let unsubscribeVendors: (() => void) | null = null;
 let unsubscribeAuth: (() => void) | null = null;
 let subscriptionCount = 0;
 
@@ -62,6 +68,7 @@ export const useAppStore = create<AppState>((set) => ({
   admins: [],
   transactions: [],
   inventory: [],
+  vendors: DEFAULT_VENDORS,
 
   isConfigLoaded: false,
   isFacilitiesLoaded: false,
@@ -69,6 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
   isAdminsLoaded: false,
   isTransactionsLoaded: false,
   isInventoryLoaded: false,
+  isVendorsLoaded: false,
 
   setConfig: (config) => set({ config, isConfigLoaded: true }),
   setFacilities: (facilities) => set({ facilities, isFacilitiesLoaded: true }),
@@ -76,6 +84,7 @@ export const useAppStore = create<AppState>((set) => ({
   setAdmins: (admins) => set({ admins, isAdminsLoaded: true }),
   setTransactions: (transactions) => set({ transactions, isTransactionsLoaded: true }),
   setInventory: (inventory) => set({ inventory, isInventoryLoaded: true }),
+  setVendors: (vendors) => set({ vendors, isVendorsLoaded: true }),
 
   initSubscriptions: () => {
     subscriptionCount++;
@@ -100,6 +109,11 @@ export const useAppStore = create<AppState>((set) => ({
       if (!unsubscribeTransactions) {
         unsubscribeTransactions = subscribeToTransactions((data) => {
           set({ transactions: data, isTransactionsLoaded: true });
+        });
+      }
+      if (!unsubscribeVendors) {
+        unsubscribeVendors = subscribeToVendors((data) => {
+          set({ vendors: data, isVendorsLoaded: true });
         });
       }
 
@@ -137,6 +151,7 @@ export const useAppStore = create<AppState>((set) => ({
         if (unsubscribeFacilities) { unsubscribeFacilities(); unsubscribeFacilities = null; }
         if (unsubscribeBookings) { unsubscribeBookings(); unsubscribeBookings = null; }
         if (unsubscribeTransactions) { unsubscribeTransactions(); unsubscribeTransactions = null; }
+        if (unsubscribeVendors) { unsubscribeVendors(); unsubscribeVendors = null; }
         
         if (unsubscribeAdmins) { unsubscribeAdmins(); unsubscribeAdmins = null; }
         if (unsubscribeInventory) { unsubscribeInventory(); unsubscribeInventory = null; }

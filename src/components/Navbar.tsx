@@ -13,6 +13,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
   const navLinks = [
     { name: 'Jadwal', href: '/#jadwal' },
     { name: 'Agenda Acara', href: '/#agenda-kegiatan' },
+    { name: 'Mitra Vendor', href: '/#mitra-vendor' },
     { name: 'Transparansi', href: '/#transparansi' },
     { name: 'Galeri', href: '/#galeri' },
     { name: 'Aturan', href: '/rules' },

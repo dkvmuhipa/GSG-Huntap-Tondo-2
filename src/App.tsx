@@ -21,6 +21,7 @@ import UpcomingEvents from './components/UpcomingEvents';
 import Footer from './components/Footer';
 import PageLoader from './components/ui/PageLoader';
 import BookingModal from './components/ui/BookingModal';
+import VendorSection from './components/vendors/VendorSection';
 
 // Lazy-loaded pages for optimal performance and smaller bundle size
 const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
@@ -29,6 +30,7 @@ const FinanceManager = React.lazy(() => import('./pages/admin/FinanceManager'));
 const BookingManager = React.lazy(() => import('./pages/admin/BookingManager'));
 const ContentManager = React.lazy(() => import('./pages/admin/ContentManager'));
 const InventoryManager = React.lazy(() => import('./pages/admin/InventoryManager'));
+const VendorManager = React.lazy(() => import('./pages/admin/VendorManager'));
 const AccountRules = React.lazy(() => import('./pages/admin/AccountRules'));
 const RulesProcedures = React.lazy(() => import('./pages/RulesProcedures'));
 const Login = React.lazy(() => import('./pages/admin/Login'));
@@ -75,6 +77,7 @@ function LandingPage() {
       <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
       <RentalCostCalculator onOpenBooking={(pkg) => openBooking(pkg)} />
       <GallerySection />
+      <VendorSection />
       <FAQSection />
       <FeedbackSection />
       <ContactSection />
@@ -108,6 +111,7 @@ export default function App() {
             <Route path="bookings" element={<BookingManager />} />
             <Route path="finance" element={<FinanceManager />} />
             <Route path="inventory" element={<InventoryManager />} />
+            <Route path="vendors" element={<VendorManager />} />
             <Route path="rules" element={<AccountRules />} />
             <Route path="settings" element={<ContentManager />} />
           </Route>

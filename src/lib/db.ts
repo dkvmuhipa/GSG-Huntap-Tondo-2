@@ -488,4 +488,77 @@ export const subscribeToAuditLogs = (callback: (logs: AdminActivityLog[]) => voi
   });
 };
 
+// ==========================================
+// VENDORS & UMKM WARGA
+// ==========================================
+import { Vendor, DEFAULT_VENDORS } from '../types/vendor';
+
+export const subscribeToVendors = (callback: (vendors: Vendor[]) => void) => {
+  const colRef = collection(db, 'vendors');
+  return onSnapshot(colRef, (snapshot) => {
+    if (snapshot.empty) {
+      // Provide default high quality mock vendors if collection not yet populated
+      callback(DEFAULT_VENDORS);
+      return;
+    }
+    const vendors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Vendor[];
+    callback(vendors);
+  }, (err) => {
+    console.warn('Error fetching vendors from Firestore, falling back to defaults:', err);
+    callback(DEFAULT_VENDORS);
+  });
+};
+
+export const upsertVendor = async (id: string | null, data: Partial<Vendor>) => {
+  const colRef = collection(db, 'vendors');
+  try {
+    if (id) {
+      await updateDoc(doc(db, 'vendors', id), {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await addDoc(colRef, {
+        ...data,
+        status: data.status || 'active',
+        isVerified: data.isVerified ?? true,
+        rating: data.rating || 5.0,
+        reviewCount: data.reviewCount || 1,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  } catch (err) {
+    handleFirestoreError(err, id ? OperationType.UPDATE : OperationType.CREATE, 'vendors');
+  }
+};
+
+export const removeVendor = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, 'vendors', id));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `vendors/${id}`);
+  }
+};
+
+export const submitVendorRegistration = async (data: any) => {
+  const colRef = collection(db, 'vendors');
+  try {
+    await addDoc(colRef, {
+      ...data,
+      status: 'pending', // Requires admin verification
+      isVerified: false,
+      rating: 5.0,
+      reviewCount: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return { success: true };
+  } catch (err) {
+    console.error('Error submitting vendor registration:', err);
+    throw err;
+  }
+};
+
+
 

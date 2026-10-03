@@ -10,6 +10,7 @@ import {
   LogOut,
   Building2,
   Box,
+  Store,
   X
 } from 'lucide-react';
 
@@ -25,6 +26,7 @@ export default function AdminSidebar({ userRole = 'admin', onLogout, onClose }: 
     { name: 'Kelola Booking', icon: CalendarCheck, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
     { name: 'Keuangan', icon: Wallet, path: '/admin/finance', roles: ['owner', 'admin', 'finance', 'bendahara'] },
     { name: 'Inventaris & Log', icon: Box, path: '/admin/inventory', roles: ['owner', 'admin', 'bendahara'] },
+    { name: 'Mitra Vendor & UMKM', icon: Store, path: '/admin/vendors', roles: ['owner', 'admin', 'editor', 'bendahara'] },
     { name: 'Akses & Rules', icon: Shield, path: '/admin/rules', roles: ['owner', 'admin'] },
     { name: 'Pengaturan Gedung', icon: Settings, path: '/admin/settings', roles: ['owner', 'admin', 'editor', 'bendahara'] },
   ];

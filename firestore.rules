@@ -205,6 +205,13 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if false; // Immutable audit trail
     }
+
+    // Mitra & Vendor UMKM Warga
+    match /vendors/{docId} {
+      allow read: if true; // Publik dapat melihat direktori vendor
+      allow create: if true; // Warga lokal dapat mengajukan pendaftaran usaha (status pending)
+      allow update, delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
+    }
   }
 }
 

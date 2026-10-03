@@ -24,7 +24,8 @@ import {
   Warehouse,
   Flame,
   Copy,
-  Check
+  Check,
+  Store
 } from 'lucide-react';
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
@@ -925,6 +926,28 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                               <p className="text-gray-900 line-clamp-1">{formData.purpose}</p>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Local Vendor Recommendation Callout */}
+                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 shrink-0">
+                              <Store className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-amber-950">Butuh Katering, Dekorasi, atau Sound?</p>
+                              <p className="text-[10px] text-amber-800">Dukung UMKM warga Huntap Tondo 2 & vendor terpercaya.</p>
+                            </div>
+                          </div>
+                          <a
+                            href="/#mitra-vendor"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm flex items-center gap-1"
+                          >
+                            <span>Lihat Mitra</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </a>
                         </div>
 
                         <div className="space-y-3">
