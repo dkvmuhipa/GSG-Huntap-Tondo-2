@@ -931,24 +931,76 @@ export default function FinanceManager() {
                             prevTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'ops_to_dev').reduce((sum, t) => sum + (Number(t.amount) || 0), 0) -
                             prevTxs.filter(t => t.type === 'reallocation' && t.transferDirection === 'dev_to_ops').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    const calculatePct = (curr: number, prev: number) => {
-      if (prev === 0) {
-        return curr > 0 ? 100 : 0;
+    const prevMonthLabel = prevDate.toLocaleDateString('id-ID', { month: 'short' });
+
+    const formatDelta = (curr: number, prev: number, isExpense = false) => {
+      if (prev === 0 && curr === 0) {
+        return {
+          text: 'Belum ada transaksi',
+          colorClass: 'text-gray-500 bg-gray-50 border-gray-200/80',
+          badgeText: isExpense ? 'Rp 0 Pengeluaran' : 'Belum Ada Transaksi'
+        };
       }
-      return Math.round(((curr - prev) / prev) * 100);
+      if (prev === 0 && curr > 0) {
+        return {
+          text: `Baru bulan ini`,
+          colorClass: isExpense ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
+          badgeText: isExpense ? 'Pengeluaran Bln Ini' : `+Rp ${curr.toLocaleString('id-ID')} Bln Ini`
+        };
+      }
+      if (curr === prev) {
+        return {
+          text: `Sama dgn ${prevMonthLabel}`,
+          colorClass: 'text-gray-500 bg-gray-50 border-gray-200/80',
+          badgeText: `Sama dgn ${prevMonthLabel}`
+        };
+      }
+      const pct = Math.round(((curr - prev) / prev) * 100);
+      if (pct > 0) {
+        return {
+          text: `▲ +${pct}% vs ${prevMonthLabel}`,
+          colorClass: isExpense ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
+          badgeText: `▲ +${pct}% vs ${prevMonthLabel}`
+        };
+      } else {
+        return {
+          text: `▼ ${pct}% vs ${prevMonthLabel}`,
+          colorClass: isExpense ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200',
+          badgeText: `▼ ${pct}% vs ${prevMonthLabel}`
+        };
+      }
+    };
+
+    const formatSaving = (curr: number, prev: number) => {
+      if (curr === 0) {
+        return {
+          text: 'Tetap / Stabil',
+          colorClass: 'text-gray-500 bg-gray-50 border-gray-200/80'
+        };
+      }
+      if (curr > 0) {
+        return {
+          text: `+Rp ${curr.toLocaleString('id-ID')} bln ini`,
+          colorClass: 'text-emerald-700 bg-emerald-50 border-emerald-200'
+        };
+      }
+      return {
+        text: `-Rp ${Math.abs(curr).toLocaleString('id-ID')} terpakai`,
+        colorClass: 'text-rose-700 bg-rose-50 border-rose-200'
+      };
     };
 
     return {
-      incomePct: calculatePct(curIncome, prevIncome),
+      income: formatDelta(curIncome, prevIncome, false),
+      opsExpense: formatDelta(curOpsExpense, prevOpsExpense, true),
+      saving: formatSaving(curSavingAlloc, prevSavingAlloc),
       curIncome,
       prevIncome,
-      opsExpensePct: calculatePct(curOpsExpense, prevOpsExpense),
       curOpsExpense,
       prevOpsExpense,
-      savingPct: calculatePct(curSavingAlloc, prevSavingAlloc),
       curSavingAlloc,
       prevSavingAlloc,
-      prevMonthLabel: prevDate.toLocaleDateString('id-ID', { month: 'short' })
+      prevMonthLabel
     };
   }, [allTransactions, activeMonth]);
 
@@ -1911,8 +1963,14 @@ export default function FinanceManager() {
             <p className="text-sm font-medium text-white/60 mb-1">Total Akumulasi Seluruh Dana Gedung</p>
             <h3 className="text-4xl font-extrabold tracking-tight">Rp {(totalDevFund + totalOps).toLocaleString('id-ID')}</h3>
             <div className="mt-8 flex flex-wrap gap-2.5 text-[10px] font-bold uppercase tracking-widest">
-              <span className={`px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border ${momDelta.incomePct >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
-                {momDelta.incomePct >= 0 ? '▲ +' : '▼ '}{momDelta.incomePct}% Pendapatan vs {momDelta.prevMonthLabel}
+              <span className={`px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border ${
+                momDelta.curIncome > momDelta.prevIncome 
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                  : momDelta.curIncome < momDelta.prevIncome && momDelta.prevIncome > 0
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
+                  : 'bg-white/10 text-white/90 border-white/10'
+              }`}>
+                {momDelta.income.badgeText}
               </span>
               <span className="bg-white/10 text-white/90 px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border border-white/5">
                 Audit Transparan
@@ -1945,14 +2003,8 @@ export default function FinanceManager() {
             </div>
             <div className="flex justify-between items-center mt-2.5 pt-1.5 border-t border-gray-50">
               <span className="text-[9px] text-gray-400 font-medium italic">Siap pakai harian</span>
-              <span className={`text-[10px] font-black flex items-center gap-0.5 uppercase tracking-tight ${
-                momDelta.opsExpensePct > 0 
-                  ? 'text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md' 
-                  : momDelta.opsExpensePct < 0 
-                  ? 'text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md' 
-                  : 'text-gray-400'
-              }`}>
-                {momDelta.opsExpensePct > 0 ? '▲ +' : momDelta.opsExpensePct < 0 ? '▼ ' : '• '}{momDelta.opsExpensePct}% MoM ({momDelta.prevMonthLabel})
+              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${momDelta.opsExpense.colorClass}`}>
+                {momDelta.opsExpense.badgeText}
               </span>
             </div>
           </div>
@@ -1971,12 +2023,8 @@ export default function FinanceManager() {
               <p className="text-[10px] text-accent font-bold flex items-center gap-1 italic">
                 Saran: Renovasi/Darurat
               </p>
-              <span className={`text-[10px] font-black flex items-center gap-0.5 uppercase tracking-tight ${
-                momDelta.savingPct >= 0 
-                  ? 'text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md' 
-                  : 'text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md'
-              }`}>
-                {momDelta.savingPct >= 0 ? '▲ +' : '▼ '}{momDelta.savingPct}% Saving vs {momDelta.prevMonthLabel}
+              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${momDelta.saving.colorClass}`}>
+                {momDelta.saving.text}
               </span>
             </div>
           </div>
