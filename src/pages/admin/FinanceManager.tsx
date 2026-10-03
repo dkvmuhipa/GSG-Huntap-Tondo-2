@@ -23,7 +23,11 @@ import {
   Edit3,
   ArrowUpRight,
   ArrowDownRight,
-  PenTool
+  PenTool,
+  Settings,
+  Percent,
+  Target,
+  FileSignature
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -112,6 +116,23 @@ export default function FinanceManager() {
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isReportSettingsModalOpen, setIsReportSettingsModalOpen] = useState(false);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const settingsMenuRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target as Node)) {
+        setIsSettingsMenuOpen(false);
+      }
+    };
+    if (isSettingsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSettingsMenuOpen]);
+
   const [localFinanceName, setLocalFinanceName] = useState('');
   const [localBendaharaName, setLocalBendaharaName] = useState('');
   const [localFinanceSig, setLocalFinanceSig] = useState<string | null>(null);
@@ -1754,28 +1775,87 @@ export default function FinanceManager() {
 
             <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block" />
 
-            <div className="flex items-center gap-2">
+            {/* Dropdown Menu Pengaturan Kas Terpadu */}
+            <div className="relative" ref={settingsMenuRef}>
               <button 
-                onClick={() => setIsRateModalOpen(true)}
-                className="p-3 bg-gray-50 text-accent rounded-xl hover:bg-orange-50 transition-colors"
-                title="Atur % Dana"
+                type="button"
+                onClick={() => setIsSettingsMenuOpen(!isSettingsMenuOpen)}
+                className="flex items-center gap-2 px-3.5 py-3 bg-gray-50 border border-gray-200/70 rounded-2xl text-xs font-black text-gray-700 hover:bg-gray-100 transition-all uppercase tracking-wider shadow-sm"
+                title="Buka Pengaturan Pembukuan Kas"
               >
-                <Shield className="w-4 h-4" />
+                <Settings className="w-4 h-4 text-primary" />
+                <span>Pengaturan Kas</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isSettingsMenuOpen ? 'rotate-180' : ''}`} />
               </button>
-              <button 
-                onClick={() => setIsBudgetModalOpen(true)}
-                className="p-3 bg-gray-50 text-emerald-500 rounded-xl hover:bg-emerald-50 transition-colors"
-                title="Budget Bulanan"
-              >
-                <TrendingUp className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setIsReportSettingsModalOpen(true)}
-                className="p-3 bg-gray-50 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors"
-                title="Laporan PDF & Tanda Tangan"
-              >
-                <PenTool className="w-4 h-4" />
-              </button>
+
+              <AnimatePresence>
+                {isSettingsMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-[60] overflow-hidden"
+                  >
+                    <div className="px-3 py-2 border-b border-gray-50 text-[10px] font-black uppercase tracking-wider text-gray-400">
+                      Opsi Konfigurasi Keuangan
+                    </div>
+
+                    <div className="space-y-1 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false);
+                          setIsRateModalOpen(true);
+                        }}
+                        className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-orange-50/70 text-left transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Percent className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-orange-950">Alokasi Dana (% Dev/Ops)</p>
+                          <p className="text-[10px] text-gray-400 leading-tight">Bagi hasil pembangunan vs operasional</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false);
+                          setIsBudgetModalOpen(true);
+                        }}
+                        className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/70 text-left transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Target className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-emerald-950">Target Budget Bulanan</p>
+                          <p className="text-[10px] text-gray-400 leading-tight">Pagu pengeluaran operasional per bulan</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false);
+                          setIsReportSettingsModalOpen(true);
+                        }}
+                        className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-indigo-50/70 text-left transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <FileSignature className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-indigo-950">Format Laporan & TTD PDF</p>
+                          <p className="text-[10px] text-gray-400 leading-tight">Pengurus, tanda tangan & stempel sah</p>
+                        </div>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
