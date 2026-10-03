@@ -788,15 +788,27 @@ export default function FinanceManager() {
 
   const exportCSV = () => {
     const headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Sumber/Tujuan', 'Jumlah', 'Catatan'];
-    const rows = filteredTransactions.map(t => [
-      t.id,
-      t.date,
-      t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-      displayCategory(t.category),
-      t.source,
-      t.amount,
-      t.notes || ''
-    ]);
+    const rows = filteredTransactions.length > 0 
+      ? filteredTransactions.map(t => [
+          t.id,
+          t.date,
+          t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+          displayCategory(t.category),
+          t.source,
+          t.amount,
+          t.notes || ''
+        ])
+      : [
+          [
+            '-',
+            '-',
+            'Laporan Nihil',
+            '-',
+            'Tidak ada aktivitas transaksi pada periode ini (Nihil)',
+            '0',
+            '-'
+          ]
+        ];
 
     const csvContent = [
       headers.join(','),
@@ -1006,8 +1018,6 @@ export default function FinanceManager() {
   };
 
   const exportToPDF = async () => {
-    if (filteredReportTransactions.length === 0) return;
-    
     const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
     const financeSig = config?.reportFinanceSignature ? await getTransparentPNG(config.reportFinanceSignature) : null;
     const stampImg = config?.reportStamp ? await getTransparentPNG(config.reportStamp) : null;
@@ -1167,15 +1177,25 @@ export default function FinanceManager() {
       return map[cat] || cat?.toUpperCase() || 'UMUM';
     };
 
-    const tableData = sortedTransactions.map((t, index) => [
-      index + 1,
-      t.date.split('-').reverse().join('/'), 
-      t.source,
-      pdfDisplayCategory(t.category),
-      t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
-      { content: t.type === 'income' ? 'MASUK' : t.type === 'reallocation' ? 'REALLOKASI' : 'KELUAR', styles: { textColor: t.type === 'income' ? [5, 150, 105] : t.type === 'reallocation' ? [217, 119, 6] : [220, 38, 38] } },
-      `Rp ${Math.abs(t.amount || 0).toLocaleString('id-ID')}`
-    ]);
+    const tableData = sortedTransactions.length > 0 
+      ? sortedTransactions.map((t, index) => [
+          index + 1,
+          t.date.split('-').reverse().join('/'), 
+          t.source,
+          pdfDisplayCategory(t.category),
+          t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
+          { content: t.type === 'income' ? 'MASUK' : t.type === 'reallocation' ? 'REALLOKASI' : 'KELUAR', styles: { textColor: t.type === 'income' ? [5, 150, 105] : t.type === 'reallocation' ? [217, 119, 6] : [220, 38, 38] } },
+          `Rp ${Math.abs(t.amount || 0).toLocaleString('id-ID')}`
+        ])
+      : [
+          [
+            { 
+              content: 'Tidak ada aktivitas transaksi pada periode ini (Laporan Nihil)', 
+              colSpan: 7, 
+              styles: { halign: 'center', fontStyle: 'italic', textColor: [100, 116, 139], minCellHeight: 12 } 
+            }
+          ]
+        ];
 
     autoTable(doc, {
       startY: txStartY + 5,
@@ -1236,7 +1256,7 @@ export default function FinanceManager() {
     const periodExpense = sortedTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
     
     // Initial balance (Balance before the period start)
-    const allTxsSorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const allTxsSorted = [...allTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let initialBalance = 0;
     if (activeMonth !== 'all') {
       initialBalance = allTxsSorted
@@ -1268,7 +1288,8 @@ export default function FinanceManager() {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.text('TOTAL SALDO AKHIR PERIODE (AVAILABLE)', margin + 5, finalRecapY + 40.5);
-    doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 40.5, { align: 'right' });
+    const finalBalance = activeMonth !== 'all' ? (initialBalance + periodIncome - periodExpense) : (totalDevFund + totalOps);
+    doc.text(`Rp ${Math.floor(finalBalance).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 40.5, { align: 'right' });
 
     // Section 3: Signature Area
     const finalY = finalRecapY + 55;
@@ -1360,12 +1381,11 @@ export default function FinanceManager() {
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
         .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
 
-    doc.save(`Laporan_Keuangan_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`);
+    const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
+    doc.save(`Laporan_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToCSV = () => {
-    if (filteredReportTransactions.length === 0) return;
-    
     const headers = [
       'ID',
       'Tanggal', 
@@ -1403,20 +1423,37 @@ export default function FinanceManager() {
       return map[cat] || cat?.toUpperCase() || 'UMUM';
     };
 
-    const rows = sortedTransactions.map((t) => [
-      t.id,
-      t.date.split('-').reverse().join('/'),
-      t.source,
-      csvDisplayCategory(t.category),
-      t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
-      t.type === 'income' ? 'PEMASUKAN' : t.type === 'reallocation' ? 'REALLOKASI' : 'PENGELUARAN',
-      t.amount || 0,
-      t.devFund || 0,
-      t.ops || 0,
-      t.addedBy || 'Sistem',
-      t.status === 'completed' ? 'SELESAI' : t.status === 'pending' ? 'PENDING' : 'BATAL',
-      t.notes || '-'
-    ]);
+    const rows = sortedTransactions.length > 0
+      ? sortedTransactions.map((t) => [
+          t.id,
+          t.date.split('-').reverse().join('/'),
+          t.source,
+          csvDisplayCategory(t.category),
+          t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER',
+          t.type === 'income' ? 'PEMASUKAN' : t.type === 'reallocation' ? 'REALLOKASI' : 'PENGELUARAN',
+          t.amount || 0,
+          t.devFund || 0,
+          t.ops || 0,
+          t.addedBy || 'Sistem',
+          t.status === 'completed' ? 'SELESAI' : t.status === 'pending' ? 'PENDING' : 'BATAL',
+          t.notes || '-'
+        ])
+      : [
+          [
+            '-',
+            '-',
+            'Tidak ada aktivitas transaksi pada periode ini (Laporan Nihil)',
+            'NIHIL',
+            '-',
+            'NIHIL',
+            0,
+            0,
+            0,
+            'Sistem',
+            'SELESAI',
+            'Laporan Nihil'
+          ]
+        ];
 
     const csvContent = [
       '\ufeff' + headers.join(','), // UTF-8 BOM for Excel
@@ -1430,11 +1467,12 @@ export default function FinanceManager() {
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
         .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
 
+    const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Ekspor_Keuangan_${periodLabel}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Ekspor_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1711,7 +1749,7 @@ export default function FinanceManager() {
 
             <ExportButton 
               type="csv"
-              onClick={exportCSV}
+              onClick={exportToCSV}
             />
 
             <div className="h-6 w-px bg-gray-100 mx-2 hidden md:block" />

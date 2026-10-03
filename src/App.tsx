@@ -39,10 +39,12 @@ function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden">
-      <AnnouncementTicker />
-      <Navbar onOpenBooking={() => openBooking()} />
-      <div className="flex-grow">
+    <div className="min-h-screen flex flex-col overflow-x-hidden w-full">
+      <header className="fixed top-0 left-0 right-0 z-50 shadow-sm">
+        <AnnouncementTicker />
+        <Navbar onOpenBooking={() => openBooking()} />
+      </header>
+      <div className="flex-grow w-full">
         <Outlet context={{ openBooking }} />
         <Footer />
       </div>

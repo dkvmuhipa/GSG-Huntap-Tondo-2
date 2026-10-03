@@ -34,49 +34,52 @@ export default function AnnouncementTicker() {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-primary text-white overflow-hidden relative border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shrink-0">
-          <Bell className="w-3.5 h-3.5 animate-bounce" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Info Huntap Tondo 2</span>
+    <div className="bg-primary text-white overflow-hidden relative border-b border-white/10 w-full">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 shrink-0">
+          <Bell className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-bounce text-amber-300" />
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">Info Warga</span>
         </div>
 
-        <div className="flex-1 overflow-hidden relative h-5">
+        <div className="flex-1 overflow-hidden relative h-5 min-w-0">
           <AnimatePresence mode="wait">
             <motion.p 
               key={currentIdx}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-xs font-bold whitespace-nowrap truncate italic"
+              exit={{ opacity: 0, y: -15 }}
+              className="text-[11px] sm:text-xs font-semibold whitespace-nowrap truncate italic"
             >
               {announcements[currentIdx].text}
             </motion.p>
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <button 
               onClick={() => setCurrentIdx((prev) => (prev - 1 + announcements.length) % announcements.length)}
               className="p-1 hover:bg-white/10 rounded-md transition-colors"
+              aria-label="Pengumuman sebelumnya"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-            <span className="text-[10px] font-black opacity-50">{currentIdx + 1}/{announcements.length}</span>
+            <span className="text-[9px] sm:text-[10px] font-black opacity-60">{currentIdx + 1}/{announcements.length}</span>
             <button 
               onClick={() => setCurrentIdx((prev) => (prev + 1) % announcements.length)}
               className="p-1 hover:bg-white/10 rounded-md transition-colors"
+              aria-label="Pengumuman selanjutnya"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
-          <div className="w-px h-4 bg-white/20 mx-1" />
+          <div className="w-px h-3.5 bg-white/20 mx-0.5" />
           <button 
             onClick={() => setIsVisible(false)}
             className="p-1 hover:bg-white/10 rounded-md transition-colors"
+            aria-label="Tutup info"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

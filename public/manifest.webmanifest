@@ -1,17 +1,38 @@
 {
-  "name": "GSG Tondo 2",
+  "id": "/",
+  "name": "Gedung Serbaguna Huntap Tondo 2",
   "short_name": "GSG Tondo",
-  "description": "Pusat kegiatan warga Huntap Tondo 2",
+  "description": "Pusat kegiatan warga Huntap Tondo 2 yang dikelola modern, transparan, dan akuntabel.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#1e3a8a",
   "icons": [
     {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "/logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
