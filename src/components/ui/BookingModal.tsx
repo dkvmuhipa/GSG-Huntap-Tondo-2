@@ -25,7 +25,9 @@ import {
   Flame,
   Copy,
   Check,
-  Store
+  Store,
+  CreditCard,
+  ShieldCheck
 } from 'lucide-react';
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
@@ -117,6 +119,22 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
       setLayout(prev => ({ ...prev, selectedElementIds: initialElements }));
     }
   }, []);
+
+  // Keyboard Escape listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isTermsOpen) {
+          setIsTermsOpen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isTermsOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || !selectedPackage || packages.length === 0) return;
@@ -420,6 +438,8 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
     }
   };
 
+  const stepPercent = step === 1 ? 25 : step === 2 ? 50 : step === 3 ? 75 : 100;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -429,32 +449,32 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-md"
           />
           
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            className="relative bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[min(900px,90vh)] flex flex-col transition-all"
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.98 }}
+            className="relative bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[min(900px,90vh)] flex flex-col transition-all border border-slate-100"
           >
             {isSuccess ? (
               <div className="p-6 sm:p-10 text-center flex-1 flex flex-col justify-between overflow-y-auto max-h-[90vh]">
                 <div>
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-sm shadow-emerald-500/10">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">Permohonan Terkirim!</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 max-w-md mx-auto mb-6">
-                    Data Anda telah tercatat di sistem kami. <strong>Sangat Direkomendasikan:</strong> Kirim salinan rincian pengajuan ini langsung ke WhatsApp Admin agar diverifikasi lebih cepat.
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">Permohonan Berhasil Dikirim!</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
+                    Data Anda telah tercatat rapi di sistem kami. <strong className="text-slate-900">Sangat Direkomendasikan:</strong> Kirim salinan rincian pengajuan ini langsung ke WhatsApp Admin agar diverifikasi lebih cepat.
                   </p>
 
                   {/* Copyable Template Box */}
-                  <div className="text-left bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-850 relative group mb-6">
+                  <div className="text-left bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-800 relative group mb-6 shadow-inner">
                     <button
                       onClick={copyWAMessage}
                       type="button"
-                      className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white p-2 rounded-xl text-xs flex items-center gap-1.5 transition-all font-bold"
+                      className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white p-2 rounded-xl text-xs flex items-center gap-1.5 transition-all font-bold backdrop-blur-sm"
                       title="Salin Template"
                     >
                       {copiedMsg ? (
@@ -469,7 +489,7 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                         </>
                       )}
                     </button>
-                    <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider block mb-2">Template Pesan Konfirmasi</span>
+                    <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider block mb-2">Template Pesan Konfirmasi WhatsApp</span>
                     <pre className="text-[11px] sm:text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto scrollbar-none select-all pr-2">
                       {generateWAMessage()}
                     </pre>
@@ -477,12 +497,12 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                 </div>
 
                 {/* Direct Action Buttons */}
-                <div className="space-y-2.5 pt-4 border-t border-gray-100">
+                <div className="space-y-2.5 pt-4 border-t border-slate-100">
                   <a
                     href={getWALink()}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <Send className="w-4 h-4" />
                     Kirim Konfirmasi ke WhatsApp Admin
@@ -499,38 +519,74 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
               </div>
             ) : (
               <>
-                <div className="bg-primary p-6 sm:p-8 text-white relative shrink-0">
+                {/* Modern Stepper Header */}
+                <div className="bg-gradient-to-r from-primary via-blue-700 to-indigo-800 p-6 sm:p-7 text-white relative shrink-0 shadow-sm">
                   <button 
                     onClick={onClose}
-                    className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center transition-all text-white backdrop-blur-sm"
                   >
                     <X className="w-5 h-5" />
                   </button>
-                  <h3 className="text-xl sm:text-2xl font-black mb-1">Permohonan Sewa Gedung</h3>
                   
-                  {/* Stepper with 4 Stages */}
-                  <div className="mt-4 sm:mt-6 flex items-center gap-2">
-                    {[1, 2, 3, 4].map((s) => {
-                      const labels = ["Identitas", "Waktu", "Tata Letak", "Selesai"];
-                      return (
-                        <div key={s} className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-all ${step >= s ? 'bg-white text-primary' : 'bg-white/10 text-white/50'}`}>
-                            {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white font-extrabold text-[10px] uppercase tracking-wider backdrop-blur-sm flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-300" />
+                      Layanan Warga RT 02
+                    </span>
+                    <span className="text-[11px] text-blue-150 font-bold opacity-80">Tahap {step} dari 4</span>
+                  </div>
+
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">Permohonan Sewa Gedung</h3>
+                  <p className="text-xs text-blue-100 font-medium mt-0.5">Formulir digital reservasi, tata letak, & rincian fasilitas gedung.</p>
+                  
+                  {/* Stepper Progress Bar */}
+                  <div className="mt-4 sm:mt-5 space-y-2">
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                      {[
+                        { num: 1, label: "Identitas" },
+                        { num: 2, label: "Waktu" },
+                        { num: 3, label: "Tata Letak" },
+                        { num: 4, label: "Selesai" }
+                      ].map((s) => (
+                        <div 
+                          key={s.num} 
+                          className={`flex items-center justify-center sm:justify-start gap-1.5 px-2 py-1.5 rounded-xl transition-all ${
+                            step === s.num 
+                              ? 'bg-white text-primary font-black shadow-md' 
+                              : step > s.num 
+                              ? 'bg-white/20 text-white font-extrabold' 
+                              : 'bg-white/5 text-white/50 font-semibold'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] shrink-0 ${
+                            step === s.num 
+                              ? 'bg-primary text-white' 
+                              : step > s.num 
+                              ? 'bg-emerald-400 text-slate-900' 
+                              : 'bg-white/10 text-white/60'
+                          }`}>
+                            {step > s.num ? <Check className="w-3 h-3 stroke-[3]" /> : s.num}
                           </div>
-                          <span className={`hidden sm:inline text-[9px] font-black uppercase tracking-wider ${step >= s ? 'text-white' : 'text-white/30'}`}>{labels[s-1]}</span>
-                          {s < 4 && <div className={`w-4 sm:w-6 h-0.5 rounded-full ${step > s ? 'bg-white' : 'bg-white/10'}`} />}
+                          <span className="hidden sm:inline text-[10px] tracking-tight uppercase truncate">{s.label}</span>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+
+                    <div className="w-full h-1.5 bg-white/15 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-amber-300 to-emerald-400 transition-all duration-300 ease-out"
+                        style={{ width: `${stepPercent}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto scrollbar-none">
                   <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
                     {error && (
-                      <div className="p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 animate-bounce" />
-                        {error}
+                      <div className="p-4 bg-red-50 text-red-700 rounded-2xl text-xs font-bold border border-red-200/80 flex items-start gap-2.5 shadow-sm">
+                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5 animate-bounce" />
+                        <span className="leading-relaxed">{error}</span>
                       </div>
                     )}
 
@@ -541,108 +597,142 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                         animate={{ opacity: 1, x: 0 }}
                         className="space-y-5"
                       >
-                        <div className="flex items-center gap-3 mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                          <User className="w-5 h-5 text-primary" />
+                        <div className="flex items-center gap-3 p-4 bg-blue-50/80 rounded-2xl border border-blue-100/80 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-primary flex items-center justify-center shrink-0">
+                            <User className="w-5 h-5" />
+                          </div>
                           <div>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Langkah 1</p>
-                            <h4 className="text-sm font-black text-gray-900">Identitas Diri & Pemilihan Paket</h4>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Tahap 1</p>
+                            <h4 className="text-sm font-black text-slate-900">Identitas Pemohon & Pilihan Paket</h4>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Lengkap</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <User className="w-3.5 h-3.5 text-primary" />
+                              <span>Nama Lengkap</span>
+                              <span className="text-red-500 font-bold">*</span>
+                            </label>
                             <input 
                               required
                               type="text" 
                               value={formData.customerName}
                               onChange={(e) => setFormData({...formData, customerName: e.target.value})}
                               placeholder="Contoh: Budi Prasetyo"
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
+                            <p className="text-[10px] text-slate-400 pl-1">Nama lengkap penanggung jawab acara.</p>
                           </div>
                           
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">No. WhatsApp (Aktif)</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>No. WhatsApp (Aktif)</span>
+                              <span className="text-red-500 font-bold">*</span>
+                            </label>
                             <input 
                               required
                               type="text" 
                               value={formData.phone}
                               onChange={(e) => setFormData({...formData, phone: e.target.value})}
                               placeholder="08xxxxxxxxxx"
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
+                            <p className="text-[10px] text-slate-400 pl-1">Nomor untuk koordinasi dan konfirmasi sewa.</p>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">No. NIK KTP (Sesuai KTP)</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>No. NIK KTP (16 Digit)</span>
+                              <span className="text-red-500 font-bold">*</span>
+                            </label>
                             <input 
                               required
                               type="text" 
+                              maxLength={16}
                               value={formData.nik}
                               onChange={(e) => setFormData({...formData, nik: e.target.value})}
                               placeholder="7203xxxxxxxxxxxx"
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm font-mono transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
+                            <p className="text-[10px] text-slate-400 pl-1">Digunakan untuk validasi hak warga & perjanjian sewa.</p>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Kategori Penyelenggara</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Kategori Penyelenggara</span>
+                              <span className="text-red-500 font-bold">*</span>
+                            </label>
                             <div className="relative">
                               <select 
                                 required
                                 value={formData.organizerType}
                                 onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
-                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-700 appearance-none text-sm shadow-inner"
+                                className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300 appearance-none cursor-pointer pr-10"
                               >
                                 <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
                                 <option value="Instansi Pemerintah">Instansi Pemerintah</option>
                                 <option value="Organisasi Kemasyarakatan / Komunitas">Organisasi / Komunitas</option>
                                 <option value="Swasta / Perusahaan / Komersil">Swasta / Komersil</option>
                               </select>
-                              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                             </div>
+                            <p className="text-[10px] text-slate-400 pl-1">Pilih entitas pemohon acara.</p>
                           </div>
 
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyelenggara / Kepanitiaan (Opsional)</label>
+                          <div className="space-y-1.5 sm:col-span-2">
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Users className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Nama Penyelenggara / Kepanitiaan (Opsional)</span>
+                            </label>
                             <input 
                               type="text" 
                               value={formData.organizerName}
                               onChange={(e) => setFormData({...formData, organizerName: e.target.value, organization: e.target.value})}
-                              placeholder="Contoh: Keluarga Budi / Karang Taruna..."
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              placeholder="Contoh: Panitia Pernikahan Budi & Ani / Karang Taruna RT 02"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Alamat Domisili Sekarang</label>
+                          <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Alamat Domisili Sekarang</span>
+                          </label>
                           <textarea 
                             rows={2}
                             value={formData.address}
                             onChange={(e) => setFormData({...formData, address: e.target.value})}
-                            placeholder="Alamat lengkap RT/RW di Huntap Tondo 2"
-                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                            placeholder="Alamat lengkap (Blok/No. Rumah di Huntap Tondo 2 atau alamat luar)..."
+                            className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300 resize-none"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Pilihan Paket Paling Cocok</label>
+                          <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                            <Tag className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Pilihan Paket Sewa Gedung</span>
+                            <span className="text-red-500 font-bold">*</span>
+                          </label>
                           <div className="relative">
                             <select 
                               required
                               value={formData.packageName}
                               onChange={(e) => handlePackageChange(e.target.value)}
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-700 appearance-none text-sm shadow-inner"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-bold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300 appearance-none cursor-pointer pr-10"
                             >
                               <option value="">-- Pilih Paket Sewa Gedung --</option>
                               {packages.map(p => (
                                 <option key={p.id} value={p.title}>{p.title} ~ ({p.price})</option>
                               ))}
                             </select>
-                            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                           </div>
+                          <p className="text-[10px] text-slate-400 pl-1">Paket menentukan durasi standar pemakaian gedung dan fasilitas dasar.</p>
                         </div>
                       </motion.div>
                     )}
@@ -654,102 +744,133 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                         animate={{ opacity: 1, x: 0 }}
                         className="space-y-5"
                       >
-                        <div className="flex items-center gap-3 mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                          <Clock className="w-5 h-5 text-primary" />
+                        <div className="flex items-center gap-3 p-4 bg-blue-50/80 rounded-2xl border border-blue-100/80 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-primary flex items-center justify-center shrink-0">
+                            <Clock className="w-5 h-5" />
+                          </div>
                           <div>
-                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Langkah 2</p>
-                            <h4 className="text-sm font-black text-gray-900">Jadwal Acara & Keperluan</h4>
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest">Tahap 2</p>
+                            <h4 className="text-sm font-black text-slate-900">Jadwal Acara & Keperluan Pemakaian</h4>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tanggal Penyewaan</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                              <span>Tanggal Acara</span>
+                              <span className="text-red-500 font-bold">*</span>
+                            </label>
                             <input 
                               required
                               type="date" 
                               value={formData.startDate}
                               onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                               min={new Date().toISOString().split('T')[0]}
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
+                            <p className="text-[10px] text-slate-400 pl-1">Pilih tanggal hari H pelaksanaan.</p>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Estimasi Jumlah Undangan / Tamu</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Users className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Estimasi Jumlah Tamu</span>
+                            </label>
                             <input 
                               type="number" 
                               value={formData.guests}
                               onChange={(e) => setFormData({...formData, guests: e.target.value})}
-                              placeholder="Jumlah orang (e.g. 300)"
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              placeholder="Contoh: 300"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
+                            <p className="text-[10px] text-slate-400 pl-1">Kapasitas maksimal gedung ±600 orang.</p>
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Jam Mulai</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Clock className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Jam Mulai</span>
+                            </label>
                             <input 
                               type="time" 
                               value={formData.startTime}
                               onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
                           </div>
 
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Jam Selesai</label>
+                            <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                              <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Jam Selesai</span>
+                            </label>
                             <input 
                               type="time" 
                               value={formData.endTime}
                               onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                              className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tujuan / Deskripsi Acara</label>
+                          <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                            <FileText className="w-3.5 h-3.5 text-primary" />
+                            <span>Tujuan / Keperluan Acara</span>
+                            <span className="text-red-500 font-bold">*</span>
+                          </label>
                           <input 
                             required
                             type="text" 
                             value={formData.purpose}
                             onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                            placeholder="Contoh: Resepsi Pernikahan, Khitanan, Rapat Akbar..."
-                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                            placeholder="Contoh: Resepsi Pernikahan, Khitanan, Syukuran, Rapat Warga..."
+                            className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Catatan Tambahan Kepada Pengurus</label>
+                          <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                            <FileText className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Catatan Tambahan untuk Pengurus</span>
+                          </label>
                           <textarea 
                             rows={2}
                             value={formData.notes}
                             onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                            placeholder="Tambahkan catatan khusus bila panggung ingin disetup sehari sebelum acara, dll..."
-                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm"
+                            placeholder="Contoh: Permohonan izin dekorasi panggung H-1 mulai sore hari..."
+                            className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 placeholder-slate-400 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300 resize-none"
                           />
                         </div>
 
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Sifat Acara</span>
-                          <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="space-y-2">
+                          <span className="text-[11px] font-black text-slate-600 uppercase tracking-wider pl-1 block">Sifat Acara</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${formData.isPublic ? 'border-primary bg-blue-50/40 shadow-sm' : 'border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/50'}`}>
                               <input 
                                 type="radio" 
                                 checked={formData.isPublic}
                                 onChange={() => setFormData({...formData, isPublic: true})}
-                                className="w-4 h-4 text-primary"
+                                className="mt-1 w-4 h-4 text-primary"
                               />
-                              <span className="text-sm font-semibold text-gray-700">Terbuka untuk Umum (Ditampilkan di Kalender Warga)</span>
+                              <div>
+                                <p className="text-xs font-black text-slate-900">Terbuka untuk Umum</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">Akan ditampilkan di Kalender Pemakaian Warga.</p>
+                              </div>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+
+                            <label className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${!formData.isPublic ? 'border-primary bg-blue-50/40 shadow-sm' : 'border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/50'}`}>
                               <input 
                                 type="radio" 
                                 checked={!formData.isPublic}
                                 onChange={() => setFormData({...formData, isPublic: false})}
-                                className="w-4 h-4 text-primary"
+                                className="mt-1 w-4 h-4 text-primary"
                               />
-                              <span className="text-sm font-semibold text-gray-700">Privat / Tertutup</span>
+                              <div>
+                                <p className="text-xs font-black text-slate-900">Privat / Tertutup</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">Hanya tanggal terisi yang ditampilkan tanpa rincian nama acara.</p>
+                              </div>
                             </label>
                           </div>
                         </div>
@@ -763,42 +884,47 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                         animate={{ opacity: 1, x: 0 }}
                         className="space-y-6"
                       >
-                        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl">
+                        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-100 rounded-2xl shadow-xs">
                           <div className="flex items-center gap-3">
-                            <Layers className="w-5 h-5 text-primary" />
+                            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-primary flex items-center justify-center shrink-0">
+                              <Layers className="w-5 h-5" />
+                            </div>
                             <div>
-                              <p className="text-[10px] font-black text-primary uppercase tracking-widest">Langkah 3</p>
-                              <h4 className="text-sm font-black text-gray-900">Tata Letak Gedung & Inventaris Opsional</h4>
+                              <p className="text-[10px] font-black text-primary uppercase tracking-widest">Tahap 3</p>
+                              <h4 className="text-sm font-black text-slate-900">Tata Letak Gedung & Fasilitas Tambahan</h4>
                             </div>
                           </div>
-                          <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" /> Interaktif
+                          <span className="px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500" /> 
+                            <span>Interaktif</span>
                           </span>
                         </div>
 
                         {/* Interactive Canvas Drawing */}
-                        <HallLayoutCanvas
-                          layoutData={layout}
-                          onChange={(newLayout) => setLayout(newLayout)}
-                          interactive={true}
-                          maxTablesAvailable={getRemainingStock(
-                            (availableInventory.find(i => i.name.toLowerCase().includes('meja')) || DEFAULT_INVENTORY[1]).id, 
-                            45
-                          )}
-                          maxChairsAvailable={getRemainingStock(
-                            (availableInventory.find(i => i.name.toLowerCase().includes('kursi')) || DEFAULT_INVENTORY[0]).id, 
-                            300
-                          )}
-                        />
+                        <div className="rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm bg-slate-50/30">
+                          <HallLayoutCanvas
+                            layoutData={layout}
+                            onChange={(newLayout) => setLayout(newLayout)}
+                            interactive={true}
+                            maxTablesAvailable={getRemainingStock(
+                              (availableInventory.find(i => i.name.toLowerCase().includes('meja')) || DEFAULT_INVENTORY[1]).id, 
+                              45
+                            )}
+                            maxChairsAvailable={getRemainingStock(
+                              (availableInventory.find(i => i.name.toLowerCase().includes('kursi')) || DEFAULT_INVENTORY[0]).id, 
+                              300
+                            )}
+                          />
+                        </div>
 
                         {/* Inventory stock control list */}
                         <div className="space-y-3.5 mt-2">
                           <div className="flex items-center gap-2 pl-1">
-                            <Warehouse className="w-4 h-4 text-gray-400" />
-                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Inventaris Tambahan Tersertifikasi</h4>
+                            <Warehouse className="w-4 h-4 text-slate-500" />
+                            <h4 className="text-xs font-black text-slate-600 uppercase tracking-wider">Inventaris Tambahan Gedung</h4>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                             {availableInventory
                               .filter(item => !item.name.toLowerCase().includes('kursi') && !item.name.toLowerCase().includes('meja'))
                               .map(item => {
@@ -808,41 +934,52 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                                 return (
                                   <div 
                                     key={item.id} 
-                                    className={`p-4 rounded-3xl border transition-all flex flex-col justify-between ${currentQty > 0 ? 'bg-blue-50/40 border-primary/30 shadow-md shadow-primary/5' : 'bg-gray-50/60 border-gray-100'}`}
+                                    className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                                      currentQty > 0 
+                                        ? 'bg-blue-50/50 border-primary/40 shadow-sm shadow-primary/5' 
+                                        : 'bg-white border-slate-200/80 hover:border-slate-300'
+                                    }`}
                                   >
                                     <div>
-                                      <div className="flex justify-between items-start">
-                                        <p className="font-extrabold text-sm text-gray-800 leading-tight line-clamp-2">{item.name}</p>
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase bg-white border border-gray-100 px-2 py-0.5 rounded-lg shrink-0">
+                                      <div className="flex justify-between items-start gap-2">
+                                        <p className="font-extrabold text-xs sm:text-sm text-slate-900 leading-snug line-clamp-2">{item.name}</p>
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-lg shrink-0">
                                           {item.category || 'Lainnya'}
                                         </span>
                                       </div>
                                       
-                                      <div className="flex justify-between items-center mt-2">
-                                        <p className="text-xs font-black text-primary">Rp {Number(item.price || 0).toLocaleString('id-ID')}<span className="text-gray-400 font-medium">/hari</span></p>
-                                        <p className={`text-[10px] font-bold ${remainingStock > 0 ? 'text-green-600' : 'text-red-500 bg-red-50 px-2 py-0.5 rounded-md font-black'}`}>
-                                          Sisa Stok: {remainingStock} {remainingStock <= 0 ? 'HABIS!' : 'Unit'}
+                                      <div className="flex justify-between items-center mt-2.5">
+                                        <p className="text-xs font-black text-primary">
+                                          Rp {Number(item.price || 0).toLocaleString('id-ID')}
+                                          <span className="text-slate-400 font-normal text-[10px]">/hari</span>
                                         </p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                          remainingStock > 0 
+                                            ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' 
+                                            : 'text-red-700 bg-red-50 border border-red-100 font-black'
+                                        }`}>
+                                          Sisa: {remainingStock} {remainingStock <= 0 ? 'HABIS!' : 'Unit'}
+                                        </span>
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-3.5 pt-2.5 border-t border-gray-100/50">
-                                      <span className="text-[10px] text-gray-400 font-extrabold uppercase">Jumlah Sewa</span>
-                                      <div className="flex items-center bg-white border border-gray-200 rounded-xl px-1.5 py-1">
+                                    <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
+                                      <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Jumlah Tambahan</span>
+                                      <div className="flex items-center bg-slate-50 border border-slate-200/90 rounded-xl px-1.5 py-1">
                                         <button 
                                           type="button" 
                                           onClick={() => handleInventoryQuantity(item.id, false)}
                                           disabled={currentQty <= 0}
-                                          className="w-7 h-7 flex items-center justify-center font-bold text-gray-500 hover:text-red-500 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-30"
+                                          className="w-7 h-7 flex items-center justify-center font-bold text-slate-600 hover:text-red-600 hover:bg-white rounded-lg transition-colors disabled:opacity-30"
                                         >
                                           -
                                         </button>
-                                        <span className="w-10 text-center font-mono font-black text-sm text-gray-800">{currentQty}</span>
+                                        <span className="w-9 text-center font-mono font-black text-xs text-slate-900">{currentQty}</span>
                                         <button 
                                           type="button" 
                                           onClick={() => handleInventoryQuantity(item.id, true)}
                                           disabled={remainingStock <= 0 || currentQty >= remainingStock}
-                                          className="w-7 h-7 flex items-center justify-center font-bold text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-30"
+                                          className="w-7 h-7 flex items-center justify-center font-bold text-slate-600 hover:text-primary hover:bg-white rounded-lg transition-colors disabled:opacity-30"
                                         >
                                           +
                                         </button>
@@ -861,131 +998,161 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                       <motion.div 
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="space-y-6"
+                        className="space-y-5"
                       >
-                        <div className="flex items-center gap-3 mb-6 p-4 bg-green-50 rounded-2xl border border-green-100">
-                          <ClipboardCheck className="w-5 h-5 text-green-500" />
+                        <div className="flex items-center gap-3 p-4 bg-emerald-50/80 rounded-2xl border border-emerald-100 shadow-xs">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                            <ClipboardCheck className="w-5 h-5" />
+                          </div>
                           <div>
-                            <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">Langkah 4</p>
-                            <h4 className="text-sm font-black text-gray-900">Review & Konfirmasi Pengajuan</h4>
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Tahap 4</p>
+                            <h4 className="text-sm font-black text-slate-900">Review & Rincian Pengajuan Sewa</h4>
                           </div>
                         </div>
 
-                        {/* Beautiful Invoice Breakdown breakdown */}
-                        <div className="bg-slate-900 text-white rounded-[2rem] p-6 border border-slate-800 space-y-4 shadow-xl">
+                        {/* Beautiful Modern Invoice Card */}
+                        <div className="bg-slate-900 text-white rounded-3xl p-6 border border-slate-800 space-y-4 shadow-xl">
                           <div className="flex justify-between items-center border-b border-white/10 pb-4">
                             <div>
-                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Biaya Komparatif</span>
-                              <p className="text-[9px] text-gray-500 font-bold uppercase">Sudah termasuk sewa gedung & alat</p>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Total Estimasi Biaya</span>
+                              <p className="text-[10px] text-slate-400 font-medium">Sewa paket utama + fasilitas tambahan</p>
                             </div>
-                            <span className="text-2xl font-black text-amber-400">Rp {calculatedBills.grandTotal.toLocaleString('id-ID')}</span>
+                            <span className="text-2xl font-black text-amber-400 font-mono tracking-tight">
+                              Rp {calculatedBills.grandTotal.toLocaleString('id-ID')}
+                            </span>
                           </div>
                           
-                          <div className="space-y-2 text-xs font-bold divide-y divide-white/5 pt-1">
+                          <div className="space-y-2 text-xs font-medium divide-y divide-white/10 pt-1">
                             <div className="flex justify-between py-2">
-                              <span className="text-gray-400 font-extrabold uppercase text-[10px]">Paket Sewa Utama ({formData.packageName}):</span>
-                              <span className="text-gray-200">Rp {calculatedBills.basePrice.toLocaleString('id-ID')}</span>
+                              <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                                Paket Utama ({formData.packageName}):
+                              </span>
+                              <span className="text-slate-200 font-mono font-bold">
+                                Rp {calculatedBills.basePrice.toLocaleString('id-ID')}
+                              </span>
                             </div>
 
                             {calculatedBills.itemsList.length > 0 ? (
-                              <div className="pt-2.5 pb-1 text-xs space-y-1.5">
-                                <span className="text-gray-400 font-extrabold uppercase text-[10px] block">Rincian Inventaris & Penataan:</span>
+                              <div className="pt-2.5 pb-1 space-y-1.5">
+                                <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider block">
+                                  Inventaris & Penataan Denah:
+                                </span>
                                 {calculatedBills.itemsList.map((itm, i) => (
-                                  <div key={i} className="flex justify-between text-[11px] font-semibold text-gray-300">
+                                  <div key={i} className="flex justify-between text-[11px] text-slate-300">
                                     <span>• {itm.name} (x{itm.quantity})</span>
-                                    <span>Rp {itm.cost.toLocaleString('id-ID')}</span>
+                                    <span className="font-mono">Rp {itm.cost.toLocaleString('id-ID')}</span>
                                   </div>
                                 ))}
                               </div>
                             ) : null}
 
-                            <div className="flex justify-between py-2 text-gray-400 text-[10.5px]">
-                              <span className="font-extrabold uppercase">Rencana Tata Ruang:</span>
-                              <span className="text-amber-400 uppercase font-black tracking-wider">{layout.template} • {layout.stagePosition === 'depan' ? 'Panggung Depan' : layout.stagePosition === 'samping' ? 'Panggung Samping' : 'Tanpa Panggung'}</span>
+                            <div className="flex justify-between py-2 text-slate-400 text-[11px]">
+                              <span className="font-bold uppercase text-[10px] tracking-wider">Rencana Tata Ruang:</span>
+                              <span className="text-amber-400 font-bold uppercase">
+                                {layout.template} • {layout.stagePosition === 'depan' ? 'Panggung Depan' : layout.stagePosition === 'samping' ? 'Panggung Samping' : 'Tanpa Panggung'}
+                              </span>
                             </div>
                           </div>
                         </div>
 
-                        {/* Booking Summary parameters details */}
-                        <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100 space-y-4">
-                          <div className="grid grid-cols-2 gap-4 text-xs font-bold">
-                            <div className="space-y-1">
-                              <span className="text-[10px] text-gray-400 uppercase">Pemegang Hak</span>
-                              <p className="text-gray-900 line-clamp-1">{formData.customerName}</p>
+                        {/* Booking Summary Parameters Details */}
+                        <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+                          <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ringkasan Data Pemohon</h5>
+                          <div className="grid grid-cols-2 gap-3.5 text-xs">
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Pemegang Hak</span>
+                              <p className="text-slate-900 font-bold line-clamp-1">{formData.customerName}</p>
                             </div>
-                            <div className="space-y-1">
-                              <span className="text-[10px] text-gray-400 uppercase">Tanggal Acara</span>
-                              <p className="text-gray-900">{formData.startDate}</p>
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Tanggal Pelaksanaan</span>
+                              <p className="text-slate-900 font-bold">{formData.startDate}</p>
                             </div>
-                            <div className="space-y-1">
-                              <span className="text-[10px] text-gray-400 uppercase">Mulai - Selesai</span>
-                              <p className="text-gray-900">{formData.startTime} - {formData.endTime}</p>
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Jam Mulai - Selesai</span>
+                              <p className="text-slate-900 font-bold">{formData.startTime} s/d {formData.endTime}</p>
                             </div>
-                            <div className="space-y-1">
-                              <span className="text-[10px] text-gray-400 uppercase">Keperluan</span>
-                              <p className="text-gray-900 line-clamp-1">{formData.purpose}</p>
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Keperluan Acara</span>
+                              <p className="text-slate-900 font-bold line-clamp-1">{formData.purpose}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Local Vendor Recommendation Callout */}
-                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3">
+                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
                           <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 shrink-0">
                               <Store className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-xs font-black text-amber-950">Butuh Katering, Dekorasi, atau Sound?</p>
-                              <p className="text-[10px] text-amber-800">Dukung UMKM warga Huntap Tondo 2 & vendor terpercaya.</p>
+                              <p className="text-xs font-black text-amber-950">Butuh Katering, Dekorasi, atau Sound System?</p>
+                              <p className="text-[10px] text-amber-800">Dukung UMKM warga Huntap Tondo 2 & mitra vendor terpercaya.</p>
                             </div>
                           </div>
                           <a
                             href="/#mitra-vendor"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm flex items-center gap-1 transition-colors"
                           >
                             <span>Lihat Mitra</span>
                             <ArrowRight className="w-3 h-3" />
                           </a>
                         </div>
 
+                        {/* Terms Agreement Checkbox */}
                         <div className="space-y-3">
-                          <label className="flex items-start gap-3 p-4 border border-gray-150 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors group">
-                            <div className="relative flex items-center mt-1">
+                          <label className="flex items-start gap-3 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors group bg-white shadow-xs">
+                            <div className="relative flex items-center mt-0.5">
                               <input 
                                 type="checkbox"
                                 required
                                 id="chk-agree"
                                 checked={formData.agreeTerms}
                                 onChange={(e) => setFormData({...formData, agreeTerms: e.target.checked})}
-                                className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:bg-primary checked:border-primary"
+                                className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-slate-300 transition-all checked:bg-primary checked:border-primary"
                               />
                               <CheckCircle2 className="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
                             </div>
                             <div className="flex-1">
-                              <span className="text-[11px] font-bold text-gray-600 block group-hover:text-gray-900 transition-colors leading-relaxed">
-                                Saya menyetujui <button type="button" onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="text-primary underline hover:text-blue-700 font-extrabold">Syarat & Ketentuan</button> penyewaan Gedung Serbaguna Huntap Tondo 2 secara penuh.
+                              <span className="text-[11px] font-semibold text-slate-700 block group-hover:text-slate-900 transition-colors leading-relaxed">
+                                Saya telah membaca dan menyetujui seluruh <button type="button" onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="text-primary underline hover:text-blue-800 font-extrabold">Syarat & Ketentuan</button> penyewaan Gedung Serbaguna Huntap Tondo 2 secara penuh.
                               </span>
                             </div>
                           </label>
                         </div>
 
-                        <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest text-center leading-relaxed">
-                            Formulir ini adalah permohonan digital resmi. Pengurus Gedung akan memvalidasi jadwal dan ketersediaan stok fisik gudang sebelum menghubungi Anda.
+                        <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-100">
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-wider text-center leading-relaxed flex items-center justify-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 shrink-0" />
+                            <span>Formulir digital resmi. Pengurus RT 02 akan meninjau jadwal & ketersediaan fasilitas fisik sebelum konfirmasi final.</span>
                           </p>
                         </div>
                       </motion.div>
                     )}
 
                     {/* Core Step Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t border-slate-100">
+                      {step > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={prevStep}
+                          className="w-full sm:w-auto px-6 bg-slate-100 text-slate-700 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-slate-200 active:scale-[0.99] transition-all order-2 sm:order-1"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          <span>Kembali</span>
+                        </button>
+                      )}
+
                       <button 
                         type={step === 4 ? "submit" : "button"}
                         onClick={step < 4 ? nextStep : undefined}
                         disabled={isSubmitting}
-                        className={`w-full py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 order-1 sm:order-2 ${step === 4 ? 'bg-green-500 hover:bg-green-600 shadow-green-200' : 'bg-primary hover:bg-blue-800 shadow-primary/20'} text-white`}
+                        className={`flex-1 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50 order-1 sm:order-2 ${
+                          step === 4 
+                            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 text-white' 
+                            : 'bg-primary hover:bg-blue-800 shadow-primary/20 text-white'
+                        }`}
                       >
                         {isSubmitting ? (
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -994,31 +1161,20 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                             {step === 4 ? (
                               <>
                                 <Send className="w-4 h-4" />
-                                Kirim Permohonan Sewa
+                                <span>Kirim Permohonan Sewa</span>
                               </>
                             ) : (
                               <>
-                                Lanjutkan Ke Tahap Berikutnya
+                                <span>Lanjutkan Ke Tahap Berikutnya</span>
                                 <ArrowRight className="w-4 h-4" />
                               </>
                             )}
                           </>
                         )}
                       </button>
-
-                      {step > 1 && (
-                        <button 
-                          type="button" 
-                          onClick={prevStep}
-                          className="w-full sm:w-auto px-8 bg-gray-100 text-gray-600 py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-200 transition-all order-2 sm:order-1"
-                        >
-                          <ArrowLeft className="w-4 h-4" />
-                          Kembali
-                        </button>
-                      )}
                     </div>
 
-                    <p className="text-center text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed pt-2">
+                    <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed pt-1">
                       Teras RT 02 Digital Ecosystem • Huntap Tondo 2
                     </p>
                   </form>
@@ -1038,39 +1194,42 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsTermsOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-slate-950/65 backdrop-blur-md"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden"
+              className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100"
             >
-              <div className="p-8 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg font-black text-gray-900">Syarat & Ketentuan</h4>
-                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Penyewaan Gedung RT 02</p>
+                  <h4 className="text-base font-black text-slate-900">Syarat & Ketentuan Sewa</h4>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Gedung Serbaguna RT 02 Huntap Tondo 2</p>
                 </div>
-                <button onClick={() => setIsTermsOpen(false)} className="p-2 hover:bg-white rounded-xl transition-all">
-                  <X className="w-5 h-5 text-gray-400" />
+                <button 
+                  onClick={() => setIsTermsOpen(false)} 
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-8 space-y-4 max-h-[50vh] overflow-y-auto">
+              <div className="p-6 space-y-3 max-h-[50vh] overflow-y-auto">
                 {TERMS.map((term, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="shrink-0 w-6 h-6 bg-blue-50 text-primary rounded-lg flex items-center justify-center text-[10px] font-black">
+                  <div key={index} className="flex gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-100">
+                    <div className="shrink-0 w-6 h-6 bg-blue-50 text-primary rounded-lg flex items-center justify-center text-[10px] font-black border border-blue-100">
                       {index + 1}
                     </div>
-                    <p className="text-sm font-medium text-gray-600 leading-relaxed">{term}</p>
+                    <p className="text-xs font-medium text-slate-700 leading-relaxed">{term}</p>
                   </div>
                 ))}
               </div>
-              <div className="p-8 pt-0">
+              <div className="p-6 pt-0">
                 <button 
                   onClick={() => setIsTermsOpen(false)}
-                  className="w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-blue-800 transition-all"
+                  className="w-full bg-primary text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:bg-blue-800 active:scale-[0.99] transition-all"
                 >
-                  Saya Mengerti
+                  Saya Mengerti & Setuju
                 </button>
               </div>
             </motion.div>

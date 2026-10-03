@@ -85,6 +85,16 @@ export default function AnnualClosingModal({
     };
   }, [transactions, bookings, selectedYear]);
 
+  // Keyboard Escape listener
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -96,7 +106,7 @@ export default function AnnualClosingModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-950/65 backdrop-blur-md"
         />
 
         {/* Modal Dialog Card */}

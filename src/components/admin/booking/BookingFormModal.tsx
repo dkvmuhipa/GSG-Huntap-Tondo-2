@@ -1,6 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { XCircle, Zap, ChevronDown } from 'lucide-react';
+import { 
+  X, 
+  User, 
+  Phone, 
+  CreditCard, 
+  Calendar, 
+  Clock, 
+  Users, 
+  DollarSign, 
+  MapPin, 
+  Building2, 
+  Zap, 
+  ChevronDown,
+  CalendarCheck,
+  FileText
+} from 'lucide-react';
 
 interface BookingFormModalProps {
   isOpen: boolean;
@@ -17,207 +32,318 @@ export default function BookingFormModal({
   setFormData,
   handleSubmit,
 }: BookingFormModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }} 
           onClick={onClose} 
-          className="absolute inset-0 bg-gray-900/60 backdrop-blur-md" 
+          className="fixed inset-0 bg-slate-950/65 backdrop-blur-md transition-opacity" 
         />
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} 
-          animate={{ opacity: 1, scale: 1 }} 
-          exit={{ opacity: 0, scale: 0.95 }} 
-          className="relative bg-white w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh]"
+          initial={{ opacity: 0, scale: 0.95, y: 16 }} 
+          animate={{ opacity: 1, scale: 1, y: 0 }} 
+          exit={{ opacity: 0, scale: 0.95, y: 16 }} 
+          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+          className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[92vh] z-10 border border-slate-100 flex flex-col"
         >
-          <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <div>
-              <h3 className="text-xl font-black text-gray-900">Input Booking Gedung</h3>
-              <p className="text-xs text-gray-500 font-bold mt-1">Sertakan detail acara dengan lengkap.</p>
+          {/* Header */}
+          <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-blue-50/50 shrink-0">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-sm border border-primary/20">
+                <CalendarCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Input Jadwal Booking</h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Catat jadwal pemakaian gedung oleh warga atau instansi.</p>
+              </div>
             </div>
             <button 
               onClick={onClose} 
-              className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-2xl"
+              type="button"
+              className="p-2.5 hover:bg-white text-slate-400 hover:text-slate-600 transition-all rounded-xl border border-transparent hover:border-slate-200"
+              aria-label="Tutup"
             >
-              <XCircle className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyewa</label>
-                <input 
-                  required 
-                  type="text" 
-                  value={formData.customerName} 
-                  onChange={(e) => setFormData({...formData, customerName: e.target.value})} 
-                  placeholder="Nama Bpk/Ibu..." 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
+          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 overflow-y-auto">
+            {/* Section 1: Customer Profile */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+                <User className="w-3.5 h-3.5 text-primary" />
+                <span>Data Pemohon & Penyelenggara</span>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">WhatsApp</label>
-                <input 
-                  required 
-                  type="text" 
-                  value={formData.phone} 
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                  placeholder="08..." 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">NIK (Opsional)</label>
-                <input 
-                  type="text" 
-                  value={formData.nik} 
-                  onChange={(e) => setFormData({...formData, nik: e.target.value})} 
-                  placeholder="16 Digit NIK" 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Kategori Penyelenggara</label>
-                <div className="relative">
-                  <select 
-                    required
-                    value={formData.organizerType || 'Perorangan / Keluarga'}
-                    onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
-                    className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-700 appearance-none shadow-inner text-sm"
-                  >
-                    <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
-                    <option value="Instansi Pemerintah">Instansi Pemerintah</option>
-                    <option value="Organisasi Kemasyarakatan / Komunitas">Organisasi / Komunitas</option>
-                    <option value="Swasta / Perusahaan / Komersil">Swasta / Komersil</option>
-                  </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nama Penyewa <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.customerName} 
+                      onChange={(e) => setFormData({...formData, customerName: e.target.value})} 
+                      placeholder="Nama lengkap pemohon..." 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Nomor WhatsApp <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      required 
+                      type="tel" 
+                      value={formData.phone} 
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                      placeholder="08xxxxxxxxxx" 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    NIK KTP (Opsional)
+                  </label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      value={formData.nik || ''} 
+                      onChange={(e) => setFormData({...formData, nik: e.target.value})} 
+                      placeholder="16 Digit NIK" 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Kategori Penyelenggara
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <select 
+                      required
+                      value={formData.organizerType || 'Perorangan / Keluarga'}
+                      onChange={(e) => setFormData({...formData, organizerType: e.target.value})}
+                      className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-800 appearance-none text-xs sm:text-sm outline-none cursor-pointer"
+                    >
+                      <option value="Perorangan / Keluarga">Perorangan / Keluarga</option>
+                      <option value="Instansi Pemerintah">Instansi Pemerintah</option>
+                      <option value="Organisasi Kemasyarakatan / Komunitas">Organisasi / Komunitas</option>
+                      <option value="Swasta / Perusahaan / Komersil">Swasta / Komersil</option>
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Nama Penyelenggara / Kepanitiaan (Opsional)</label>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nama Kepanitiaan / Komunitas (Opsional)
+                </label>
                 <input 
                   type="text" 
                   value={formData.organizerName || ''} 
                   onChange={(e) => setFormData({...formData, organizerName: e.target.value, organization: e.target.value})} 
-                  placeholder="Contoh: Keluarga Budi / Karang Taruna..." 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner text-sm" 
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Alamat Domisili</label>
-              <textarea 
-                rows={2} 
-                value={formData.address} 
-                onChange={(e) => setFormData({...formData, address: e.target.value})} 
-                placeholder="Alamat lengkap pemohon..." 
-                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Tujuan / Nama Acara</label>
-              <input 
-                required 
-                type="text" 
-                value={formData.purpose} 
-                onChange={(e) => setFormData({...formData, purpose: e.target.value})} 
-                placeholder="Contoh: Resepsi Pernikahan..." 
-                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Mulai Acara</label>
-                <input 
-                  required 
-                  type="date" 
-                  value={formData.startDate} 
-                  onChange={(e) => setFormData({...formData, startDate: e.target.value})} 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Selesai Acara (Opsional)</label>
-                <input 
-                  type="date" 
-                  value={formData.endDate} 
-                  onChange={(e) => setFormData({...formData, endDate: e.target.value})} 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
+                  placeholder="Contoh: Panitia HUT RI Huntap 2 / Keluarga Besar..." 
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
                 />
               </div>
 
-              {formData.startDate && formData.endDate && formData.startDate !== formData.endDate && (
-                <div className="md:col-span-2 px-5 py-3 bg-blue-50 rounded-2xl flex items-center gap-3">
-                  <Zap className="w-4 h-4 text-primary" />
-                  <p className="text-[10px] font-bold text-primary uppercase">
-                    Sewa Multi-Hari Terdeteksi: {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 3600 * 24)) + 1} Hari Terblokir
-                  </p>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Alamat Domisili Pemohon
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+                  <textarea 
+                    rows={2} 
+                    value={formData.address || ''} 
+                    onChange={(e) => setFormData({...formData, address: e.target.value})} 
+                    placeholder="Contoh: Huntap Tondo 2, Blok B No. 12..." 
+                    className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none resize-none" 
+                  />
                 </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
-                  {formData.endDate && formData.endDate !== formData.startDate ? 'Jam Mulai (Hari Ke-1)' : 'Jam Mulai'}
-                </label>
-                <input 
-                  type="time" 
-                  value={formData.startTime} 
-                  onChange={(e) => setFormData({...formData, startTime: e.target.value})} 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
-                  {formData.endDate && formData.endDate !== formData.startDate ? 'Jam Selesai (Hari Terakhir)' : 'Jam Selesai'}
-                </label>
-                <input 
-                  type="time" 
-                  value={formData.endTime} 
-                  onChange={(e) => setFormData({...formData, endTime: e.target.value})} 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Estimasi Tamu</label>
-                <input 
-                  type="number" 
-                  value={formData.guests} 
-                  onChange={(e) => setFormData({...formData, guests: e.target.value})} 
-                  placeholder="Orang" 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-bold text-gray-900 shadow-inner" 
-                />
+            {/* Section 2: Event Details & Schedule */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+                <Calendar className="w-3.5 h-3.5 text-primary" />
+                <span>Jadwal & Tujuan Pemakaian</span>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Biaya Sewa (Rp)</label>
-                <input 
-                  required 
-                  type="number" 
-                  value={formData.amount} 
-                  onChange={(e) => setFormData({...formData, amount: e.target.value})} 
-                  placeholder="500000" 
-                  className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl focus:bg-white transition-all font-black text-gray-900 shadow-inner text-lg" 
-                />
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Tujuan / Judul Acara <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.purpose} 
+                    onChange={(e) => setFormData({...formData, purpose: e.target.value})} 
+                    placeholder="Contoh: Resepsi Pernikahan, Rapat Koordinasi, Turnamen Bulutangkis..." 
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Tanggal Mulai Acara <span className="text-rose-500">*</span>
+                  </label>
+                  <input 
+                    required 
+                    type="date" 
+                    value={formData.startDate} 
+                    onChange={(e) => setFormData({...formData, startDate: e.target.value})} 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Tanggal Selesai (Opsional)
+                  </label>
+                  <input 
+                    type="date" 
+                    value={formData.endDate || ''} 
+                    onChange={(e) => setFormData({...formData, endDate: e.target.value})} 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                  />
+                </div>
+
+                {formData.startDate && formData.endDate && formData.startDate !== formData.endDate && (
+                  <div className="sm:col-span-2 px-4 py-2.5 bg-blue-50 border border-blue-200/80 rounded-2xl flex items-center gap-2.5">
+                    <Zap className="w-4 h-4 text-primary shrink-0" />
+                    <p className="text-[11px] font-black text-primary uppercase tracking-wide">
+                      Durasi Multi-Hari: {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 3600 * 24)) + 1} Hari Pemakaian Gedung
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Jam Mulai
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="time" 
+                      value={formData.startTime || '08:00'} 
+                      onChange={(e) => setFormData({...formData, startTime: e.target.value})} 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Jam Selesai
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="time" 
+                      value={formData.endTime || '17:00'} 
+                      onChange={(e) => setFormData({...formData, endTime: e.target.value})} 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <button 
-              type="submit" 
-              className="w-full bg-primary text-white py-5 rounded-[2rem] font-black shadow-xl shadow-primary/30 hover:-translate-y-1 transition-all mt-4"
-            >
-              SIMPAN JADWAL BOOKING
-            </button>
+
+            {/* Section 3: Capacity & Pricing */}
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-400">
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+                <span>Kapasitas & Kesepakatan Biaya</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Estimasi Jumlah Tamu
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="number" 
+                      value={formData.guests || ''} 
+                      onChange={(e) => setFormData({...formData, guests: e.target.value})} 
+                      placeholder="Contoh: 300" 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-bold text-slate-900 text-xs sm:text-sm outline-none" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Total Biaya Sewa (Rp) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs sm:text-sm">Rp</span>
+                    <input 
+                      required 
+                      type="number" 
+                      value={formData.amount} 
+                      onChange={(e) => setFormData({...formData, amount: e.target.value})} 
+                      placeholder="1500000" 
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-black text-slate-900 text-sm sm:text-base outline-none" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
+              <button 
+                type="button" 
+                onClick={onClose}
+                className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider rounded-2xl transition-all active:scale-[0.98]"
+              >
+                Batal
+              </button>
+
+              <button 
+                type="submit" 
+                className="flex-2 py-4 bg-primary hover:bg-blue-800 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                <span>Simpan Jadwal Booking</span>
+              </button>
+            </div>
           </form>
         </motion.div>
       </div>

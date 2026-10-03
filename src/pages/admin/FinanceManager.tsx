@@ -140,6 +140,20 @@ export default function FinanceManager() {
     };
   }, [isSettingsMenuOpen]);
 
+  // Keyboard Escape listener for modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isRateModalOpen) setIsRateModalOpen(false);
+        if (isBudgetModalOpen) setIsBudgetModalOpen(false);
+        if (isReportSettingsModalOpen) setIsReportSettingsModalOpen(false);
+        if (isSettingsMenuOpen) setIsSettingsMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRateModalOpen, isBudgetModalOpen, isReportSettingsModalOpen, isSettingsMenuOpen]);
+
   const [localFinanceName, setLocalFinanceName] = useState('');
   const [localBendaharaName, setLocalBendaharaName] = useState('');
   const [localFinanceSig, setLocalFinanceSig] = useState<string | null>(null);
@@ -2382,64 +2396,85 @@ export default function FinanceManager() {
 
       {/* Rate Adjust Modal */}
       {isRateModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 backdrop-blur-md p-4">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl overflow-hidden relative"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl overflow-hidden relative border border-slate-100"
           >
-            <div className="absolute top-0 left-0 w-full h-2 bg-accent" />
-            <div className="flex justify-between items-start mb-6">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 to-orange-500" />
+            <div className="flex justify-between items-start mb-5 pt-1">
               <div>
-                <h3 className="text-xl font-black text-gray-900 tracking-tight">Atur Persentase Dana</h3>
-                <p className="text-gray-500 text-xs">Persentase alokasi untuk Dana Pengembangan.</p>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80 inline-block mb-1.5">
+                  Kebijakan Kas RT 02
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Atur Persentase Dana</h3>
+                <p className="text-slate-500 text-xs mt-0.5">Persentase alokasi otomatis untuk Dana Pengembangan / Renovasi.</p>
               </div>
-              <button onClick={() => setIsRateModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5"/></button>
+              <button 
+                onClick={() => setIsRateModalOpen(false)} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-4 h-4"/>
+              </button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Dana Pengembangan (%)</label>
+                <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 pl-1">
+                  Porsi Dana Pengembangan (%)
+                </label>
                 <div className="relative">
                   <input 
                     type="number"
                     value={newRate}
                     onChange={(e) => setNewRate(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-lg font-black outline-none focus:border-accent transition-all"
+                    className="w-full bg-slate-50/70 border border-slate-200/90 rounded-2xl pl-4 pr-12 py-3.5 text-lg font-black text-slate-900 font-mono outline-none focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all"
                     placeholder="20"
                   />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm bg-slate-200/70 px-2 py-0.5 rounded-lg">%</span>
                 </div>
+                <p className="text-[10px] text-slate-400 mt-1 pl-1">Sisa persentase otomatis dialokasikan ke Dana Operasional.</p>
               </div>
 
-              <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-orange-700 font-medium leading-relaxed">
-                  Perubahan ini hanya akan berdampak pada transaksi **baru** yang diinput mulai sekarang. Data lama tidak akan terpengaruh secara retrospektif.
+              <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-start gap-3 shadow-xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                  Perubahan rasio ini hanya akan berlaku pada transaksi <strong className="text-amber-950">baru</strong> yang dicatat. Riwayat transaksi terdahulu tetap dipertahankan keabsahan nilainya.
                 </p>
               </div>
 
-              <button 
-                onClick={async () => {
-                  const rate = Number(newRate) / 100;
-                  if (isNaN(rate) || rate < 0 || rate > 1) {
-                    setConfirmConfig({
-                      isOpen: true,
-                      title: 'Input Tidak Valid',
-                      message: 'Persentase harus berada di antara angka 0 hingga 100.',
-                      onConfirm: () => {},
-                      type: 'danger',
-                      isAlert: true
-                    });
-                    return;
-                  }
-                  await updateGlobalConfig({ devFundRate: rate });
-                  setIsRateModalOpen(false);
-                }}
-                className="w-full bg-accent text-white py-5 rounded-2xl font-black shadow-xl shadow-amber-900/20 active:scale-[0.98] transition-transform"
-              >
-                SIMPAN PERUBAHAN
-              </button>
+              <div className="flex gap-2.5 pt-1">
+                <button 
+                  type="button"
+                  onClick={() => setIsRateModalOpen(false)}
+                  className="px-5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider transition-all"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={async () => {
+                    const rate = Number(newRate) / 100;
+                    if (isNaN(rate) || rate < 0 || rate > 1) {
+                      setConfirmConfig({
+                        isOpen: true,
+                        title: 'Input Tidak Valid',
+                        message: 'Persentase harus berada di antara angka 0 hingga 100.',
+                        onConfirm: () => {},
+                        type: 'danger',
+                        isAlert: true
+                      });
+                      return;
+                    }
+                    await updateGlobalConfig({ devFundRate: rate });
+                    setIsRateModalOpen(false);
+                  }}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-[0.99] transition-all"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -2447,49 +2482,70 @@ export default function FinanceManager() {
 
       {/* Monthly Budget Modal */}
       {isBudgetModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 backdrop-blur-md p-4">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl overflow-hidden relative"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl overflow-hidden relative border border-slate-100"
           >
-            <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
-            <div className="flex justify-between items-start mb-6">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 to-teal-500" />
+            <div className="flex justify-between items-start mb-5 pt-1">
               <div>
-                <h3 className="text-xl font-black text-gray-900 tracking-tight">Set Anggaran Bulanan</h3>
-                <p className="text-gray-500 text-xs">Atur batas pengeluaran operasional per bulan.</p>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/80 inline-block mb-1.5">
+                  Batas Anggaran
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Set Plafon Anggaran</h3>
+                <p className="text-slate-500 text-xs mt-0.5">Batas aman pengeluaran operasional per bulan.</p>
               </div>
-              <button onClick={() => setIsBudgetModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5"/></button>
+              <button 
+                onClick={() => setIsBudgetModalOpen(false)} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-4 h-4"/>
+              </button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nominal Anggaran Bulanan (Rp)</label>
+                <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 pl-1">
+                  Nominal Anggaran Bulanan (Rp)
+                </label>
                 <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
                   <input 
                     type="number"
                     value={newBudget}
                     onChange={(e) => setNewBudget(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-lg font-black outline-none focus:border-emerald-500 transition-all"
+                    className="w-full bg-slate-50/70 border border-slate-200/90 rounded-2xl pl-12 pr-4 py-3.5 text-lg font-black text-slate-900 font-mono outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
                     placeholder="5000000"
                   />
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 font-bold">Rp</span>
                 </div>
+                <p className="text-[10px] text-slate-400 mt-1 pl-1">Target pengeluaran operasional rutin gedung.</p>
               </div>
 
-              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-start gap-3">
-                <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-emerald-700 font-medium leading-relaxed">
-                  Anggaran ini akan membantu tim keuangan dalam memantau efisiensi penggunaan dana operasional warga.
+              <div className="p-4 bg-emerald-50/80 rounded-2xl border border-emerald-200/80 flex items-start gap-3 shadow-xs">
+                <TrendingUp className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
+                  Plafon anggaran ini akan memandu bendahara mendeteksi peringatan bila pengeluaran bulanan melampaui batas wajar.
                 </p>
               </div>
 
-              <button 
-                onClick={handleUpdateBudget}
-                className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-emerald-900/20 active:scale-[0.98] transition-transform"
-              >
-                SIMPAN ANGGARAN
-              </button>
+              <div className="flex gap-2.5 pt-1">
+                <button 
+                  type="button"
+                  onClick={() => setIsBudgetModalOpen(false)}
+                  className="px-5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider transition-all"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleUpdateBudget}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all"
+                >
+                  Simpan Anggaran
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -2497,58 +2553,71 @@ export default function FinanceManager() {
 
       {/* Report PDF & Digital Signature Settings Modal */}
       {isReportSettingsModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/65 backdrop-blur-md p-4 overflow-y-auto">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2.5rem] p-10 w-full max-w-2xl shadow-2xl overflow-hidden relative my-8"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-2xl shadow-2xl overflow-hidden relative my-6 border border-slate-100"
           >
-            <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600" />
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-primary to-blue-600" />
             
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-6 pt-1">
               <div>
-                <h3 className="text-xl font-black text-gray-900 tracking-tight">Pengaturan Laporan & Tanda Tangan</h3>
-                <p className="text-gray-500 text-xs mt-1">Sesuaikan nama penandatangan dan sematkan gambar tanda tangan digital transparan pada PDF laporan bulanan.</p>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/80 inline-block mb-1.5">
+                  Format Berkas PDF Resmi
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Pengaturan Laporan & Tanda Tangan</h3>
+                <p className="text-slate-500 text-xs mt-0.5">Nama penandatangan & gambar tanda tangan digital transparan pada lembar laporan keuangan.</p>
               </div>
-              <button onClick={() => setIsReportSettingsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5"/>
+              <button 
+                onClick={() => setIsReportSettingsModalOpen(false)} 
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+              >
+                <X className="w-4 h-4"/>
               </button>
             </div>
 
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-5">
+              <div className="grid md:grid-cols-2 gap-5">
                 {/* Administrasi Keuangan block */}
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-[10px] bg-indigo-55 text-indigo-700 font-extrabold px-2.5 py-1 rounded-md tracking-wider uppercase">Pihak 1 (Pembuat Laporan)</span>
-                    <h4 className="text-xs font-black text-gray-400 mt-2 uppercase tracking-wide">Administrasi Keuangan</h4>
+                <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] bg-indigo-50 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-md tracking-wider uppercase border border-indigo-150">
+                      Pihak 1 (Pembuat)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Adm. Keuangan</span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nama Pegawai Keuangan</label>
+                    <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      Nama Petugas Keuangan
+                    </label>
                     <input 
                       type="text"
                       value={localFinanceName}
                       onChange={(e) => setLocalFinanceName(e.target.value)}
                       placeholder="Contoh: Safira S.Ak."
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-xs font-bold outline-none focus:border-indigo-500 transition-all font-sans"
+                      className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanda Tangan Digital (Transparan)</label>
+                    <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      Tanda Tangan Digital (Transparan)
+                    </label>
                     
                     {localFinanceSig ? (
-                      <div className="relative border border-dashed border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
+                      <div className="relative border border-dashed border-indigo-200 rounded-xl p-3 bg-white flex flex-col items-center justify-center shadow-xs">
                         <img 
                           src={localFinanceSig} 
                           alt="Tanda Tangan Administrasi"
-                          className="max-h-24 object-contain mb-3 bg-white border border-gray-100 p-2 rounded-lg"
+                          className="max-h-20 object-contain mb-2 bg-slate-50/50 border border-slate-100 p-1.5 rounded-lg"
                         />
                         <button
                           type="button"
                           onClick={() => setLocalFinanceSig(null)}
-                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-wider transition-colors"
                         >
                           Hapus Tanda Tangan
                         </button>
@@ -2563,14 +2632,14 @@ export default function FinanceManager() {
                           const file = e.dataTransfer.files?.[0];
                           if (file) handleSignatureUpload(file, 'finance');
                         }}
-                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                          dragActiveFinance ? 'border-indigo-500 bg-indigo-50/30' : 'border-gray-200 hover:border-indigo-400 bg-gray-50'
+                        className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${
+                          dragActiveFinance ? 'border-indigo-500 bg-indigo-50/30' : 'border-slate-200 hover:border-indigo-400'
                         }`}
                         onClick={() => document.getElementById('financeSigInput')?.click()}
                       >
-                        <Upload className="w-5 h-5 text-gray-400 mb-2" />
-                        <span className="text-xs font-black text-gray-700">Pilih atau Tarik Gambar</span>
-                        <span className="text-[9px] text-gray-400 mt-1">PNG Transparan direkomendasikan</span>
+                        <Upload className="w-4 h-4 text-slate-400 mb-1" />
+                        <span className="text-[11px] font-bold text-slate-700">Pilih atau Seret Gambar</span>
+                        <span className="text-[9px] text-slate-400 mt-0.5">PNG Transparan disarankan</span>
                         <input 
                           id="financeSigInput"
                           type="file" 
@@ -2587,37 +2656,43 @@ export default function FinanceManager() {
                 </div>
 
                 {/* Bendahara block */}
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-[10px] bg-emerald-55 text-emerald-700 font-extrabold px-2.5 py-1 rounded-md tracking-wider uppercase">Pihak 2 (Mengetahui)</span>
-                    <h4 className="text-xs font-black text-gray-400 mt-2 uppercase tracking-wide">Bendahara / Ketua RT</h4>
+                <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-md tracking-wider uppercase border border-emerald-150">
+                      Pihak 2 (Mengetahui)
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Bendahara / RT</span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 font-sans">Nama Bendahara / Ketua RT</label>
+                    <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      Nama Bendahara / Ketua RT
+                    </label>
                     <input 
                       type="text"
                       value={localBendaharaName}
                       onChange={(e) => setLocalBendaharaName(e.target.value)}
                       placeholder="Contoh: Bpk. H. Ahmad Fauzi"
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3.5 text-xs font-bold outline-none focus:border-indigo-500 transition-all font-sans"
+                      className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/10 transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tanda Tangan Digital (Transparan)</label>
+                    <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5">
+                      Tanda Tangan Digital (Transparan)
+                    </label>
                     
                     {localBendaharaSig ? (
-                      <div className="relative border border-dashed border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col items-center justify-center">
+                      <div className="relative border border-dashed border-emerald-200 rounded-xl p-3 bg-white flex flex-col items-center justify-center shadow-xs">
                         <img 
                           src={localBendaharaSig} 
                           alt="Tanda Tangan Bendahara"
-                          className="max-h-24 object-contain mb-3 bg-white border border-gray-100 p-2 rounded-lg"
+                          className="max-h-20 object-contain mb-2 bg-slate-50/50 border border-slate-100 p-1.5 rounded-lg"
                         />
                         <button
                           type="button"
                           onClick={() => setLocalBendaharaSig(null)}
-                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                          className="text-[10px] text-red-500 hover:text-red-700 font-black uppercase tracking-wider transition-colors"
                         >
                           Hapus Tanda Tangan
                         </button>
@@ -2632,14 +2707,14 @@ export default function FinanceManager() {
                           const file = e.dataTransfer.files?.[0];
                           if (file) handleSignatureUpload(file, 'bendahara');
                         }}
-                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
-                          dragActiveBendahara ? 'border-emerald-500 bg-emerald-50/30' : 'border-gray-200 hover:border-emerald-400 bg-gray-50'
+                        className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${
+                          dragActiveBendahara ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-200 hover:border-emerald-400'
                         }`}
                         onClick={() => document.getElementById('bendaharaSigInput')?.click()}
                       >
-                        <Upload className="w-5 h-5 text-gray-400 mb-2" />
-                        <span className="text-xs font-black text-gray-700">Pilih atau Tarik Gambar</span>
-                        <span className="text-[9px] text-gray-400 mt-1">PNG Transparan direkomendasikan</span>
+                        <Upload className="w-4 h-4 text-slate-400 mb-1" />
+                        <span className="text-[11px] font-bold text-slate-700">Pilih atau Seret Gambar</span>
+                        <span className="text-[9px] text-slate-400 mt-0.5">PNG Transparan disarankan</span>
                         <input 
                           id="bendaharaSigInput"
                           type="file" 
@@ -2656,14 +2731,14 @@ export default function FinanceManager() {
                 </div>
               </div>
 
-              <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
-                  Pilihan Tanda Tangan pada Kuitansi / Kwitansi PDF
+              <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80">
+                <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-2">
+                  Pilihan Tanda Tangan pada Kuitansi PDF
                 </label>
                 <select 
                   value={localReceiptSignatureMode}
                   onChange={(e) => setLocalReceiptSignatureMode(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-900 outline-none focus:border-indigo-500 transition-all text-xs cursor-pointer"
+                  className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 outline-none focus:border-indigo-500 focus:ring-3 focus:ring-indigo-500/10 transition-all text-xs cursor-pointer"
                 >
                   <option value="both">Tampilkan Keduanya (Administrasi Keuangan & Bendahara)</option>
                   <option value="finance">Tampilkan Administrasi Keuangan Saja</option>
@@ -2671,20 +2746,20 @@ export default function FinanceManager() {
                 </select>
               </div>
 
-              <div className="p-4 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-[10px] text-indigo-700 font-medium leading-relaxed">
-                💡 <span className="font-bold">Tips Transparansi:</span> Menggunakan gambar tanda tangan digital berlatar belakang transparan (PNG) akan memberikan tampilan paling tajam dan presisi pada cetakan PDF laporan tanpa menutupi batas garis stempel laporan fisik.
+              <div className="p-3.5 bg-indigo-50/70 rounded-2xl border border-indigo-100 text-[11px] text-indigo-800 font-medium leading-relaxed">
+                💡 <span className="font-bold">Tips Kejernihan PDF:</span> Menggunakan gambar tanda tangan digital berlatar belakang transparan (format PNG) akan memberikan hasil cetak paling presisi tanpa menutupi cap stempel fisik dokumen RT 02.
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-3 pt-1">
                 <button 
                   onClick={() => setIsReportSettingsModalOpen(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-2xl font-black active:scale-[0.98] transition-transform text-xs uppercase"
+                  className="px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider transition-all"
                 >
                   Batal
                 </button>
                 <button 
                   onClick={handleSaveReportSettings}
-                  className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-indigo-900/10 active:scale-[0.98] transition-transform text-xs uppercase"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/20 active:scale-[0.99] transition-all"
                 >
                   Simpan Pengaturan
                 </button>

@@ -11,7 +11,12 @@ import {
   CheckCircle2,
   Wrench,
   History,
-  ArrowRight
+  ArrowRight,
+  X,
+  ChevronDown,
+  Package,
+  Tag,
+  Layers
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType, auth } from '../../lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
@@ -54,6 +59,16 @@ export default function InventoryManager() {
     brokenQuantity: 0,
     category: 'Fasilitas Utama'
   });
+
+  // Keyboard Escape listener
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
 
   useEffect(() => {
     let unsubLogs: (() => void) | null = null;
@@ -325,92 +340,139 @@ export default function InventoryManager() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-slate-950/65 backdrop-blur-md"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl p-8 overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl p-6 sm:p-8 overflow-hidden border border-slate-100 z-10"
             >
-              <h3 className="text-2xl font-black text-gray-900 mb-6">{editingItem ? 'Edit Aset' : 'Tambah Aset Baru'}</h3>
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-blue-600" />
               
-              <form onSubmit={handleSaveItem} className="space-y-5">
+              <div className="flex justify-between items-start mb-6 pt-1">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Nama Item</label>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-primary border border-blue-200/80 inline-block mb-1.5">
+                    Logistik & Gudang GSG
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    {editingItem ? 'Edit Aset Inventaris' : 'Tambah Aset Baru'}
+                  </h3>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    Pencatatan rincian jumlah & status kelaikan fisik barang.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                >
+                  <X className="w-4 h-4"/>
+                </button>
+              </div>
+              
+              <form onSubmit={handleSaveItem} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                    <Package className="w-3.5 h-3.5 text-primary" />
+                    <span>Nama Item / Barang</span>
+                    <span className="text-red-500 font-bold">*</span>
+                  </label>
                   <input 
                     required
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Contoh: Kursi Plastik Hijau"
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold"
+                    placeholder="Contoh: Kursi Lipat Chitose / Meja Bulat"
+                    className="w-full bg-slate-50/70 border border-slate-200/90 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Kategori</label>
-                    <select 
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none font-bold appearance-none"
-                    >
-                      <option>Fasilitas Utama</option>
-                      <option>Sound System</option>
-                      <option>Peralatan Dapur</option>
-                      <option>Pendingin Ruangan</option>
-                      <option>Lainnya</option>
-                    </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                      <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Kategori</span>
+                    </label>
+                    <div className="relative">
+                      <select 
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        className="w-full bg-slate-50/70 border border-slate-200/90 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer pr-10"
+                      >
+                        <option>Fasilitas Utama</option>
+                        <option>Sound System</option>
+                        <option>Peralatan Dapur</option>
+                        <option>Pendingin Ruangan</option>
+                        <option>Lainnya</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Total Stok</label>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 pl-1">
+                      <Layers className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Total Stok (Unit)</span>
+                      <span className="text-red-500 font-bold">*</span>
+                    </label>
                     <input 
                       required
                       type="number"
+                      min={0}
                       value={formData.totalQuantity}
-                      onChange={(e) => setFormData({...formData, totalQuantity: parseInt(e.target.value)})}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none font-bold"
+                      onChange={(e) => setFormData({...formData, totalQuantity: parseInt(e.target.value) || 0})}
+                      className="w-full bg-slate-50/70 border border-slate-200/90 rounded-2xl px-4 py-3 text-sm font-black text-slate-900 font-mono outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Kondisi Baik</label>
+                <div className="grid grid-cols-2 gap-3.5 pt-1">
+                  <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 space-y-1.5">
+                    <label className="text-[10px] font-black text-emerald-700 uppercase tracking-wider flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Kondisi Baik</span>
+                    </label>
                     <input 
                       required
                       type="number"
+                      min={0}
                       value={formData.goodQuantity}
-                      onChange={(e) => setFormData({...formData, goodQuantity: parseInt(e.target.value)})}
-                      className="w-full bg-emerald-50/50 border border-emerald-100 rounded-2xl px-5 py-4 text-sm outline-none font-bold text-emerald-600"
+                      onChange={(e) => setFormData({...formData, goodQuantity: parseInt(e.target.value) || 0})}
+                      className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-sm font-black text-emerald-700 font-mono outline-none focus:ring-3 focus:ring-emerald-500/20 transition-all"
                     />
+                    <p className="text-[9px] text-emerald-600 font-medium">Siap dipinjamkan</p>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-red-500 uppercase tracking-widest block mb-1">Kondisi Rusak</label>
+
+                  <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-1.5">
+                    <label className="text-[10px] font-black text-rose-700 uppercase tracking-wider flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Kondisi Rusak</span>
+                    </label>
                     <input 
                       required
                       type="number"
+                      min={0}
                       value={formData.brokenQuantity}
-                      onChange={(e) => setFormData({...formData, brokenQuantity: parseInt(e.target.value)})}
-                      className="w-full bg-red-50/50 border border-red-100 rounded-2xl px-5 py-4 text-sm outline-none font-bold text-red-600"
+                      onChange={(e) => setFormData({...formData, brokenQuantity: parseInt(e.target.value) || 0})}
+                      className="w-full bg-white border border-rose-300 rounded-xl px-3 py-2 text-sm font-black text-rose-700 font-mono outline-none focus:ring-3 focus:ring-rose-500/20 transition-all"
                     />
+                    <p className="text-[9px] text-rose-600 font-medium">Perlu perbaikan</p>
                   </div>
                 </div>
 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-3 flex gap-3 border-t border-slate-100">
                   <button 
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-8 py-4 rounded-2xl border border-gray-100 font-black text-xs text-gray-400 hover:bg-gray-50 transition-all"
+                    className="px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 font-black text-xs text-slate-700 uppercase tracking-wider transition-all"
                   >
-                    BATAL
+                    Batal
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 bg-primary text-white px-8 py-4 rounded-2xl font-black text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    className="flex-1 bg-primary hover:bg-blue-800 text-white px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/20 active:scale-[0.99] transition-all"
                   >
-                    SIMPAN ASET
+                    Simpan Aset
                   </button>
                 </div>
               </form>
