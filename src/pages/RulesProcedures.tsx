@@ -363,7 +363,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
 
           {/* Rules Sections Container */}
           <div className="space-y-8 print:space-y-6">
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="wait">
               {filteredSections.map((section, idx) => (
                 <motion.section 
                   key={section.id}

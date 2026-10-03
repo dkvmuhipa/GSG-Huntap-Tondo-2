@@ -91,6 +91,7 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
                   onChange={(val) => setSelectedDate(val as Date)} 
                   value={selectedDate}
                   tileClassName={tileClassName}
+                  showNeighboringMonth={false}
                   locale="id-ID"
                 />
               </div>

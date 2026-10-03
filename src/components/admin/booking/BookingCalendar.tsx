@@ -20,22 +20,30 @@ export default function BookingCalendar({
             {d}
           </div>
         ))}
-        {calendarDays.map((dayObj, i) => (
-          <div 
-            key={i} 
-            className={`min-h-[100px] bg-white p-3 transition-colors ${!dayObj ? 'bg-gray-50/50' : 'hover:bg-gray-50/30'}`}
-          >
-            {dayObj && (
-              <>
-                <span 
-                  className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg ${
-                    dayObj.day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() 
-                      ? 'bg-primary text-white shadow-lg' 
-                      : 'text-gray-300 font-bold'
-                  }`}
-                >
-                  {dayObj.day}
-                </span>
+        {calendarDays.map((dayObj, i) => {
+          const isToday = Boolean(
+            dayObj && 
+            dayObj.day === new Date().getDate() && 
+            currentMonth.getMonth() === new Date().getMonth() &&
+            currentMonth.getFullYear() === new Date().getFullYear()
+          );
+
+          return (
+            <div 
+              key={dayObj ? `cell-${currentMonth.getFullYear()}-${currentMonth.getMonth()}-${dayObj.day}` : `empty-${currentMonth.getFullYear()}-${currentMonth.getMonth()}-${i}`} 
+              className={`min-h-[100px] bg-white p-3 ${!dayObj ? 'bg-gray-50/50' : 'hover:bg-gray-50/40'}`}
+            >
+              {dayObj && (
+                <>
+                  <span 
+                    className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg ${
+                      isToday 
+                        ? 'bg-primary text-white shadow-sm' 
+                        : 'text-gray-400 font-bold'
+                    }`}
+                  >
+                    {dayObj.day}
+                  </span>
                 <div className="mt-2 space-y-1">
                   {dayObj.bookings.map((b: any) => (
                     <div 
@@ -52,7 +60,8 @@ export default function BookingCalendar({
               </>
             )}
           </div>
-        ))}
+        );
+      })}
       </div>
     </div>
   );

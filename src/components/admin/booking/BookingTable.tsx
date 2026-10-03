@@ -85,10 +85,8 @@ export default function BookingTable({
               </tr>
             ) : (
               filteredBookings.map((booking, idx) => (
-                <motion.tr 
+                <tr 
                   key={booking.id} 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
                   className="hover:bg-gray-50/50 transition-colors group"
                 >
                   <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
@@ -177,7 +175,7 @@ export default function BookingTable({
                       </button>
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               ))
             )}
           </tbody>
