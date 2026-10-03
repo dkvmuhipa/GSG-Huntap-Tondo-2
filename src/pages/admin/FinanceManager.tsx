@@ -27,7 +27,8 @@ import {
   Settings,
   Percent,
   Target,
-  FileSignature
+  FileSignature,
+  Award
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -64,6 +65,8 @@ import FinanceCharts from '../../components/admin/finance/FinanceCharts';
 import ExportButton from '../../components/admin/finance/ExportButton';
 import TransactionTable from '../../components/admin/finance/TransactionTable';
 import TransactionFormModal from '../../components/admin/finance/TransactionFormModal';
+import AnnualClosingModal from '../../components/admin/finance/AnnualClosingModal';
+import { buildAnnualReportDoc } from '../../services/annualReportService';
 
 const AUTO_CATEGORIES = [
   {
@@ -105,6 +108,7 @@ export default function FinanceManager() {
   const allTransactions = useAppStore(state => state.transactions);
   const config = useAppStore(state => state.config);
   const admins = useAppStore(state => state.admins);
+  const bookings = useAppStore(state => state.bookings);
   const [limitCount, setLimitCount] = useState(20);
 
   const transactions = useMemo(() => {
@@ -118,6 +122,7 @@ export default function FinanceManager() {
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isReportSettingsModalOpen, setIsReportSettingsModalOpen] = useState(false);
+  const [isAnnualModalOpen, setIsAnnualModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const settingsMenuRef = React.useRef<HTMLDivElement>(null);
 
@@ -1581,6 +1586,21 @@ export default function FinanceManager() {
     });
   };
 
+  const handlePreviewAnnualReport = (targetYear?: string) => {
+    const yr = targetYear || activeYear || new Date().getFullYear().toString();
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Laporan Infografis Tutup Buku Tahunan ${yr}`,
+      loadPdf: () => buildAnnualReportDoc({
+        year: yr,
+        transactions: allTransactions,
+        bookings: bookings,
+        config: config,
+        adminProfile: adminProfile
+      })
+    });
+  };
+
   const exportToCSV = () => {
     const headers = [
       'ID',
@@ -2083,6 +2103,23 @@ export default function FinanceManager() {
                           <p className="text-[10px] text-gray-400 leading-tight">Pengurus, tanda tangan & stempel sah</p>
                         </div>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSettingsMenuOpen(false);
+                          setIsAnnualModalOpen(true);
+                        }}
+                        className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-purple-50/70 text-left transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-purple-950">Laporan Tutup Buku Tahunan</p>
+                          <p className="text-[10px] text-gray-400 leading-tight">Infografis & rekap 12 bulan eksekutif</p>
+                        </div>
+                      </button>
                     </div>
                   </motion.div>
                 )}
@@ -2092,6 +2129,15 @@ export default function FinanceManager() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 md:justify-end shrink-0">
+          <button 
+            type="button"
+            onClick={() => setIsAnnualModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-4 rounded-3xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black uppercase tracking-widest transition-all border border-indigo-200/80 shadow-sm active:scale-95"
+            title="Laporan Infografis Tutup Buku Tahunan"
+          >
+            <Award className="w-4 h-4 text-indigo-600" />
+            Tutup Buku Tahunan
+          </button>
           <ExportButton 
             type="pdf"
             onClick={handlePreviewReport}
@@ -2647,6 +2693,15 @@ export default function FinanceManager() {
           </motion.div>
         </div>
       )}
+
+      <AnnualClosingModal
+        isOpen={isAnnualModalOpen}
+        onClose={() => setIsAnnualModalOpen(false)}
+        onGenerateReport={(yr) => handlePreviewAnnualReport(yr)}
+        transactions={allTransactions}
+        bookings={bookings}
+        initialYear={activeYear}
+      />
 
       <ConfirmModal 
         isOpen={confirmConfig.isOpen}

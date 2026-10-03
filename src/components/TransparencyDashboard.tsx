@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown } from 'lucide-react';
+import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown, Award } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { 
   BarChart, 
@@ -19,6 +19,7 @@ import autoTable from 'jspdf-autotable';
 import { auth } from '../lib/firebase';
 import { getTransparentPNG } from '../lib/cloudinary';
 import PdfPreviewModal from './ui/PdfPreviewModal';
+import { buildAnnualReportDoc } from '../services/annualReportService';
 
 export default function TransparencyDashboard() {
   const getLocalMonthKey = (d: Date) => {
@@ -43,6 +44,7 @@ export default function TransparencyDashboard() {
 
   const config = useAppStore(state => state.config);
   const transactions = useAppStore(state => state.transactions);
+  const bookings = useAppStore(state => state.bookings);
   const [activeMonth, setActiveMonth] = useState('all');
   const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
   const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
@@ -433,6 +435,21 @@ export default function TransparencyDashboard() {
     });
   };
 
+  const handlePreviewAnnualReport = () => {
+    if (transactions.length === 0) return;
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Laporan Infografis Tutup Buku Tahunan ${activeYear}`,
+      loadPdf: () => buildAnnualReportDoc({
+        year: activeYear,
+        transactions: transactions,
+        bookings: bookings,
+        config: config,
+        adminProfile: null
+      })
+    });
+  };
+
   const exportToCSV = () => {
     if (transactions.length === 0) return;
     
@@ -678,6 +695,16 @@ export default function TransparencyDashboard() {
             >
               Export CSV/Excel
             </button>
+            {filterMode === 'annual' && (
+              <button 
+                onClick={handlePreviewAnnualReport}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+                title={`Pratinjau & Unduh Laporan Tutup Buku Tahunan ${activeYear}`}
+              >
+                <Award className="w-4 h-4 text-amber-300" />
+                Tutup Buku {activeYear}
+              </button>
+            )}
             <button 
               onClick={handlePreviewReport}
               className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
