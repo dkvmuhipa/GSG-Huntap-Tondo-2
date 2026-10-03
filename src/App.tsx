@@ -11,6 +11,7 @@ import Hero from './components/Hero';
 import AvailabilityWidget from './components/AvailabilityWidget';
 import TransparencyDashboard from './components/TransparencyDashboard';
 import FacilitiesGrid from './components/FacilitiesGrid';
+import RentalCostCalculator from './components/RentalCostCalculator';
 import GallerySection from './components/GallerySection';
 import FAQSection from './components/FAQSection';
 import FeedbackSection from './components/FeedbackSection';
@@ -72,6 +73,7 @@ function LandingPage() {
       <AvailabilityWidget />
       <UpcomingEvents />
       <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
+      <RentalCostCalculator onOpenBooking={(pkg) => openBooking(pkg)} />
       <GallerySection />
       <FAQSection />
       <FeedbackSection />

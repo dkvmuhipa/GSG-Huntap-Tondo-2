@@ -148,7 +148,9 @@ export default function FinanceManager() {
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [activeMonth, setActiveMonth] = useState('all');
   const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
-  const [filterMode, setFilterMode] = useState<'monthly' | 'annual'>('monthly');
+  const [filterMode, setFilterMode] = useState<'monthly' | 'annual' | 'custom'>('monthly');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -340,8 +342,15 @@ export default function FinanceManager() {
       if (activeMonth !== 'all') {
         result = result.filter(t => t.date.startsWith(activeMonth));
       }
-    } else {
+    } else if (filterMode === 'annual') {
       result = result.filter(t => t.date.startsWith(activeYear));
+    } else if (filterMode === 'custom') {
+      if (customStartDate) {
+        result = result.filter(t => t.date >= customStartDate);
+      }
+      if (customEndDate) {
+        result = result.filter(t => t.date <= customEndDate);
+      }
     }
 
     if (searchQuery.trim()) {
@@ -358,7 +367,7 @@ export default function FinanceManager() {
       if (dateDiff !== 0) return dateDiff;
       return String(b.id || '').localeCompare(String(a.id || ''));
     });
-  }, [transactions, searchQuery, activeMonth, activeType, filterMode, activeYear]);
+  }, [transactions, searchQuery, activeMonth, activeType, filterMode, activeYear, customStartDate, customEndDate]);
 
   const filteredReportTransactions = useMemo(() => {
     let result = [...allTransactions];
@@ -371,8 +380,15 @@ export default function FinanceManager() {
       if (activeMonth !== 'all') {
         result = result.filter(t => t.date.startsWith(activeMonth));
       }
-    } else {
+    } else if (filterMode === 'annual') {
       result = result.filter(t => t.date.startsWith(activeYear));
+    } else if (filterMode === 'custom') {
+      if (customStartDate) {
+        result = result.filter(t => t.date >= customStartDate);
+      }
+      if (customEndDate) {
+        result = result.filter(t => t.date <= customEndDate);
+      }
     }
 
     if (searchQuery.trim()) {
@@ -389,18 +405,24 @@ export default function FinanceManager() {
       if (dateDiff !== 0) return dateDiff;
       return String(b.id || '').localeCompare(String(a.id || ''));
     });
-  }, [allTransactions, searchQuery, activeMonth, activeType, filterMode, activeYear]);
+  }, [allTransactions, searchQuery, activeMonth, activeType, filterMode, activeYear, customStartDate, customEndDate]);
 
   const filteredStats = useMemo(() => {
     const periodTxs = filterMode === 'monthly'
       ? (activeMonth === 'all' ? allTransactions : allTransactions.filter(t => t.date.startsWith(activeMonth)))
-      : allTransactions.filter(t => t.date.startsWith(activeYear));
+      : filterMode === 'annual'
+        ? allTransactions.filter(t => t.date.startsWith(activeYear))
+        : allTransactions.filter(t => {
+            const afterStart = customStartDate ? t.date >= customStartDate : true;
+            const beforeEnd = customEndDate ? t.date <= customEndDate : true;
+            return afterStart && beforeEnd;
+          });
     
     const income = periodTxs.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const expense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
     
     return { income, expense };
-  }, [allTransactions, activeMonth, activeYear, filterMode]);
+  }, [allTransactions, activeMonth, activeYear, filterMode, customStartDate, customEndDate]);
 
   const downloadKwitansi = async (tx: any) => {
     const bendaharaSig = config?.reportBendaharaSignature ? await getTransparentPNG(config.reportBendaharaSignature) : null;
@@ -1150,7 +1172,7 @@ export default function FinanceManager() {
         doc.setTextColor(226, 232, 240);
         doc.text('KOTA PALU, SULAWESI TENGAH', margin, 33);
 
-        if (activeMonth !== 'all') {
+        if (filterMode === 'monthly' && activeMonth !== 'all') {
           const [year, month] = activeMonth.split('-');
           const mDate = new Date(parseInt(year), parseInt(month) - 1);
           const monthName = mDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -1158,6 +1180,18 @@ export default function FinanceManager() {
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(255, 255, 255);
           doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+        } else if (filterMode === 'annual') {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PERIODE: TAHUN ${activeYear}`, margin, 40);
+        } else if (filterMode === 'custom') {
+          const startLabel = customStartDate ? new Date(customStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Awal';
+          const endLabel = customEndDate ? new Date(customEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sekarang';
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PERIODE: ${startLabel.toUpperCase()} S.D. ${endLabel.toUpperCase()}`, margin, 40);
         }
 
         // Metadata Right (Page 1 Only)
@@ -1336,10 +1370,16 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'bold');
     
     let recapTitle = 'III. REKAPITULASI SALDO PERIODE';
-    if (activeMonth !== 'all') {
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
       const [year, month] = activeMonth.split('-');
       const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
       recapTitle += ` (${monthName.toUpperCase()})`;
+    } else if (filterMode === 'annual') {
+      recapTitle += ` (TAHUN ${activeYear})`;
+    } else if (filterMode === 'custom') {
+      const startLabel = customStartDate ? new Date(customStartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Awal';
+      const endLabel = customEndDate ? new Date(customEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sekarang';
+      recapTitle += ` (${startLabel.toUpperCase()} - ${endLabel.toUpperCase()})`;
     }
     doc.text(recapTitle, margin + 5, finalRecapY + 2);
 
@@ -1349,9 +1389,25 @@ export default function FinanceManager() {
     // Initial balance (Balance before the period start)
     const allTxsSorted = [...allTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let initialBalance = 0;
-    if (activeMonth !== 'all') {
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
       initialBalance = allTxsSorted
         .filter(t => t.date < activeMonth + '-01')
+        .reduce((acc, curr) => {
+          if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
+          if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
+          return acc;
+        }, 0);
+    } else if (filterMode === 'annual') {
+      initialBalance = allTxsSorted
+        .filter(t => t.date < activeYear + '-01-01')
+        .reduce((acc, curr) => {
+          if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
+          if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
+          return acc;
+        }, 0);
+    } else if (filterMode === 'custom' && customStartDate) {
+      initialBalance = allTxsSorted
+        .filter(t => t.date < customStartDate)
         .reduce((acc, curr) => {
           if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
           if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
@@ -1468,9 +1524,18 @@ export default function FinanceManager() {
     doc.setFont('helvetica', 'italic');
     doc.text('Tanda Tangan & Cap Stempel Resmi', pageWidth / 2, sigY + 50, { align: 'center' });
 
-    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
-      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
-        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+    let periodLabel = 'Semua_Waktu';
+    if (filterMode === 'monthly') {
+      periodLabel = activeMonth === 'all' ? 'Semua_Bulan' : 
+        new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+          .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+    } else if (filterMode === 'annual') {
+      periodLabel = `Tahun_${activeYear}`;
+    } else if (filterMode === 'custom') {
+      const s = customStartDate ? customStartDate.replace(/-/g, '') : 'Awal';
+      const e = customEndDate ? customEndDate.replace(/-/g, '') : 'Sekarang';
+      periodLabel = `Rentang_${s}_sd_${e}`;
+    }
 
     const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
     doc.save(`Laporan_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -1554,9 +1619,18 @@ export default function FinanceManager() {
       }).join(','))
     ].join('\n');
 
-    const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
-      new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
-        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+    let periodLabel = 'Semua_Waktu';
+    if (filterMode === 'monthly') {
+      periodLabel = activeMonth === 'all' ? 'Semua_Bulan' : 
+        new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+          .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
+    } else if (filterMode === 'annual') {
+      periodLabel = `Tahun_${activeYear}`;
+    } else if (filterMode === 'custom') {
+      const s = customStartDate ? customStartDate.replace(/-/g, '') : 'Awal';
+      const e = customEndDate ? customEndDate.replace(/-/g, '') : 'Sekarang';
+      periodLabel = `Rentang_${s}_sd_${e}`;
+    }
 
     const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1747,7 +1821,13 @@ export default function FinanceManager() {
     const cats: { [key: string]: number } = {};
     const targetTxs = filterMode === 'monthly'
       ? (activeMonth === 'all' ? allTransactions : allTransactions.filter(t => t.date.startsWith(activeMonth)))
-      : allTransactions.filter(t => t.date.startsWith(activeYear));
+      : filterMode === 'annual'
+        ? allTransactions.filter(t => t.date.startsWith(activeYear))
+        : allTransactions.filter(t => {
+            const afterStart = customStartDate ? t.date >= customStartDate : true;
+            const beforeEnd = customEndDate ? t.date <= customEndDate : true;
+            return afterStart && beforeEnd;
+          });
     
     targetTxs
       .filter(t => t.type === 'expense')
@@ -1760,7 +1840,7 @@ export default function FinanceManager() {
     return Object.entries(cats)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [allTransactions, activeMonth, activeYear, filterMode]);
+  }, [allTransactions, activeMonth, activeYear, filterMode, customStartDate, customEndDate]);
 
   const COLORS = ['#1E40AF', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#6366F1'];
 
@@ -1775,52 +1855,93 @@ export default function FinanceManager() {
             <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 p-1 rounded-2xl">
               <button 
                 onClick={() => setFilterMode('monthly')}
-                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
               >
                 Bulanan
               </button>
               <button 
                 onClick={() => setFilterMode('annual')}
-                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
               >
                 Tahunan
               </button>
+              <button 
+                onClick={() => setFilterMode('custom')}
+                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'custom' ? 'bg-white text-primary shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                Rentang Tanggal
+              </button>
             </div>
 
-            <div className="relative group">
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                {filterMode === 'monthly' ? (
-                  <select 
-                    value={activeMonth}
-                    onChange={(e: any) => setActiveMonth(e.target.value)}
-                    className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+            {filterMode === 'custom' ? (
+              <div className="flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-100 px-3.5 py-2 rounded-2xl">
+                <Calendar className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Dari:</span>
+                  <input 
+                    type="date" 
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="bg-white border border-gray-200 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <span className="text-gray-300 font-bold">-</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase text-gray-400">Sampai:</span>
+                  <input 
+                    type="date" 
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="bg-white border border-gray-200 rounded-xl px-2.5 py-1 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                {(customStartDate || customEndDate) && (
+                  <button 
+                    type="button"
+                    onClick={() => { setCustomStartDate(''); setCustomEndDate(''); }}
+                    className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors ml-1"
+                    title="Reset rentang tanggal"
                   >
-                    <option value="all">SEMUA BULAN</option>
-                    {Array.from({ length: 24 }).map((_, i) => {
-                      const d = new Date();
-                      d.setDate(1);
-                      d.setMonth(d.getMonth() - i);
-                      const val = getLocalMonthKey(d);
-                      const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                      return <option key={val} value={val}>{label.toUpperCase()}</option>;
-                    })}
-                  </select>
-                ) : (
-                  <select 
-                    value={activeYear}
-                    onChange={(e: any) => setActiveYear(e.target.value)}
-                    className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
-                  >
-                    {Array.from({ length: 5 }).map((_, i) => {
-                      const year = (new Date().getFullYear() - i).toString();
-                      return <option key={year} value={year}>{year}</option>;
-                    })}
-                  </select>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
               </div>
-            </div>
+            ) : (
+              <div className="relative group">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  {filterMode === 'monthly' ? (
+                    <select 
+                      value={activeMonth}
+                      onChange={(e: any) => setActiveMonth(e.target.value)}
+                      className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                    >
+                      <option value="all">SEMUA BULAN</option>
+                      {Array.from({ length: 24 }).map((_, i) => {
+                        const d = new Date();
+                        d.setDate(1);
+                        d.setMonth(d.getMonth() - i);
+                        const val = getLocalMonthKey(d);
+                        const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                        return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                      })}
+                    </select>
+                  ) : (
+                    <select 
+                      value={activeYear}
+                      onChange={(e: any) => setActiveYear(e.target.value)}
+                      className="bg-transparent border-none text-xs font-black text-gray-700 outline-none cursor-pointer appearance-none pr-6 uppercase tracking-widest"
+                    >
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const year = (new Date().getFullYear() - i).toString();
+                        return <option key={year} value={year}>{year}</option>;
+                      })}
+                    </select>
+                  )}
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
+                </div>
+              </div>
+            )}
 
             <div className="relative group">
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl">
