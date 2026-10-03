@@ -57,7 +57,7 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
   return (
     <section id="fasilitas" className="section-padding bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
           <div className="max-w-xl">
             <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4">Fasilitas & Tarif</h2>
             <p className="text-gray-500">Pilih paket penggunaan sesuai kebutuhan acara Anda. Harga flat dan kompetitif untuk kualitas prima.</p>

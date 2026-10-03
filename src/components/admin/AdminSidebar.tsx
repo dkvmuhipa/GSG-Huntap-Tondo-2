@@ -9,15 +9,17 @@ import {
   Home,
   LogOut,
   Building2,
-  Box
+  Box,
+  X
 } from 'lucide-react';
 
 interface AdminSidebarProps {
   userRole?: string | null;
   onLogout?: () => void;
+  onClose?: () => void;
 }
 
-export default function AdminSidebar({ userRole = 'admin', onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ userRole = 'admin', onLogout, onClose }: AdminSidebarProps) {
   const menuItems = [
     { name: 'Ringkasan', icon: LayoutDashboard, path: '/admin', roles: ['owner', 'admin', 'editor', 'finance', 'bendahara'] },
     { name: 'Kelola Booking', icon: CalendarCheck, path: '/admin/bookings', roles: ['owner', 'admin', 'editor', 'bendahara', 'finance'] },
@@ -30,14 +32,24 @@ export default function AdminSidebar({ userRole = 'admin', onLogout }: AdminSide
   const filteredMenu = menuItems.filter(item => item.roles.includes(userRole || 'admin'));
 
   return (
-    <aside className="w-64 bg-gray-900 h-screen fixed left-0 top-0 text-white flex flex-col z-50">
-      <div className="p-6 border-b border-gray-800">
+    <aside className="w-64 bg-gray-900 h-full md:h-screen md:fixed left-0 top-0 text-white flex flex-col z-50">
+      <div className="p-6 border-b border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="text-white w-5 h-5" />
           </div>
           <span className="text-lg font-bold">Admin Tondo 2</span>
         </div>
+        {onClose && (
+          <button 
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            aria-label="Tutup Menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 p-4 space-y-2 mt-4">
@@ -46,6 +58,7 @@ export default function AdminSidebar({ userRole = 'admin', onLogout }: AdminSide
             key={item.path}
             to={item.path}
             end={item.path === '/admin'}
+            onClick={() => onClose && onClose()}
             className={({ isActive }) => 
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 

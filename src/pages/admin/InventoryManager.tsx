@@ -157,7 +157,7 @@ export default function InventoryManager() {
           <p className="text-gray-500 text-sm mt-1">Pantau ketersediaan barang dan histori pemeliharaan gedung.</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="bg-white border border-gray-100 p-1.5 rounded-2xl flex items-center gap-1">
             <button 
               onClick={() => setActiveTab('inventory')}
@@ -240,18 +240,18 @@ export default function InventoryManager() {
                   <h3 className="text-xl font-black text-gray-900 mt-3">{item.name}</h3>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-4 rounded-3xl bg-gray-50 border border-gray-100 text-center">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Total</p>
-                    <p className="text-xl font-black text-gray-900">{item.totalQuantity}</p>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gray-50 border border-gray-100 text-center">
+                    <p className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Total</p>
+                    <p className="text-base sm:text-xl font-black text-gray-900">{item.totalQuantity}</p>
                   </div>
-                  <div className="p-4 rounded-3xl bg-emerald-50/50 border border-emerald-100 text-center">
-                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Baik</p>
-                    <p className="text-xl font-black text-emerald-600">{item.goodQuantity}</p>
+                  <div className="p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-emerald-50/50 border border-emerald-100 text-center">
+                    <p className="text-[8px] sm:text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Baik</p>
+                    <p className="text-base sm:text-xl font-black text-emerald-600">{item.goodQuantity}</p>
                   </div>
-                  <div className="p-4 rounded-3xl bg-red-50/50 border border-red-100 text-center">
-                    <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Rusak</p>
-                    <p className="text-xl font-black text-red-600">{item.brokenQuantity}</p>
+                  <div className="p-2.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-red-50/50 border border-red-100 text-center">
+                    <p className="text-[8px] sm:text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">Rusak</p>
+                    <p className="text-base sm:text-xl font-black text-red-600">{item.brokenQuantity}</p>
                   </div>
                 </div>
 

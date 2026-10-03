@@ -500,7 +500,7 @@ export default function AccountRules() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form Add */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 sticky top-28">
+          <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 lg:sticky lg:top-28">
             <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
               Tambah Admin Baru

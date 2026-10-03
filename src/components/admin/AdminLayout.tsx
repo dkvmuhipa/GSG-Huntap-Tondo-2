@@ -34,6 +34,7 @@ export default function AdminLayout() {
   const [adminProfile, setAdminProfile] = useState<any>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -178,8 +179,16 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0 md:ml-64">
         {/* Top Header */}
         <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight line-clamp-1">Admin Dashboard</h1>
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="md:hidden p-2 -ml-1 text-gray-600 hover:text-primary rounded-xl hover:bg-gray-100 transition-colors shrink-0"
+              aria-label="Buka Menu Admin"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight line-clamp-1">Admin Dashboard</h1>
           </div>
           
           <div className="flex items-center gap-3 md:gap-6">
@@ -317,6 +326,36 @@ export default function AdminLayout() {
           <Outlet context={{ userRole, adminProfile }} />
         </main>
       </div>
+      {/* Mobile Drawer Slide-over */}
+      <AnimatePresence>
+        {isMobileDrawerOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileDrawerOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="relative z-10 w-72 max-w-[85vw] h-full"
+            >
+              <AdminSidebar 
+                userRole={userRole} 
+                onLogout={() => {
+                  setIsMobileDrawerOpen(false);
+                  setIsLogoutModalOpen(true);
+                }} 
+                onClose={() => setIsMobileDrawerOpen(false)}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
         <motion.nav 

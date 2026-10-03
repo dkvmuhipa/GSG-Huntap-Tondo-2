@@ -71,7 +71,7 @@ export default function Login() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-[3rem] p-12 shadow-2xl shadow-primary/10 border border-gray-100 max-w-md w-full text-center"
+        className="bg-white rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-12 shadow-2xl shadow-primary/10 border border-gray-100 max-w-md w-full text-center"
       >
         <div className="w-20 h-20 bg-primary rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-xl shadow-primary/20">
           <Building2 className="text-white w-10 h-10" />

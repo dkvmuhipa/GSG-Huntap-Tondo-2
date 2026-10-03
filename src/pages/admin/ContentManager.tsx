@@ -258,7 +258,7 @@ export default function ContentManager() {
 
   return (
     <div className="space-y-8 pb-20">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Pengaturan Konten Publik</h2>
           <p className="text-gray-500 text-sm">Kelola informasi yang tampil pada halaman depan website.</p>

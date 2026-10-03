@@ -364,7 +364,7 @@ Mohon informasi ketersediaan tanggal dan verifikasi jadwal acara saya. Terima ka
           </div>
 
           {/* Right Column: Live Calculation Summary Card (5 Cols) */}
-          <div className="lg:col-span-5 sticky top-28 space-y-6">
+          <div className="lg:col-span-5 lg:sticky lg:top-28 space-y-6">
 
             <div className="bg-gradient-to-br from-slate-900 via-primary-dark to-slate-900 text-white rounded-[2.5rem] p-7 md:p-8 shadow-2xl shadow-primary/20 border border-white/10 relative overflow-hidden">
               {/* Background badge accent */}

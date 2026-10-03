@@ -69,7 +69,7 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] my-auto"
+            className="relative bg-white rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row max-h-[90vh] my-auto"
           >
             {/* Left Side: Calendar Control */}
             <div className="bg-gray-50 p-6 md:p-8 flex-1 border-r border-gray-100">
