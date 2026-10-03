@@ -13,11 +13,14 @@ import {
   Settings2, 
   X,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Bell,
+  RotateCcw
 } from 'lucide-react';
 import { updateGlobalConfig, upsertFacility, removeFacility } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import { DEFAULT_ANNOUNCEMENTS } from '../../components/AnnouncementTicker';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -30,6 +33,10 @@ export default function ContentManager() {
   const facilities = useAppStore(state => state.facilities);
   const [config, setConfig] = useState<any>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
+
+  // Announcement Ticker States
+  const [newAnnouncementText, setNewAnnouncementText] = useState('');
+  const [newAnnouncementType, setNewAnnouncementType] = useState<'info' | 'warning' | 'success'>('info');
 
   // Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -179,6 +186,49 @@ export default function ContentManager() {
     { name: 'Heart', label: 'Sosial' },
     { name: 'Utensils', label: 'Katering' }
   ];
+
+  // Announcement Handlers
+  const handleAddAnnouncement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnouncementText.trim()) return;
+    const currentList = config?.announcements || DEFAULT_ANNOUNCEMENTS;
+    const newItem = {
+      id: `ann-${Date.now()}`,
+      text: newAnnouncementText.trim(),
+      type: newAnnouncementType,
+      active: true
+    };
+    setConfig({
+      ...config,
+      announcements: [...currentList, newItem]
+    });
+    setNewAnnouncementText('');
+  };
+
+  const handleToggleAnnouncementActive = (id: string) => {
+    const currentList = config?.announcements || DEFAULT_ANNOUNCEMENTS;
+    setConfig({
+      ...config,
+      announcements: currentList.map((item: any) =>
+        item.id === id ? { ...item, active: item.active === false ? true : false } : item
+      )
+    });
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    const currentList = config?.announcements || DEFAULT_ANNOUNCEMENTS;
+    setConfig({
+      ...config,
+      announcements: currentList.filter((item: any) => item.id !== id)
+    });
+  };
+
+  const handleResetToDefaultAnnouncements = () => {
+    setConfig({
+      ...config,
+      announcements: DEFAULT_ANNOUNCEMENTS
+    });
+  };
 
   if (!isAuthorized) {
     return (
@@ -331,6 +381,165 @@ export default function ContentManager() {
               </div>
               {!canEditFinancials && <p className="text-[10px] text-red-400 font-bold mt-1">Hanya Owner/Admin yang dapat mengubah angka ini</p>}
             </div>
+          </div>
+        </div>
+
+        {/* Info Warga / Announcement Ticker Manager */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 leading-tight">Pengumuman Berjalan (Info Warga)</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Kelola pesan teks berputar yang tampil di baris teratas website publik.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setConfig({
+                  ...config,
+                  showAnnouncementTicker: config?.showAnnouncementTicker === false ? true : false
+                })}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                  config?.showAnnouncementTicker !== false
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                }`}
+              >
+                {config?.showAnnouncementTicker !== false ? (
+                  <>
+                    <ToggleRight className="w-4 h-4 text-emerald-600" />
+                    <span>Status: Aktif Tayang</span>
+                  </>
+                ) : (
+                  <>
+                    <ToggleLeft className="w-4 h-4 text-gray-400" />
+                    <span>Status: Disembunyikan</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetToDefaultAnnouncements}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                title="Muat teks default awal"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Default</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Form Tambah Pengumuman */}
+          <form onSubmit={handleAddAnnouncement} className="mb-6 p-4 sm:p-5 bg-gray-50/70 rounded-2xl border border-gray-100 space-y-4">
+            <div className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5 text-primary" /> Tambah Pengumuman Baru
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Ketik isi pengumuman untuk warga (contoh: Kerja bakti hari Minggu jam 07.00...)"
+                  value={newAnnouncementText}
+                  onChange={(e) => setNewAnnouncementText(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={newAnnouncementType}
+                  onChange={(e: any) => setNewAnnouncementType(e.target.value)}
+                  className="bg-white border border-gray-200 rounded-xl px-3 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                >
+                  <option value="info">ℹ️ Tipe: Informasi (Normal)</option>
+                  <option value="warning">⚠️ Tipe: Perhatian / Penting</option>
+                  <option value="success">✅ Tipe: Sukses / Agenda</option>
+                </select>
+
+                <button
+                  type="submit"
+                  disabled={!newAnnouncementText.trim()}
+                  className="px-5 py-3 bg-primary text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah</span>
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Daftar Pengumuman Saat Ini */}
+          <div className="space-y-2.5">
+            <label className="block text-[11px] font-black text-gray-400 uppercase tracking-wider mb-2">
+              Daftar Pesan Berputar ({((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).length} Pesan)
+            </label>
+
+            {((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).length === 0 ? (
+              <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-gray-400 text-xs">
+                Belum ada pengumuman. Ketik di atas atau klik "Reset Default" untuk memuat contoh pengumuman.
+              </div>
+            ) : (
+              ((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).map((ann: any, index: number) => {
+                const isActive = ann.active !== false;
+                return (
+                  <div 
+                    key={ann.id || index}
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
+                      isActive 
+                        ? 'bg-white border-gray-200/80 hover:border-gray-300 shadow-sm' 
+                        : 'bg-gray-50/80 border-gray-100 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                      <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-black text-[10px] flex items-center justify-center shrink-0">
+                        {index + 1}
+                      </span>
+
+                      <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        ann.type === 'warning' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                        ann.type === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                        'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}>
+                        {ann.type === 'warning' ? 'Perhatian' : ann.type === 'success' ? 'Agenda' : 'Info'}
+                      </span>
+
+                      <p className={`text-xs sm:text-sm font-medium ${isActive ? 'text-gray-900 font-semibold' : 'text-gray-500 line-through'}`}>
+                        {ann.text}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAnnouncementActive(ann.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
+                          isActive 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        {isActive ? 'Aktif' : 'Nonaktif'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAnnouncement(ann.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                        title="Hapus pengumuman ini"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 

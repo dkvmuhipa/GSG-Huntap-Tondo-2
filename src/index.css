@@ -159,3 +159,26 @@
   }
 }
 
+/* Continuous Running Text / Marquee Animation for Mobile Info Warga */
+@keyframes marquee-continuous {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-smooth {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-continuous var(--marquee-speed, 22s) linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-smooth:hover,
+.animate-marquee-smooth:active {
+  animation-play-state: paused;
+}
+
+
