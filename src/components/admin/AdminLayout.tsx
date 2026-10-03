@@ -1,12 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
-import { User, Bell, LogOut, AlertTriangle, Menu, X, Home, Calendar, Wallet, LayoutDashboard, CalendarCheck } from 'lucide-react';
+import { 
+  User, 
+  Bell, 
+  LogOut, 
+  AlertTriangle, 
+  Menu, 
+  X, 
+  Home, 
+  Calendar, 
+  Wallet, 
+  LayoutDashboard, 
+  CalendarCheck,
+  ChevronDown,
+  Shield,
+  Settings,
+  ExternalLink
+} from 'lucide-react';
 import { auth, logout, db } from '../../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, Link } from 'react-router-dom';
+import ConfirmModal from '../ui/ConfirmModal';
 
 export default function AdminLayout() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -15,8 +32,25 @@ export default function AdminLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [adminProfile, setAdminProfile] = useState<any>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    if (isProfileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileMenuOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -137,7 +171,7 @@ export default function AdminLayout() {
       <div className="hidden md:block">
         <AdminSidebar 
           userRole={userRole} 
-          onLogout={handleLogout} 
+          onLogout={() => setIsLogoutModalOpen(true)} 
         />
       </div>
       
@@ -156,20 +190,124 @@ export default function AdminLayout() {
             
             <div className="hidden sm:block h-8 w-px bg-gray-100" />
             
-            <div className="flex items-center gap-2 md:gap-3 group cursor-pointer" onClick={handleLogout}>
-              <div className="text-right hidden xs:block">
-                <p className="text-sm font-bold text-gray-900 line-clamp-1">{adminProfile?.displayName || user?.displayName || 'Admin'}</p>
-                <p className="text-[9px] uppercase font-bold text-gray-400">
-                  {userRole}
-                </p>
-              </div>
-              <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-primary group-hover:bg-red-50 group-hover:text-red-500 transition-colors shrink-0">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="User" className="w-full h-full rounded-full" />
-                ) : (
-                  <User className="w-5 h-5" />
+            {/* Account Profile Trigger & Dropdown */}
+            <div className="relative" ref={profileMenuRef}>
+              <button 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-2xl hover:bg-gray-50 transition-all group outline-none"
+                aria-expanded={isProfileMenuOpen}
+                aria-haspopup="true"
+              >
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs md:text-sm font-bold text-gray-900 line-clamp-1">{adminProfile?.displayName || user?.displayName || 'Admin'}</p>
+                  <p className="text-[9px] uppercase font-black tracking-wider text-primary">
+                    {userRole || 'admin'}
+                  </p>
+                </div>
+                <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} alt="User" className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform hidden sm:block ${isProfileMenuOpen ? 'rotate-180 text-primary' : ''}`} />
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              <AnimatePresence>
+                {isProfileMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 z-50 overflow-hidden"
+                  >
+                    {/* User Identity Card */}
+                    <div className="flex items-start gap-3 p-3 bg-gray-50/70 rounded-2xl mb-3">
+                      <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black shrink-0 overflow-hidden">
+                        {user?.photoURL ? (
+                          <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-gray-900 truncate">
+                          {adminProfile?.displayName || user?.displayName || 'Admin'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate font-medium">
+                          {user?.email}
+                        </p>
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider">
+                          {userRole || 'admin'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Navigation Shortcuts */}
+                    <div className="space-y-1 border-t border-gray-100 pt-2 mb-2">
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-gray-400" />
+                        Ringkasan Dashboard
+                      </Link>
+
+                      {(userRole === 'owner' || userRole === 'admin') && (
+                        <Link
+                          to="/admin/rules"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                        >
+                          <Shield className="w-4 h-4 text-gray-400" />
+                          Hak Akses & Akun Admin
+                        </Link>
+                      )}
+
+                      <Link
+                        to="/admin/settings"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-gray-400" />
+                        Pengaturan Gedung
+                      </Link>
+
+                      <a
+                        href="/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Home className="w-4 h-4 text-gray-400" />
+                          Portal Warga GSG
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-gray-400" />
+                      </a>
+                    </div>
+
+                    {/* Logout Button */}
+                    <div className="border-t border-gray-100 pt-2">
+                      <button
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          setIsLogoutModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-500" />
+                        Keluar dari Akun
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </div>
           </div>
         </header>
@@ -186,9 +324,21 @@ export default function AdminLayout() {
           animate={{ y: 0 }}
           className="bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pt-3 pb-8 flex items-center justify-around pointer-events-auto"
         >
-          <MobileAdminNav userRole={userRole} onLogout={handleLogout} />
+          <MobileAdminNav userRole={userRole} onLogout={() => setIsLogoutModalOpen(true)} />
         </motion.nav>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="Konfirmasi Keluar Sistem"
+        message="Apakah Anda yakin ingin mengakhiri sesi administrator dan keluar dari sistem GSG Huntap Tondo 2?"
+        confirmText="Ya, Keluar"
+        cancelText="Batal"
+        type="danger"
+      />
     </div>
   );
 }
