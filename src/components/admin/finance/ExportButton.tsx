@@ -31,7 +31,7 @@ export default function ExportButton({ type, onClick, className = '', disabled =
       id="btn-export-pdf"
     >
       <Download className="w-4 h-4" />
-      Download PDF
+      Unduh PDF
     </button>
   );
 }

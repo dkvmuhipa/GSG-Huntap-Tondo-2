@@ -936,16 +936,16 @@ export default function FinanceManager() {
     const formatDelta = (curr: number, prev: number, isExpense = false) => {
       if (prev === 0 && curr === 0) {
         return {
-          text: 'Belum ada transaksi',
+          text: isExpense ? 'Nihil Pengeluaran' : 'Nihil Pemasukan',
           colorClass: 'text-gray-500 bg-gray-50 border-gray-200/80',
-          badgeText: isExpense ? 'Rp 0 Pengeluaran' : 'Belum Ada Transaksi'
+          badgeText: isExpense ? 'Nihil Pengeluaran' : 'Nihil Masukan Bln Ini'
         };
       }
       if (prev === 0 && curr > 0) {
         return {
           text: `Baru bulan ini`,
           colorClass: isExpense ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
-          badgeText: isExpense ? 'Pengeluaran Bln Ini' : `+Rp ${curr.toLocaleString('id-ID')} Bln Ini`
+          badgeText: isExpense ? `-Rp ${curr.toLocaleString('id-ID')} Terpakai Bln Ini` : `+Rp ${curr.toLocaleString('id-ID')} Bln Ini`
         };
       }
       if (curr === prev) {
@@ -960,13 +960,13 @@ export default function FinanceManager() {
         return {
           text: `▲ +${pct}% vs ${prevMonthLabel}`,
           colorClass: isExpense ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200',
-          badgeText: `▲ +${pct}% vs ${prevMonthLabel}`
+          badgeText: isExpense ? `▲ +${pct}% Beban vs ${prevMonthLabel}` : `▲ +${pct}% Masukan vs ${prevMonthLabel}`
         };
       } else {
         return {
-          text: `▼ ${pct}% vs ${prevMonthLabel}`,
+          text: `▼ ${Math.abs(pct)}% vs ${prevMonthLabel}`,
           colorClass: isExpense ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200',
-          badgeText: `▼ ${pct}% vs ${prevMonthLabel}`
+          badgeText: isExpense ? `▼ ${Math.abs(pct)}% Beban vs ${prevMonthLabel}` : `▼ ${Math.abs(pct)}% Masukan vs ${prevMonthLabel}`
         };
       }
     };
@@ -1196,7 +1196,7 @@ export default function FinanceManager() {
       head: [['Keterangan Klasifikasi Dana', 'Porsi (%)', 'Jumlah Saldo']],
       body: [
         ['Dana Operasional', `${100 - currentRate}%`, `Rp ${totalOps.toLocaleString('id-ID')}`],
-        ['Dana Saving', `${currentRate}%`, `Rp ${totalDevFund.toLocaleString('id-ID')}`],
+        ['Dana Cadangan', `${currentRate}%`, `Rp ${totalDevFund.toLocaleString('id-ID')}`],
         [{ content: 'TOTAL AKUMULASI SELURUH DANA', styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, '', { content: `Rp ${(totalDevFund + totalOps).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
       ],
       headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 10, halign: 'center', fontStyle: 'bold' },
@@ -1219,7 +1219,7 @@ export default function FinanceManager() {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(100);
-    doc.text('* Dana Operasional: Siap digunakan untuk kebutuhan rutin harian. Dana Saving: Dialokasikan khusus untuk pengembangan fisik atau dana darurat.', margin, noteY);
+    doc.text('* Dana Operasional: Siap digunakan untuk kebutuhan rutin harian. Dana Cadangan: Dialokasikan khusus untuk pengembangan fisik atau dana darurat.', margin, noteY);
 
     // Section 2: Rincian Transaksi
     const txStartY = (doc as any).lastAutoTable.finalY + 18; 
@@ -1467,8 +1467,8 @@ export default function FinanceManager() {
       'Metode Pembayaran', 
       'Jenis Transaksi', 
       'Nominal (Rp)', 
-      'Dana Saving (20%)', 
-      'Dana Operasional (80%)',
+      `Dana Cadangan (${Math.round((config?.devFundRate ?? 0.2) * 100)}%)`, 
+      `Dana Operasional (${100 - Math.round((config?.devFundRate ?? 0.2) * 100)}%)`,
       'User Input',
       'Status',
       'Catatan'
@@ -1883,7 +1883,7 @@ export default function FinanceManager() {
                           <Target className="w-4 h-4" />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-gray-800 group-hover:text-emerald-950">Target Budget Bulanan</p>
+                          <p className="text-xs font-bold text-gray-800 group-hover:text-emerald-950">Target Anggaran Bulanan</p>
                           <p className="text-[10px] text-gray-400 leading-tight">Pagu pengeluaran operasional per bulan</p>
                         </div>
                       </button>
@@ -1964,13 +1964,17 @@ export default function FinanceManager() {
             <h3 className="text-4xl font-extrabold tracking-tight">Rp {(totalDevFund + totalOps).toLocaleString('id-ID')}</h3>
             <div className="mt-8 flex flex-wrap gap-2.5 text-[10px] font-bold uppercase tracking-widest">
               <span className={`px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border ${
-                momDelta.curIncome > momDelta.prevIncome 
+                activeMonth === 'all'
+                  ? 'bg-white/10 text-white/90 border-white/10'
+                  : momDelta.curIncome > momDelta.prevIncome 
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
                   : momDelta.curIncome < momDelta.prevIncome && momDelta.prevIncome > 0
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' 
                   : 'bg-white/10 text-white/90 border-white/10'
               }`}>
-                {momDelta.income.badgeText}
+                {activeMonth === 'all' 
+                  ? (allTransactions.length > 0 ? `${allTransactions.length} Transaksi Tercatat` : 'Belum Ada Transaksi')
+                  : momDelta.income.badgeText}
               </span>
               <span className="bg-white/10 text-white/90 px-4.5 py-2 rounded-full backdrop-blur-sm whitespace-nowrap border border-white/5">
                 Audit Transparan
@@ -1990,7 +1994,7 @@ export default function FinanceManager() {
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                Penyerapan Budget {activeMonth !== 'all' ? activeMonth : ''}
+                Penyerapan Anggaran {activeMonth !== 'all' ? `(${new Date(activeMonth + '-01').toLocaleDateString('id-ID', { month: 'short' })})` : '(Bulan Ini)'}
               </span>
               <span className="text-[10px] font-black text-primary">{Math.min(100, Math.round(budgetProgress))}%</span>
             </div>
@@ -2003,8 +2007,18 @@ export default function FinanceManager() {
             </div>
             <div className="flex justify-between items-center mt-2.5 pt-1.5 border-t border-gray-50">
               <span className="text-[9px] text-gray-400 font-medium italic">Siap pakai harian</span>
-              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${momDelta.opsExpense.colorClass}`}>
-                {momDelta.opsExpense.badgeText}
+              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${
+                activeMonth === 'all'
+                  ? (currentMonthOpsExpense > 0 
+                      ? 'text-amber-700 bg-amber-50 border-amber-200' 
+                      : 'text-gray-500 bg-gray-50 border-gray-200/80')
+                  : momDelta.opsExpense.colorClass
+              }`}>
+                {activeMonth === 'all'
+                  ? (currentMonthOpsExpense > 0 
+                      ? `-Rp ${currentMonthOpsExpense.toLocaleString('id-ID')} Bln Ini` 
+                      : 'Nihil Beban Bln Ini')
+                  : momDelta.opsExpense.badgeText}
               </span>
             </div>
           </div>
@@ -2015,7 +2029,7 @@ export default function FinanceManager() {
             <div className="w-12 h-12 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-6 h-6" />
             </div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Saving (Cadangan)</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dana Cadangan (Pengembangan)</p>
             <h3 className="text-2xl font-black text-gray-900">Rp {Math.floor(totalDevFund).toLocaleString('id-ID')}</h3>
           </div>
           <div className="mt-4">
@@ -2023,8 +2037,14 @@ export default function FinanceManager() {
               <p className="text-[10px] text-accent font-bold flex items-center gap-1 italic">
                 Saran: Renovasi/Darurat
               </p>
-              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${momDelta.saving.colorClass}`}>
-                {momDelta.saving.text}
+              <span className={`text-[10px] font-bold flex items-center gap-1 tracking-tight px-2.5 py-0.5 rounded-lg border ${
+                activeMonth === 'all'
+                  ? (momDelta.curSavingAlloc > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-gray-500 bg-gray-50 border-gray-200/80')
+                  : momDelta.saving.colorClass
+              }`}>
+                {activeMonth === 'all'
+                  ? (momDelta.curSavingAlloc > 0 ? `+Rp ${momDelta.curSavingAlloc.toLocaleString('id-ID')} Bln Ini` : 'Tetap / Stabil')
+                  : momDelta.saving.text}
               </span>
             </div>
           </div>
@@ -2219,7 +2239,7 @@ export default function FinanceManager() {
             
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nominal Budget (Rp)</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Nominal Anggaran Bulanan (Rp)</label>
                 <div className="relative">
                   <input 
                     type="number"
