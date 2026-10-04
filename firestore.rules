@@ -105,7 +105,7 @@ service cloud.firestore {
     function isValidFeedback(data) {
       return data.keys().hasAll(['name', 'rating', 'comment', 'status']) &&
              data.name is string && data.name.size() <= 200 &&
-             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             (data.rating is int || data.rating is float) && data.rating >= 1 && data.rating <= 5 &&
              data.comment is string && data.comment.size() <= 2000 &&
              data.status in ['pending', 'approved', 'rejected'] &&
              (!('eventDate' in data) || data.eventDate is string) &&

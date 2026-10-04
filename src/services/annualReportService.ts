@@ -302,20 +302,20 @@ export async function buildAnnualReportDoc({
 
   // Total Summary Row
   tableBody.push([
-    { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `TAHUN ANGGARAN ${year}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `${yearBookings.length} Acara`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `Rp ${Math.round(totalIncome).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `Rp ${Math.round(totalExpense).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `Rp ${Math.round(netCashflow).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: 255 } },
-    { content: `Rp ${Math.round(endingBalance).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: 255 } }
-  ]);
+    { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `TAHUN ANGGARAN ${year}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `${yearBookings.length} Acara`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `Rp ${Math.round(totalIncome).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `Rp ${Math.round(totalExpense).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `Rp ${Math.round(netCashflow).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: [255, 255, 255] } },
+    { content: `Rp ${Math.round(endingBalance).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [30, 64, 175], textColor: [255, 255, 255] } }
+  ] as any);
 
   autoTable(doc, {
     startY: tableTitleY + 4,
     margin: { left: margin, right: margin },
     head: [['No', 'Bulan', 'Pemakaian', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Surplus / (Defisit)', 'Saldo Kas Akumulatif']],
-    body: tableBody,
+    body: tableBody as any,
     headStyles: {
       fillColor: [15, 23, 42],
       textColor: 255,
@@ -404,14 +404,14 @@ export async function buildAnnualReportDoc({
       { content: `Rp ${Math.round(totalExpense).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', halign: 'right', fillColor: [241, 245, 249], textColor: roseRed } },
       { content: '100.0%', styles: { fontStyle: 'bold', halign: 'center', fillColor: [241, 245, 249] } },
       { content: 'Terealisasi 100% dari kas gedung', styles: { fontStyle: 'italic', fillColor: [241, 245, 249], textColor: [100, 116, 139] } }
-    ]);
+    ] as any);
   }
 
   autoTable(doc, {
     startY: expStartY + 4,
     margin: { left: margin, right: margin },
     head: [['No', 'Bidang / Pos Alokasi Pengeluaran', 'Jumlah Realisasi (Rp)', 'Porsi (%)', 'Uraian & Catatan Kebutuhan']],
-    body: expTableRows,
+    body: expTableRows as any,
     headStyles: {
       fillColor: [71, 85, 105],
       textColor: 255,

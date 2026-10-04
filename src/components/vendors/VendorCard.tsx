@@ -14,6 +14,7 @@ import {
 import { Vendor, VENDOR_CATEGORIES } from '../../types/vendor';
 
 interface VendorCardProps {
+  key?: React.Key;
   vendor: Vendor;
   onSelect: (vendor: Vendor) => void;
 }
