@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -27,6 +27,50 @@ export const loginWithGoogleRedirect = () => signInWithRedirect(auth, googleProv
 export const getRedirectLoginResult = () => getRedirectResult(auth);
 
 export const logout = () => auth.signOut();
+
+export const SYSTEM_OWNER_EMAILS = ["dkvsmkmuhipa@gmail.com"];
+
+export interface AdminAuthCheckResult {
+  authorized: boolean;
+  role: string | null;
+  profile: any | null;
+}
+
+export const checkIsAdminAuthorized = async (firebaseUser: { email?: string | null } | null): Promise<AdminAuthCheckResult> => {
+  if (!firebaseUser || !firebaseUser.email) {
+    return { authorized: false, role: null, profile: null };
+  }
+
+  const userEmail = firebaseUser.email.toLowerCase().trim();
+
+  // 1. Direct System Owner check
+  if (SYSTEM_OWNER_EMAILS.includes(userEmail)) {
+    return {
+      authorized: true,
+      role: 'owner',
+      profile: { role: 'owner', displayName: 'System Owner', email: userEmail }
+    };
+  }
+
+  // 2. Direct lookup in Firestore 'admins' collection by email key
+  try {
+    const docRef = doc(db, 'admins', userEmail);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        authorized: true,
+        role: data.role || 'admin',
+        profile: data
+      };
+    }
+  } catch (err) {
+    console.warn("Could not verify admin document from Firestore:", err);
+  }
+
+  return { authorized: false, role: null, profile: null };
+};
 
 export enum OperationType {
   CREATE = 'create',

@@ -18,7 +18,7 @@ import {
   Settings,
   ExternalLink
 } from 'lucide-react';
-import { auth, logout, db } from '../../lib/firebase';
+import { auth, logout, db, checkIsAdminAuthorized } from '../../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -55,40 +55,6 @@ export default function AdminLayout() {
 
   useEffect(() => {
     let isMounted = true;
-    
-    const checkAdminStatus = async (firebaseUser: FirebaseUser) => {
-      try {
-        const owners = ["dkvsmkmuhipa@gmail.com"];
-        const userEmail = firebaseUser.email?.toLowerCase() || "";
-        
-        let profile = null;
-        if (owners.includes(userEmail)) {
-          profile = { role: 'owner', displayName: 'System Owner' };
-        }
-
-        try {
-          // Direct lookup by email key
-          const docRef = doc(db, 'admins', userEmail);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            profile = docSnap.data();
-          }
-        } catch (dbErr) {
-          console.warn("Could not fetch admin document from Firestore:", dbErr);
-          // Don't crash if they are already identified as owner
-        }
-
-        if (profile) {
-          return { authorized: true, role: profile.role, profile };
-        }
-
-        return { authorized: false, role: null, profile: null };
-      } catch (err: any) {
-        console.error("Admin check failed:", err);
-        return { authorized: false, role: null, profile: null };
-      }
-    };
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!isMounted) return;
@@ -98,7 +64,7 @@ export default function AdminLayout() {
         return;
       }
 
-      const { authorized, role, profile } = await checkAdminStatus(currentUser);
+      const { authorized, role, profile } = await checkIsAdminAuthorized(currentUser);
       
       if (!isMounted) return;
 
