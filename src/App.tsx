@@ -22,6 +22,7 @@ import Footer from './components/Footer';
 import PageLoader from './components/ui/PageLoader';
 import BookingModal from './components/ui/BookingModal';
 import VendorSection from './components/vendors/VendorSection';
+import PWAInstallButton from './components/ui/PWAInstallButton';
 
 // Lazy-loaded pages for optimal performance and smaller bundle size
 const AdminLayout = React.lazy(() => import('./components/admin/AdminLayout'));
@@ -35,6 +36,7 @@ const AccountRules = React.lazy(() => import('./pages/admin/AccountRules'));
 const RulesProcedures = React.lazy(() => import('./pages/RulesProcedures'));
 const Login = React.lazy(() => import('./pages/admin/Login'));
 const DocumentVerification = React.lazy(() => import('./pages/DocumentVerification'));
+const AuditTrailManager = React.lazy(() => import('./pages/admin/AuditTrailManager'));
 
 
 function MainLayout() {
@@ -62,6 +64,7 @@ function MainLayout() {
         onClose={() => setIsBookingOpen(false)} 
         selectedPackage={selectedPackage}
       />
+      <PWAInstallButton />
     </div>
   );
 }
@@ -113,6 +116,7 @@ export default function App() {
             <Route path="inventory" element={<InventoryManager />} />
             <Route path="vendors" element={<VendorManager />} />
             <Route path="rules" element={<AccountRules />} />
+            <Route path="audit-logs" element={<AuditTrailManager />} />
             <Route path="settings" element={<ContentManager />} />
           </Route>
         </Routes>

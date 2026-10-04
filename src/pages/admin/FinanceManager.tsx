@@ -67,6 +67,7 @@ import TransactionTable from '../../components/admin/finance/TransactionTable';
 import TransactionFormModal from '../../components/admin/finance/TransactionFormModal';
 import AnnualClosingModal from '../../components/admin/finance/AnnualClosingModal';
 import { buildAnnualReportDoc } from '../../services/annualReportService';
+import { exportTransactionsToExcel } from '../../services/excelExportService';
 
 const AUTO_CATEGORIES = [
   {
@@ -1716,6 +1717,37 @@ export default function FinanceManager() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportExcel = () => {
+    let periodLabel = 'Semua Waktu';
+    if (filterMode === 'monthly') {
+      periodLabel = activeMonth === 'all' ? 'Semua Bulan' : 
+        new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
+          .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    } else if (filterMode === 'annual') {
+      periodLabel = `Tahun ${activeYear}`;
+    } else if (filterMode === 'custom') {
+      const s = customStartDate ? customStartDate : 'Awal';
+      const e = customEndDate ? customEndDate : 'Sekarang';
+      periodLabel = `${s} s.d. ${e}`;
+    }
+
+    const reportIncome = filteredReportTransactions
+      .filter((t: any) => t.type === 'income')
+      .reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
+    const reportExpense = filteredReportTransactions
+      .filter((t: any) => t.type === 'expense')
+      .reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
+
+    exportTransactionsToExcel(filteredReportTransactions, {
+      totalIncome: reportIncome,
+      totalExpense: reportExpense,
+      netBalance: reportIncome - reportExpense,
+      opsBalance: totalOps,
+      devBalance: totalDevFund,
+      periodLabel
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseRupiahInput(formData.amount);
@@ -2032,6 +2064,11 @@ export default function FinanceManager() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-300 pointer-events-none" />
               </div>
             </div>
+
+            <ExportButton 
+              type="excel"
+              onClick={handleExportExcel}
+            />
 
             <ExportButton 
               type="csv"

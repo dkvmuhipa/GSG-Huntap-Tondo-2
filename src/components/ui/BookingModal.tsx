@@ -32,6 +32,7 @@ import {
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas, { HallLayoutData, LayoutTemplate, StagePosition } from './HallLayoutCanvas';
+import { notifyAdminNewBooking } from '../../services/whatsappGatewayService';
 
 // Fallback Inventory items with standard pricing if Firestore behaves empty
 const DEFAULT_INVENTORY = [
@@ -430,6 +431,12 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
         createdAt: new Date().toISOString()
       });
       
+      // Automated alert to Admin WhatsApp via Gateway if active
+      notifyAdminNewBooking({
+        ...formData,
+        amount: calculatedBills.grandTotal
+      });
+
       setIsSuccess(true);
     } catch (err: any) {
       setError('Gagal mengirimkan permohonan. Silakan coba lagi.');

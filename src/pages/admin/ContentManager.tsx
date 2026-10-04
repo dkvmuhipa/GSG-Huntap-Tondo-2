@@ -21,6 +21,7 @@ import { updateGlobalConfig, upsertFacility, removeFacility } from '../../lib/db
 import { useAppStore } from '../../store/useAppStore';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { DEFAULT_ANNOUNCEMENTS } from '../../components/AnnouncementTicker';
+import WhatsAppGatewaySettingsCard from '../../components/admin/settings/WhatsAppGatewaySettingsCard';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -634,6 +635,11 @@ export default function ContentManager() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* WhatsApp Gateway Integration */}
+        <div className="lg:col-span-2">
+          <WhatsAppGatewaySettingsCard />
         </div>
       </div>
 

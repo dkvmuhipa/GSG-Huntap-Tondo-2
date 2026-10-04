@@ -10,6 +10,7 @@ import {
   User, 
   Phone, 
   FileText,
+  FileSpreadsheet,
   Receipt,
   Plus,
   ChevronDown,
@@ -43,6 +44,8 @@ import { generateContract, generateReceipt, buildContractDoc, buildReceiptDoc } 
 import { getTransparentPNG } from '../../lib/cloudinary';
 import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas from '../../components/ui/HallLayoutCanvas';
+import { exportBookingsToExcel } from '../../services/excelExportService';
+import { notifyCitizenOnApproval, notifyCitizenOnPayment } from '../../services/whatsappGatewayService';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -173,6 +176,13 @@ export default function BookingManager() {
           });
           return;
         }
+
+        if (result.success) {
+          const targetBooking = bookings.find(b => b.id === id);
+          if (targetBooking) {
+            notifyCitizenOnApproval({ ...targetBooking, status: 'approved' }, config);
+          }
+        }
       } else {
         await updateBookingStatus(id, { status: newStatus });
         await logAdminActivity({
@@ -196,6 +206,9 @@ export default function BookingManager() {
     if (!booking) return;
 
     try {
+      if (newStatus === 'paid') {
+        notifyCitizenOnPayment({ ...booking, paymentStatus: 'paid' }, config);
+      }
       if (newStatus === 'paid' && !booking.financeAdded) {
         setConfirmConfig({
           isOpen: true,
@@ -560,6 +573,15 @@ export default function BookingManager() {
           <p className="text-gray-500 font-medium mt-1">Sistem kontrol jadwal & keuangan penyewaan.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button 
+            type="button"
+            onClick={() => exportBookingsToExcel(filteredBookings, statusFilter === 'all' ? 'Semua Status' : statusFilter.toUpperCase())}
+            className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-5 py-3 rounded-2xl font-bold shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all flex-1 md:flex-none active:scale-95"
+            title="Unduh Rekap Data Booking ke Microsoft Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            <span>Ekspor Excel</span>
+          </button>
           <button onClick={exportPDF} className="flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-3 rounded-2xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all flex-1 md:flex-none">
             <Download className="w-5 h-5" />
             Laporan

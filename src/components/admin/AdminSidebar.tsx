@@ -11,6 +11,7 @@ import {
   Building2,
   Box,
   Store,
+  History,
   X
 } from 'lucide-react';
 
@@ -28,6 +29,7 @@ export default function AdminSidebar({ userRole = 'admin', onLogout, onClose }: 
     { name: 'Inventaris & Log', icon: Box, path: '/admin/inventory', roles: ['owner', 'admin', 'bendahara'] },
     { name: 'Mitra Vendor & UMKM', icon: Store, path: '/admin/vendors', roles: ['owner', 'admin', 'editor', 'bendahara'] },
     { name: 'Akses & Rules', icon: Shield, path: '/admin/rules', roles: ['owner', 'admin'] },
+    { name: 'Audit Trail & Log', icon: History, path: '/admin/audit-logs', roles: ['owner', 'admin', 'bendahara', 'finance'] },
     { name: 'Pengaturan Gedung', icon: Settings, path: '/admin/settings', roles: ['owner', 'admin', 'editor', 'bendahara'] },
   ];
 
