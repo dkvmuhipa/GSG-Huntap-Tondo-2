@@ -11,13 +11,11 @@ import Hero from './components/Hero';
 import AvailabilityWidget from './components/AvailabilityWidget';
 import TransparencyDashboard from './components/TransparencyDashboard';
 import FacilitiesGrid from './components/FacilitiesGrid';
-import RentalCostCalculator from './components/RentalCostCalculator';
 import GallerySection from './components/GallerySection';
 import FAQSection from './components/FAQSection';
 import FeedbackSection from './components/FeedbackSection';
 import ContactSection from './components/ContactSection';
 import AnnouncementTicker from './components/AnnouncementTicker';
-import UpcomingEvents from './components/UpcomingEvents';
 import Footer from './components/Footer';
 import PageLoader from './components/ui/PageLoader';
 import BookingModal from './components/ui/BookingModal';
@@ -76,15 +74,13 @@ function LandingPage() {
     <main>
       <Hero onOpenBooking={() => openBooking()} />
       <AvailabilityWidget />
-      <UpcomingEvents />
       <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
-      <RentalCostCalculator onOpenBooking={(pkg) => openBooking(pkg)} />
+      <TransparencyDashboard />
       <GallerySection />
       <VendorSection />
       <FAQSection />
       <FeedbackSection />
       <ContactSection />
-      <TransparencyDashboard />
     </main>
   );
 }
