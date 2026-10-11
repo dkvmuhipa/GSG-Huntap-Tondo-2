@@ -231,7 +231,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
     .filter(Boolean) as typeof sections;
 
   return (
-    <main className="pt-24 pb-20 bg-gray-50/50 min-h-screen print:bg-white print:pt-4">
+    <main className="pt-32 sm:pt-36 pb-20 bg-gray-50/50 min-h-screen print:bg-white print:pt-4">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Back Button (Hidden in Print) */}
           <Link 

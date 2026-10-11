@@ -27,7 +27,20 @@ export const DEFAULT_ANNOUNCEMENTS = [
 export default function AnnouncementTicker() {
   const config = useAppStore(state => state.config);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(() => {
+    try {
+      return sessionStorage.getItem('gsg_ticker_dismissed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    try {
+      sessionStorage.setItem('gsg_ticker_dismissed', 'true');
+    } catch {}
+  };
 
   // Check if ticker is enabled in config (default: true)
   const isEnabled = config?.showAnnouncementTicker !== false;
@@ -142,7 +155,7 @@ export default function AnnouncementTicker() {
           </div>
           <div className="w-px h-3.5 bg-white/20 mx-0.5" />
           <button 
-            onClick={() => setIsVisible(false)}
+            onClick={handleDismiss}
             className="p-1 hover:bg-white/10 rounded-md transition-colors"
             aria-label="Tutup info"
           >
