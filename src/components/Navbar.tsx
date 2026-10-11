@@ -12,7 +12,6 @@ import {
   Image as ImageIcon, 
   Store, 
   FileText,
-  Sparkles,
   ChevronRight
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -37,13 +36,13 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { name: 'Fasilitas & Tarif', href: '/#fasilitas', icon: Building2 },
-    { name: 'Ketersediaan', href: '/#jadwal', icon: CalendarCheck },
-    { name: 'Lacak Sewa', href: '/#lacak', icon: Search },
-    { name: 'Transparansi', href: '/#transparansi', icon: PieChart },
-    { name: 'Galeri', href: '/#galeri', icon: ImageIcon },
-    { name: 'Mitra Vendor', href: '/#mitra-vendor', icon: Store },
-    { name: 'Aturan Sewa', href: '/rules', icon: FileText },
+    { name: 'Fasilitas', fullName: 'Fasilitas & Tarif', href: '/#fasilitas', icon: Building2 },
+    { name: 'Jadwal', fullName: 'Jadwal & Agenda', href: '/#jadwal', icon: CalendarCheck },
+    { name: 'Lacak', fullName: 'Lacak Status Sewa', href: '/#lacak', icon: Search },
+    { name: 'Transparansi', fullName: 'Transparansi Kas', href: '/#transparansi', icon: PieChart },
+    { name: 'Galeri', fullName: 'Galeri Foto', href: '/#galeri', icon: ImageIcon },
+    { name: 'Vendor', fullName: 'Mitra Vendor UMKM', href: '/#mitra-vendor', icon: Store },
+    { name: 'Aturan', fullName: 'Aturan & Prosedur', href: '/rules', icon: FileText },
   ];
 
   const isLinkActive = (href: string) => {
@@ -64,61 +63,63 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
         : 'bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-xs'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 sm:h-20">
+        <div className="flex justify-between items-center h-16 sm:h-20 gap-3">
           
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink group">
+          {/* Logo (Shrink-0 and Never Truncated) */}
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 shrink-0 group">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-primary/25 group-hover:scale-105 transition-transform">
               <Building2 className="text-white w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-base sm:text-lg md:text-xl font-black tracking-tight text-slate-900 group-hover:text-primary transition-colors truncate leading-tight">
+            <div className="flex flex-col shrink-0 text-left">
+              <span className="text-sm sm:text-base md:text-lg font-black tracking-tight text-slate-900 group-hover:text-primary transition-colors whitespace-nowrap leading-tight">
                 GEDUNG SERBAGUNA
               </span>
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-400 tracking-widest uppercase truncate">
+              <span className="text-[9px] sm:text-[10px] font-black text-slate-400 tracking-widest uppercase whitespace-nowrap">
                 Huntap Tondo 2
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-1 xl:gap-2 text-xs xl:text-sm font-bold text-slate-600">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-xs xl:text-sm font-bold text-slate-600">
             {navLinks.map((link) => {
               const active = isLinkActive(link.href);
               const isExternalOrHash = link.href.includes('#');
 
               const content = (
-                <span className={`px-3 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 ${
+                <span className={`px-2.5 xl:px-3 py-1.5 rounded-xl transition-all whitespace-nowrap inline-block leading-normal ${
                   active 
                     ? 'text-primary bg-primary/10 font-black' 
-                    : 'hover:text-primary hover:bg-slate-50'
+                    : 'hover:text-primary hover:bg-slate-100/70'
                 }`}>
                   {link.name}
                 </span>
               );
 
               return !isExternalOrHash ? (
-                <Link key={link.name} to={link.href}>
+                <Link key={link.name} to={link.href} className="shrink-0">
                   {content}
                 </Link>
               ) : (
-                <a key={link.name} href={link.href}>
+                <a key={link.name} href={link.href} className="shrink-0">
                   {content}
                 </a>
               );
             })}
           </div>
 
-          {/* Right Action Elements: PWA, Portal Pengurus, Booking Button, Mobile Hamburger */}
+          {/* Right Action Elements */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             
-            {/* PWA Install */}
-            <PWAInstallButton variant="navbar" />
+            {/* PWA Install (Visible on XL screens) */}
+            <div className="hidden xl:block">
+              <PWAInstallButton variant="navbar" />
+            </div>
 
             {/* Portal Pengurus / Admin Login Button */}
             <Link
               to="/login"
-              className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-primary hover:bg-blue-50/70 border border-transparent hover:border-blue-100 transition-all flex items-center gap-1.5"
+              className="p-2 sm:px-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-primary hover:bg-slate-100 transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap border border-transparent hover:border-slate-200"
               title="Portal Pengurus & Admin"
               aria-label="Portal Pengurus"
             >
@@ -129,17 +130,17 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
             {/* Main Booking Button */}
             <motion.button
               onClick={onOpenBooking}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="hidden sm:inline-flex bg-primary hover:bg-blue-800 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-primary/20 transition-all items-center gap-2 cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="hidden sm:inline-flex bg-primary hover:bg-blue-800 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-primary/20 transition-all items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>Booking Sekarang</span>
+              <span>Booking<span className="hidden xl:inline"> Sekarang</span></span>
             </motion.button>
 
             {/* Mobile Menu Toggle */}
             <button 
-              className="lg:hidden p-2 text-slate-700 hover:text-primary hover:bg-slate-100 rounded-2xl transition-colors cursor-pointer"
+              className="lg:hidden p-2 text-slate-700 hover:text-primary hover:bg-slate-100 rounded-2xl transition-colors cursor-pointer shrink-0"
               onClick={() => setIsOpen(!isOpen)}
               aria-label={isOpen ? "Tutup menu" : "Buka menu"}
             >
@@ -172,14 +173,14 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                       : 'text-slate-700 hover:bg-slate-50 hover:text-primary'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                         active ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
                       }`}>
                         <IconComponent className="w-4 h-4" />
                       </div>
-                      <span>{link.name}</span>
+                      <span className="whitespace-nowrap">{link.fullName || link.name}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 opacity-40" />
+                    <ChevronRight className="w-4 h-4 opacity-40 shrink-0" />
                   </div>
                 );
 
