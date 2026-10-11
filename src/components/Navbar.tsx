@@ -98,6 +98,23 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
     return false;
   };
 
+  const handleNavClick = (href: string) => {
+    if (href.startsWith('/#')) {
+      const id = href.replace('/#', '');
+      if (id === 'lacak') {
+        window.dispatchEvent(new CustomEvent('activate-tracking-tab'));
+      }
+      if (location.pathname === '/') {
+        setTimeout(() => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 50);
+      }
+    }
+  };
+
   const isAnyMoreLinkActive = moreNavLinks.some(link => isLinkActive(link.href));
 
   return (
@@ -133,6 +150,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                 <Link
                   key={link.name}
                   to={link.href}
+                  onClick={() => handleNavClick(link.href)}
                   className={`px-3 py-2 rounded-xl transition-all whitespace-nowrap ${
                     active 
                       ? 'text-primary bg-primary/10 font-black' 
@@ -194,7 +212,10 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                           <Link 
                             key={item.name} 
                             to={item.href}
-                            onClick={() => setIsMoreOpen(false)}
+                            onClick={() => {
+                              setIsMoreOpen(false);
+                              handleNavClick(item.href);
+                            }}
                           >
                             {itemBody}
                           </Link>
@@ -290,7 +311,10 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                   <Link 
                     key={link.name} 
                     to={link.href} 
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => {
+                      setIsOpen(false);
+                      handleNavClick(link.href);
+                    }}
                     className="block"
                   >
                     {itemContent}

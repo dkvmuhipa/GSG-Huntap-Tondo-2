@@ -82,8 +82,31 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
       setActiveTab('events');
     } else if (location.hash === '#lacak') {
       setActiveTab('tracking');
+      const timer = setTimeout(() => {
+        const el = document.getElementById('lacak');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [location.hash]);
+
+  // Listen for custom event triggered by navbar clicks (even if hash is unchanged)
+  useEffect(() => {
+    const handleTrackingEvent = () => {
+      setActiveTab('tracking');
+      const timer = setTimeout(() => {
+        const el = document.getElementById('lacak');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    };
+
+    window.addEventListener('activate-tracking-tab', handleActivateTracking);
+    return () => window.removeEventListener('activate-tracking-tab', handleActivateTracking);
+  }, []);
 
   const handlePreviewContract = (booking: any) => {
     setPdfPreviewModal({
@@ -315,7 +338,7 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
         </motion.div>
 
         {/* Segmented Switcher Tabs */}
-        <div className="flex items-center justify-center mb-8">
+        <div id="lacak" className="flex items-center justify-center mb-8 scroll-mt-28 md:scroll-mt-32">
           <div className="bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-1 w-full max-w-md">
             <button
               type="button"
