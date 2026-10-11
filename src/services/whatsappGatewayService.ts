@@ -3,31 +3,34 @@ import { db } from '../lib/firebase';
 import { 
   formatWhatsAppPhoneNumber, 
   generateBookingApprovalMessage, 
-  generatePaymentReceiptMessage 
+  generatePaymentReceiptMessage,
+  generateHMinus1ReminderMessage 
 } from '../lib/whatsapp';
 
 export interface WhatsAppGatewayConfig {
   enabled: boolean;
-  provider: 'fonnte' | 'wablas' | 'custom_webhook';
+  provider: 'sidobe' | 'fonnte' | 'wablas' | 'custom_webhook';
   apiKey: string;
   senderNumber?: string;
   adminNotificationPhone?: string;
   autoNotifyAdminOnNewBooking: boolean;
   autoNotifyCitizenOnBookingApproval: boolean;
   autoNotifyCitizenOnPaymentReceipt: boolean;
+  autoNotifyCitizenOnHMinus1Reminder?: boolean;
   webhookUrl?: string;
   updatedAt?: any;
 }
 
 export const DEFAULT_WA_GATEWAY_CONFIG: WhatsAppGatewayConfig = {
-  enabled: false,
-  provider: 'fonnte',
-  apiKey: '',
-  senderNumber: '',
-  adminNotificationPhone: '081234567890',
+  enabled: true,
+  provider: 'sidobe',
+  apiKey: (import.meta as any).env?.VITE_SIDOBE_SECRET_KEY || 'HxwYSTJREiBIkUOszvGvtmnMhPbomMilGvHdaJPjawTsmmLuCl',
+  senderNumber: '6285961194622',
+  adminNotificationPhone: '085961194622',
   autoNotifyAdminOnNewBooking: true,
   autoNotifyCitizenOnBookingApproval: true,
   autoNotifyCitizenOnPaymentReceipt: true,
+  autoNotifyCitizenOnHMinus1Reminder: true,
   webhookUrl: ''
 };
 
@@ -109,6 +112,43 @@ export async function sendAutomatedWhatsAppMessage(
   }
 
   try {
+    // 0. SIDOBE WA API Provider (https://api.sidobe.com/wa/v1/send-message)
+    if (config.provider === 'sidobe') {
+      const secretKey = (config.apiKey || (import.meta as any).env?.VITE_SIDOBE_SECRET_KEY || 'HxwYSTJREiBIkUOszvGvtmnMhPbomMilGvHdaJPjawTsmmLuCl').trim();
+      if (!secretKey) {
+        return { success: false, message: 'Secret Key SIDOBE WA API belum diisi.' };
+      }
+
+      const phoneE164 = formattedPhone.startsWith('+') ? formattedPhone : `+${formattedPhone}`;
+
+      const response = await fetch('https://api.sidobe.com/wa/v1/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-Key': secretKey
+        },
+        body: JSON.stringify({
+          phone: phoneE164,
+          message: message,
+          is_async: true
+        })
+      });
+
+      const resData = await response.json();
+      if (resData.is_success === true || response.ok) {
+        const deviceName = resData?.data?.whatsapp_device?.name || 'DKV INFO';
+        return {
+          success: true,
+          message: `Pesan WhatsApp berhasil dikirim via SIDOBE (Device: ${deviceName}).`
+        };
+      } else {
+        return {
+          success: false,
+          message: resData.message || resData.error_code || 'Gagal mengirim pesan via SIDOBE WA API.'
+        };
+      }
+    }
+
     // 1. Fonnte Provider (https://api.fonnte.com/send)
     if (config.provider === 'fonnte') {
       if (!config.apiKey) {
@@ -302,3 +342,23 @@ export async function notifyCitizenOnPayment(booking: any, globalConfig?: any) {
     return { sent: false };
   }
 }
+
+/**
+ * Automated trigger: Notify Citizen with H-1 reminder before event day
+ */
+export async function notifyCitizenHMinus1Reminder(booking: any, globalConfig?: any) {
+  try {
+    const config = await getWhatsAppGatewayConfig();
+    if (!config.enabled || !booking.phone) {
+      return { sent: false, message: 'WhatsApp Gateway nonaktif.' };
+    }
+
+    const message = generateHMinus1ReminderMessage(booking, globalConfig);
+    const result = await sendAutomatedWhatsAppMessage(booking.phone, message, config);
+    return { sent: result.success, message: result.message };
+  } catch (err) {
+    console.warn('Failed to auto notify citizen H-1 reminder:', err);
+    return { sent: false, message: (err as any)?.message || 'Terjadi kesalahan' };
+  }
+}
+

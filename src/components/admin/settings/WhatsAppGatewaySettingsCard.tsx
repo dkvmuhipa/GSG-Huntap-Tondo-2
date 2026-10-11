@@ -117,11 +117,12 @@ export default function WhatsAppGatewaySettingsCard() {
           <label className="block text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2">
             Pilihan Provider Gateway
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { id: 'fonnte', name: 'Fonnte (Rekomendasi)', desc: 'Setup instan, stabil & mudah digunakan' },
+              { id: 'sidobe', name: 'SIDOBE WA API (Aktif)', desc: 'Produksi resmi api.sidobe.com, async mode & multi-device' },
+              { id: 'fonnte', name: 'Fonnte Gateway', desc: 'Setup instan via token API Fonnte' },
               { id: 'wablas', name: 'Wablas API', desc: 'Enterprise gateway multi-device' },
-              { id: 'custom_webhook', name: 'Custom Webhook', desc: 'Integrasi URL endpoint / server sendiri' }
+              { id: 'custom_webhook', name: 'Custom Webhook', desc: 'Integrasi URL endpoint server sendiri' }
             ].map((p) => (
               <button
                 key={p.id}
@@ -144,6 +145,23 @@ export default function WhatsAppGatewaySettingsCard() {
             ))}
           </div>
 
+          {config.provider === 'sidobe' && (
+            <div className="mt-3 p-3.5 bg-emerald-50/80 border border-emerald-200/60 rounded-2xl text-[11px] text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold">Perangkat Terkoneksi: <strong>DKV INFO</strong> (6285961194622)</span>
+              </div>
+              <a 
+                href="https://sidobe.com" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-emerald-700 font-black hover:underline inline-flex items-center gap-1"
+              >
+                Buka Sidobe Console <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+
           {config.provider === 'fonnte' && (
             <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1.5">
               <span>Belum punya akun Fonnte?</span>
@@ -163,14 +181,14 @@ export default function WhatsAppGatewaySettingsCard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2">
-              API Token / Secret Key ({config.provider.toUpperCase()})
+              Secret Key / API Token ({config.provider.toUpperCase()})
             </label>
             <div className="relative">
               <input
                 type={showKey ? 'text' : 'password'}
                 value={config.apiKey || ''}
                 onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                placeholder="Masukkan API Token gateway..."
+                placeholder="Masukkan Secret Key gateway..."
                 className="w-full pl-4 pr-11 py-3 bg-gray-50 border border-gray-200/80 rounded-2xl text-xs font-medium text-gray-800 focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10 transition-all outline-none"
               />
               <button
@@ -250,6 +268,16 @@ export default function WhatsAppGatewaySettingsCard() {
               className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
             />
             <span>Kirim kuitansi tanda terima lunas otomatis saat pembayaran diverifikasi</span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer text-xs text-gray-700">
+            <input
+              type="checkbox"
+              checked={config.autoNotifyCitizenOnHMinus1Reminder ?? true}
+              onChange={(e) => setConfig({ ...config, autoNotifyCitizenOnHMinus1Reminder: e.target.checked })}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
+            />
+            <span>Aktifkan pengingat H-1 pelaksanaan acara & serah terima kunci gedung</span>
           </label>
         </div>
 

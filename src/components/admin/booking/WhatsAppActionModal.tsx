@@ -10,14 +10,21 @@ import {
   Clock, 
   Receipt, 
   User, 
-  Calendar 
+  Calendar,
+  Bell,
+  Zap,
+  Loader2,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { 
   createWhatsAppUrl, 
   generateBookingApprovalMessage, 
   generatePaymentReminderMessage, 
-  generatePaymentReceiptMessage 
+  generatePaymentReceiptMessage,
+  generateHMinus1ReminderMessage
 } from '../../../lib/whatsapp';
+import { sendAutomatedWhatsAppMessage } from '../../../services/whatsappGatewayService';
 
 interface WhatsAppActionModalProps {
   isOpen: boolean;
@@ -26,21 +33,40 @@ interface WhatsAppActionModalProps {
   config?: any;
 }
 
+type TemplateType = 'approval' | 'reminder' | 'receipt' | 'hminus1';
+
 export default function WhatsAppActionModal({
   isOpen,
   onClose,
   booking,
   config
 }: WhatsAppActionModalProps) {
-  const [activeTemplate, setActiveTemplate] = useState<'approval' | 'reminder' | 'receipt'>('approval');
+  const [activeTemplate, setActiveTemplate] = useState<TemplateType>('approval');
   const [customMessage, setCustomMessage] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [isSendingViaApi, setIsSendingViaApi] = useState(false);
+  const [apiFeedback, setApiFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     if (!booking) return;
+    setApiFeedback(null);
 
-    // Set default active template based on payment/booking status
-    if (booking.paymentStatus === 'paid') {
+    // Calculate if event is tomorrow
+    let isEventTomorrow = false;
+    if (booking.startDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const eventDate = new Date(booking.startDate);
+      eventDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) isEventTomorrow = true;
+    }
+
+    // Set default active template based on context
+    if (isEventTomorrow) {
+      setActiveTemplate('hminus1');
+      setCustomMessage(generateHMinus1ReminderMessage(booking, config));
+    } else if (booking.paymentStatus === 'paid') {
       setActiveTemplate('receipt');
       setCustomMessage(generatePaymentReceiptMessage(booking, config));
     } else if (booking.status === 'approved') {
@@ -52,15 +78,18 @@ export default function WhatsAppActionModal({
     }
   }, [booking, config, isOpen]);
 
-  const handleTemplateChange = (tmpl: 'approval' | 'reminder' | 'receipt') => {
+  const handleTemplateChange = (tmpl: TemplateType) => {
     setActiveTemplate(tmpl);
+    setApiFeedback(null);
     if (!booking) return;
     if (tmpl === 'approval') {
       setCustomMessage(generateBookingApprovalMessage(booking, config));
     } else if (tmpl === 'reminder') {
       setCustomMessage(generatePaymentReminderMessage(booking, config));
-    } else {
+    } else if (tmpl === 'receipt') {
       setCustomMessage(generatePaymentReceiptMessage(booking, config));
+    } else if (tmpl === 'hminus1') {
+      setCustomMessage(generateHMinus1ReminderMessage(booking, config));
     }
   };
 
@@ -71,10 +100,33 @@ export default function WhatsAppActionModal({
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsAppManual = () => {
     if (!booking?.phone || !customMessage) return;
     const url = createWhatsAppUrl(booking.phone, customMessage);
     window.open(url, '_blank');
+  };
+
+  const handleSendAutomated = async () => {
+    if (!booking?.phone || !customMessage) return;
+    setIsSendingViaApi(true);
+    setApiFeedback(null);
+
+    try {
+      const res = await sendAutomatedWhatsAppMessage(booking.phone, customMessage);
+      setApiFeedback(res);
+      if (res.success) {
+        setTimeout(() => {
+          onClose();
+        }, 2200);
+      }
+    } catch (err: any) {
+      setApiFeedback({
+        success: false,
+        message: err?.message || 'Gagal mengirim pesan otomatis via gateway.'
+      });
+    } finally {
+      setIsSendingViaApi(false);
+    }
   };
 
   if (!isOpen || !booking) return null;
@@ -114,44 +166,57 @@ export default function WhatsAppActionModal({
             <label className="block text-[10px] font-black uppercase text-gray-400 tracking-wider mb-2">
               Pilih Template Notifikasi
             </label>
-            <div className="grid grid-cols-3 gap-2 p-1 bg-gray-50 rounded-2xl border border-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-gray-50 rounded-2xl border border-gray-100">
               <button
                 type="button"
                 onClick={() => handleTemplateChange('approval')}
-                className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                   activeTemplate === 'approval' 
                     ? 'bg-white text-primary shadow-sm' 
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Persetujuan</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleTemplateChange('reminder')}
-                className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                   activeTemplate === 'reminder' 
                     ? 'bg-white text-amber-600 shadow-sm' 
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Tagihan</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleTemplateChange('receipt')}
-                className={`py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
                   activeTemplate === 'receipt' 
                     ? 'bg-white text-emerald-600 shadow-sm' 
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
-                <Receipt className="w-3.5 h-3.5" />
+                <Receipt className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Bukti Lunas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTemplateChange('hminus1')}
+                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                  activeTemplate === 'hminus1' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Reminder H-1</span>
               </button>
             </div>
           </div>
@@ -182,7 +247,7 @@ export default function WhatsAppActionModal({
             </div>
 
             <textarea
-              rows={9}
+              rows={8}
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
               className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-mono text-gray-800 leading-relaxed outline-none focus:border-emerald-500 transition-all resize-none shadow-inner"
@@ -190,22 +255,59 @@ export default function WhatsAppActionModal({
             />
           </div>
 
+          {/* API Feedback Alert */}
+          {apiFeedback && (
+            <div className={`mt-3 p-3.5 rounded-2xl border text-xs flex items-center gap-2.5 ${
+              apiFeedback.success 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}>
+              {apiFeedback.success ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              )}
+              <span className="font-medium leading-snug">{apiFeedback.message}</span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="w-full sm:w-auto flex-1 py-3 px-5 rounded-2xl bg-gray-100 text-gray-600 font-bold text-xs hover:bg-gray-200 transition-colors"
+              className="py-3 px-4 rounded-2xl bg-gray-100 text-gray-600 font-bold text-xs hover:bg-gray-200 transition-colors"
             >
-              Batal
+              Tutup
             </button>
+
             <button
               type="button"
-              onClick={handleSendWhatsApp}
-              className="w-full sm:w-auto flex-2 py-3 px-6 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+              onClick={handleSendWhatsAppManual}
+              className="py-3 px-4 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold text-xs hover:bg-gray-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+              title="Buka obrolan WhatsApp Web atau aplikasi desktop"
             >
-              <Send className="w-4 h-4" />
-              Buka WhatsApp & Kirim
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>WhatsApp Web</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isSendingViaApi}
+              onClick={handleSendAutomated}
+              className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-200 hover:bg-emerald-700 disabled:opacity-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              {isSendingViaApi ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Mengirim via SIDOBE...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 text-emerald-200" />
+                  <span>Kirim via SIDOBE API</span>
+                </>
+              )}
             </button>
           </div>
         </motion.div>

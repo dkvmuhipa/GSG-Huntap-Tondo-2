@@ -105,3 +105,40 @@ Jadwal Anda telah terkunci 100% di sistem kalender pengurus. Terima kasih telah 
 Salam hangat,
 *Bendahara & Pengurus GSG Huntap Tondo 2*`;
 }
+
+export function generateHMinus1ReminderMessage(booking: any, config?: any): string {
+  const customerName = booking.customerName || 'Bapak/Ibu';
+  const purpose = booking.purpose || 'Acara';
+  const dateStr = booking.startDate 
+    ? new Date(booking.startDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Besok';
+  const contactName = config?.reportBendaharaName || 'Pengurus GSG Huntap Tondo 2';
+  const contactPhone = config?.contactPhone || '0859-6119-4622';
+  const isPaid = booking.paymentStatus === 'paid';
+  const totalAmount = Number(booking.amount || 0).toLocaleString('id-ID');
+
+  return `🔔 *PENGINGAT H-1 PELAKSANAAN ACARA*
+*Gedung Serbaguna Huntap Tondo 2*
+----------------------------------------
+Yth. *${customerName}*,
+
+Mengingatkan kembali bahwa jadwal penggunaan Gedung Serbaguna Huntap Tondo 2 untuk acara Anda adalah *BESOK*:
+
+📋 *Detail Acara:*
+• Keperluan: *${purpose}*
+• Tanggal: *${dateStr}*
+• Waktu: ${booking.startTime || '08:00'} - ${booking.endTime || 'Selesai'} WITA
+• Paket: ${booking.packageTitle || booking.packageName || 'Standar'}
+• Status Pembayaran: *${isPaid ? 'LUNAS (SAH) ✅' : `BELUM LUNAS (Rp ${totalAmount}) ⚠️`}*
+
+🔑 *Instruksi Serah Terima & Ketertiban:*
+1. Serah terima kunci dan pengecekan kelistrikan dapat dilakukan mulai pagi hari via pengurus.
+2. Dilarang merusak dinding/fasilitas dan harap menjaga kebersihan selama & setelah acara.
+3. Narahubung Pengurus Lapangan: *${contactName}* (${contactPhone}).
+
+Semoga acara Anda besok berjalan lancar, tertib, dan berkah.
+
+Terima kasih,
+*Pengurus GSG Huntap Tondo 2*`;
+}
+

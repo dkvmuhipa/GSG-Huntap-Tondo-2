@@ -10,7 +10,9 @@ import {
   Clock,
   Receipt,
   LayoutGrid,
-  MapPin
+  MapPin,
+  Bell,
+  ArrowRight
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -26,7 +28,7 @@ import {
 import { syncFinanceTotals, checkCurrentAvailability } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
 
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import QuickMenuGrid from '../../components/admin/QuickMenuGrid';
 import ActivityLogWidget from '../../components/admin/ActivityLogWidget';
 
@@ -136,6 +138,16 @@ export default function DashboardOverview() {
 
   const recentTransactions = transactions.slice(0, 5);
 
+  // Radar H-1: Detect events happening tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+  
+  const tomorrowBookings = bookings.filter(b => 
+    (b.status === 'approved' || b.status === 'confirmed') &&
+    b.startDate && b.startDate.startsWith(tomorrowStr)
+  );
+
   return (
     <div className="space-y-8">
       {/* Availability Status Card */}
@@ -177,6 +189,40 @@ export default function DashboardOverview() {
           </div>
         )}
       </motion.div>
+
+      {/* Radar Pengingat H-1 Acara Besok */}
+      {tomorrowBookings.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-[2rem] sm:rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border border-blue-500/30"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0">
+              <Bell className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                Radar Pengingat H-1
+              </div>
+              <h4 className="text-base sm:text-lg font-black text-white">
+                Ada {tomorrowBookings.length} Jadwal Acara Besok ({tomorrow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })})
+              </h4>
+              <p className="text-xs text-blue-200 mt-0.5 line-clamp-1">
+                {tomorrowBookings.map(b => `${b.customerName} - ${b.purpose || 'Acara'}`).join(' • ')}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/admin/bookings"
+            className="w-full md:w-auto px-5 py-3 rounded-2xl bg-white hover:bg-blue-50 text-blue-950 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shrink-0 active:scale-95"
+          >
+            <span>Buka & Kirim Reminder WA</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+      )}
 
       {/* Quick Menu Grid */}
       <QuickMenuGrid userRole={userRole} pendingBookingsCount={pendingBookings} />
