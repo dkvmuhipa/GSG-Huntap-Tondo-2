@@ -94,7 +94,7 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
   // Listen for custom event triggered by navbar clicks (even if hash is unchanged)
   useEffect(() => {
-    const handleTrackingEvent = () => {
+    const handleActivateTracking = () => {
       setActiveTab('tracking');
       const timer = setTimeout(() => {
         const el = document.getElementById('lacak');
