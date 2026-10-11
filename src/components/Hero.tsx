@@ -12,12 +12,29 @@ import {
   ShieldCheck,
   Clock
 } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
 
 interface HeroProps {
   onOpenBooking: () => void;
 }
 
 export default function Hero({ onOpenBooking }: HeroProps) {
+  const config = useAppStore(state => state.config);
+
+  const badgeLocation = config?.heroBadgeLocation || 'Kawasan Huntap Tondo 2 • Palu';
+  const badgeCategory = config?.heroBadgeCategory || 'Balai Warga Terpadu';
+  const title = config?.heroTitle || 'Ruang Mulia Warga,';
+  const subtitle = config?.heroSubtitle || 'Panggung Cerita & Tradisi Kita.';
+  const tagline = config?.heroTagline || 'Dari akad nikah khidmat, resepsi adat, hingga musyawarah mufakat warga. Fasilitas aula representatif berkapasitas hingga 500+ tamu yang dikelola secara mandiri, transparan, dan terbuka untuk umum.';
+  const imageUrl = config?.heroImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200';
+  const imageCaption = config?.heroImageCaption || 'Tata Lampu, Panggung Resepsi, & Akustik Terpadu';
+  const statCapacity = config?.heroStatCapacity || '500+';
+  const statAudio = config?.heroStatAudio || '10.000 W';
+  const statTransparency = config?.heroStatTransparency || '100%';
+  const statusTitle = config?.heroStatusTitle || 'Gedung Siap Digunakan';
+  const statusSubtitle = config?.heroStatusSubtitle || 'Reservasi Online Terbuka';
+  const partnerTitle = config?.heroPartnerTitle || 'Pengurus RT 02 Huntap 2';
+  const partnerSubtitle = config?.heroPartnerSubtitle || 'Laporan Kas Terbuka & Sah';
   return (
     <section className="relative pt-32 sm:pt-40 pb-20 overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-slate-50/30">
       {/* Architectural Ambient Glow */}
@@ -41,28 +58,26 @@ export default function Hero({ onOpenBooking }: HeroProps) {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
               <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                Kawasan Huntap Tondo 2 • Palu
+                {badgeLocation}
               </span>
               <span className="text-slate-300 font-bold">•</span>
               <span className="text-[11px] font-bold text-primary">
-                Balai Warga Terpadu
+                {badgeCategory}
               </span>
             </div>
 
             {/* Editorial Title Interplay */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] text-slate-950 tracking-tight mb-6">
-              Ruang Mulia Warga,{' '}
+              {title}{' '}
               <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-primary to-indigo-600 italic font-serif">
-                Panggung Cerita & Tradisi Kita.
+                {subtitle}
               </span>
             </h1>
 
             {/* Authentic Subheadline */}
             <p className="text-base sm:text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
-              Dari akad nikah khidmat, resepsi adat, hingga musyawarah mufakat warga. Fasilitas aula representatif 
-              berkapasitas hingga <strong className="text-slate-900 font-black">500+ tamu</strong> yang dikelola 
-              secara mandiri, transparan, dan terbuka untuk umum.
+              {tagline}
             </p>
 
             {/* Interactive Primary & Secondary Actions */}
@@ -97,15 +112,15 @@ export default function Hero({ onOpenBooking }: HeroProps) {
             {/* Key Civic Highlights */}
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-slate-200/80 max-w-lg mx-auto lg:mx-0 text-left">
               <div>
-                <span className="text-xl sm:text-2xl font-black text-slate-950 block leading-tight">500+</span>
+                <span className="text-xl sm:text-2xl font-black text-slate-950 block leading-tight">{statCapacity}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Kapasitas Tamu</span>
               </div>
               <div className="border-l border-slate-200 pl-3">
-                <span className="text-xl sm:text-2xl font-black text-primary block leading-tight">10.000 W</span>
+                <span className="text-xl sm:text-2xl font-black text-primary block leading-tight">{statAudio}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Audio & Panggung</span>
               </div>
               <div className="border-l border-slate-200 pl-3">
-                <span className="text-xl sm:text-2xl font-black text-emerald-600 block leading-tight">100%</span>
+                <span className="text-xl sm:text-2xl font-black text-emerald-600 block leading-tight">{statTransparency}</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Transparansi Kas</span>
               </div>
             </div>
@@ -122,7 +137,7 @@ export default function Hero({ onOpenBooking }: HeroProps) {
             <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-900/10 border-4 sm:border-8 border-white bg-slate-900 group">
               <div className="aspect-[4/3] sm:aspect-[5/4] overflow-hidden">
                 <img 
-                  src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200" 
+                  src={imageUrl} 
                   alt="Interior Gedung Serbaguna Huntap Tondo 2" 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   referrerPolicy="no-referrer"
@@ -143,7 +158,7 @@ export default function Hero({ onOpenBooking }: HeroProps) {
                   </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-black text-white leading-snug">
-                  Tata Lampu, Panggung Resepsi, & Akustik Terpadu
+                  {imageCaption}
                 </h3>
               </div>
             </div>
@@ -160,8 +175,8 @@ export default function Hero({ onOpenBooking }: HeroProps) {
               </div>
               <div>
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Status Hari Ini</span>
-                <p className="text-xs font-black text-slate-900 leading-tight">Gedung Siap Digunakan</p>
-                <span className="text-[10px] text-emerald-600 font-bold">Reservasi Online Terbuka</span>
+                <p className="text-xs font-black text-slate-900 leading-tight">{statusTitle}</p>
+                <span className="text-[10px] text-emerald-600 font-bold">{statusSubtitle}</span>
               </div>
             </motion.div>
 
@@ -177,8 +192,8 @@ export default function Hero({ onOpenBooking }: HeroProps) {
               </div>
               <div>
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Kemitraan Komunitas</span>
-                <p className="text-xs font-black text-slate-900 leading-tight">Pengurus RT 02 Huntap 2</p>
-                <span className="text-[10px] text-slate-500 font-medium">Laporan Kas Terbuka & Sah</span>
+                <p className="text-xs font-black text-slate-900 leading-tight">{partnerTitle}</p>
+                <span className="text-[10px] text-slate-500 font-medium">{partnerSubtitle}</span>
               </div>
             </motion.div>
           </motion.div>
