@@ -21,9 +21,13 @@ import {
   Copy,
   Check,
   MessageCircle,
-  Building2
+  Building2,
+  Upload,
+  Loader2,
+  Eye,
+  ExternalLink
 } from 'lucide-react';
-import { checkCurrentAvailability } from '../lib/db';
+import { checkCurrentAvailability, updateBookingStatus } from '../lib/db';
 import { useAppStore } from '../store/useAppStore';
 import CalendarModal from './ui/CalendarModal';
 import { jsPDF } from 'jspdf';
@@ -31,6 +35,8 @@ import autoTable from 'jspdf-autotable';
 import { buildContractDoc, buildReceiptDoc } from '../services/contractService';
 import PdfPreviewModal from './ui/PdfPreviewModal';
 import { useLocation } from 'react-router-dom';
+import { uploadToCloudinary } from '../lib/cloudinary';
+import { notifyAdminPaymentProofUploaded } from '../services/whatsappGatewayService';
 
 interface AvailabilityWidgetProps {
   onOpenBooking?: (pkg?: string, date?: string) => void;
@@ -112,6 +118,51 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
       setTrackedBooking(null);
     }
     setIsTracking(false);
+  };
+
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
+  const [uploadErrorMsg, setUploadErrorMsg] = useState('');
+
+  const handleUploadProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !trackedBooking) return;
+
+    setIsUploadingProof(true);
+    setUploadSuccessMsg('');
+    setUploadErrorMsg('');
+
+    try {
+      const uploadRes = await uploadToCloudinary(file);
+      const proofUrl = uploadRes.url;
+
+      await updateBookingStatus(trackedBooking.id, {
+        paymentProofUrl: proofUrl,
+        paymentStatus: 'verifying',
+        paymentProofUploadedAt: new Date().toISOString()
+      });
+
+      // Send automated WhatsApp alert to GSG Admin via SIDOBE WA API
+      notifyAdminPaymentProofUploaded(trackedBooking, proofUrl).catch(err => {
+        console.warn('WhatsApp alert to admin failed:', err);
+      });
+
+      // Update local state
+      setTrackedBooking({
+        ...trackedBooking,
+        paymentProofUrl: proofUrl,
+        paymentStatus: 'verifying',
+        paymentProofUploadedAt: new Date().toISOString()
+      });
+
+      setUploadSuccessMsg('Bukti transfer berhasil diunggah! Pengurus GSG Huntap Tondo 2 telah diberitahu via WhatsApp.');
+    } catch (err: any) {
+      console.error('Error uploading payment proof:', err);
+      setUploadErrorMsg(err?.message || 'Gagal mengunggah bukti transfer. Silakan coba lagi.');
+    } finally {
+      setIsUploadingProof(false);
+      e.target.value = '';
+    }
   };
 
   // Availability calculation
@@ -480,15 +531,30 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                       #{trackedBooking.id?.substring(0, 8).toUpperCase()}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    trackedBooking.status === 'approved' 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : trackedBooking.status === 'rejected' 
-                        ? 'bg-rose-100 text-rose-800' 
-                        : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {trackedBooking.status === 'approved' ? 'DISETUJUI' : trackedBooking.status === 'rejected' ? 'DITOLAK' : 'MENUNGGU VERIFIKASI'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      trackedBooking.status === 'approved' 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : trackedBooking.status === 'rejected' 
+                          ? 'bg-rose-100 text-rose-800' 
+                          : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {trackedBooking.status === 'approved' ? 'DISETUJUI' : trackedBooking.status === 'rejected' ? 'DITOLAK' : 'MENUNGGU VERIFIKASI'}
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      trackedBooking.paymentStatus === 'paid'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : trackedBooking.paymentStatus === 'verifying'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                    }`}>
+                      {trackedBooking.paymentStatus === 'paid'
+                        ? 'LUNAS (SAH) ✅'
+                        : trackedBooking.paymentStatus === 'verifying'
+                          ? 'BUKTI SEDANG DIVERIFIKASI ⏳'
+                          : 'BELUM BAYAR ⚠️'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs">
@@ -566,18 +632,87 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                       </button>
                     </div>
 
-                    {/* Direct WhatsApp Transfer Confirmation */}
-                    <a
-                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(
-                        `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n\nBerikut saya lampirkan bukti transfer pembayarannya. Mohon diverifikasi. Terima kasih.`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Kirim Bukti Transfer via WhatsApp</span>
-                    </a>
+                    {/* Existing Uploaded Proof Badge */}
+                    {trackedBooking.paymentProofUrl && (
+                      <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-black text-blue-900 block leading-tight">Bukti Transfer Berhasil Diunggah</span>
+                            <span className="text-[10px] text-blue-600 font-medium">Sedang menunggu konfirmasi bendahara pengurus</span>
+                          </div>
+                        </div>
+                        <a
+                          href={trackedBooking.paymentProofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Lihat Struk</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Direct Upload Transfer Proof Input */}
+                    <div className="space-y-2 pt-1">
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                        {trackedBooking.paymentProofUrl ? 'Unggah Ulang Bukti Transfer Baru' : 'Unggah Struk / Bukti Transfer Sekarang'}
+                      </span>
+                      <label className={`w-full py-3 px-4 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-white hover:bg-amber-50/50 flex items-center justify-center gap-2 text-xs font-bold text-amber-900 cursor-pointer transition-all shadow-xs ${isUploadingProof ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {isUploadingProof ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                            <span>Mengunggah & Mengirim Alert ke Pengurus...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 text-amber-600" />
+                            <span>Pilih Foto Bukti Transfer (JPG/PNG)</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadProof}
+                          disabled={isUploadingProof}
+                          className="sr-only"
+                        />
+                      </label>
+                      {uploadSuccessMsg && (
+                        <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>{uploadSuccessMsg}</span>
+                        </p>
+                      )}
+                      {uploadErrorMsg && (
+                        <p className="text-xs text-rose-700 font-bold bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>{uploadErrorMsg}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Direct WhatsApp Transfer Confirmation Fallback */}
+                    <div className="pt-1">
+                      <a
+                        href={`https://wa.me/${
+                          config?.contactPhone 
+                            ? (config.contactPhone.startsWith('0') ? '62' + config.contactPhone.slice(1) : config.contactPhone.replace(/\D/g, '')) 
+                            : '6285961194622'
+                        }?text=${encodeURIComponent(
+                          `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n${trackedBooking.paymentProofUrl ? `• Tautan Bukti: ${trackedBooking.paymentProofUrl}\n` : ''}\nMohon diverifikasi. Terima kasih.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Konfirmasi via WhatsApp Pengurus</span>
+                      </a>
+                    </div>
                   </div>
                 )}
 

@@ -362,3 +362,44 @@ export async function notifyCitizenHMinus1Reminder(booking: any, globalConfig?: 
   }
 }
 
+/**
+ * Automated trigger: Notify GSG Admin via WhatsApp when citizen uploads payment proof
+ */
+export async function notifyAdminPaymentProofUploaded(bookingData: any, paymentProofUrl: string) {
+  try {
+    const config = await getWhatsAppGatewayConfig();
+    if (!config.enabled || !config.adminNotificationPhone) {
+      return { sent: false, message: 'WhatsApp Gateway nonaktif.' };
+    }
+
+    const customerName = bookingData.customerName || 'Warga';
+    const purpose = bookingData.purpose || 'Acara Warga';
+    const dateStr = bookingData.startDate || '-';
+    const amount = Number(bookingData.amount || 0).toLocaleString('id-ID');
+    const dpAmount = Math.round(Number(bookingData.amount || 0) * 0.3).toLocaleString('id-ID');
+    const phone = bookingData.phone || '-';
+
+    const message = `🔔 *BUKTI TRANSFER PEMBAYARAN MASUK*
+*Gedung Serbaguna Huntap Tondo 2*
+----------------------------------------
+Penyewa telah mengunggah bukti pembayaran sewa gedung:
+
+• *Nama Pemohon:* ${customerName}
+• *No. WhatsApp:* ${phone}
+• *Keperluan:* ${purpose}
+• *Tanggal Acara:* ${dateStr}
+• *Estimasi DP (30%):* Rp ${dpAmount} (Total: Rp ${amount})
+• *Tautan Bukti Struk:* ${paymentProofUrl}
+
+Silakan periksa mutasi rekening dan verifikasi status pembayaran:
+👉 https://gsght2.vercel.app/admin/bookings`;
+
+    const result = await sendAutomatedWhatsAppMessage(config.adminNotificationPhone, message, config);
+    return { sent: result.success, message: result.message };
+  } catch (err) {
+    console.warn('Failed to auto notify admin on payment proof upload:', err);
+    return { sent: false, message: (err as any)?.message || 'Terjadi kesalahan' };
+  }
+}
+
+

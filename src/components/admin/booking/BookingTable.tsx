@@ -9,7 +9,8 @@ import {
   Zap, 
   CheckCircle2, 
   XCircle, 
-  Clock 
+  Clock,
+  Eye 
 } from 'lucide-react';
 
 interface BookingTableProps {
@@ -126,15 +127,33 @@ export default function BookingTable({
                         className={`px-3 py-1.5 rounded-xl text-[9px] font-black transition-all border shadow-sm active:scale-95 ${
                           booking.paymentStatus === 'paid' 
                             ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
-                            : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                            : booking.paymentStatus === 'verifying'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 animate-pulse'
+                              : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
                         }`}
+                        title={booking.paymentStatus === 'verifying' ? 'Klik untuk verifikasi & tandai lunas' : undefined}
                       >
-                        {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
+                        {booking.paymentStatus === 'paid' 
+                          ? 'LUNAS (SINKRON)' 
+                          : booking.paymentStatus === 'verifying' 
+                            ? 'VERIFIKASI BUKTI 🔔' 
+                            : 'TAGIH PEMBAYARAN'}
                       </button>
                     </div>
                   </td>
                   <td className="px-6 py-6">
                     <div className="flex items-center justify-end gap-2">
+                      {booking.paymentProofUrl && (
+                        <a 
+                          href={booking.paymentProofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                          title="Lihat Struk/Bukti Transfer Pembayaran Warga"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      )}
                       <button 
                         onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')} 
                         className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors" 
@@ -234,15 +253,31 @@ export default function BookingTable({
                     className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border shadow-sm active:scale-95 ${
                       booking.paymentStatus === 'paid' 
                         ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
-                        : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                        : booking.paymentStatus === 'verifying'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 animate-pulse'
+                          : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
                     }`}
                   >
-                    {booking.paymentStatus === 'paid' ? 'LUNAS (SINKRON)' : 'TAGIH PEMBAYARAN'}
+                    {booking.paymentStatus === 'paid' 
+                      ? 'LUNAS (SINKRON)' 
+                      : booking.paymentStatus === 'verifying' 
+                        ? 'VERIFIKASI BUKTI 🔔' 
+                        : 'TAGIH PEMBAYARAN'}
                   </button>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                {booking.paymentProofUrl && (
+                  <a 
+                    href={booking.paymentProofUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-200 hover:bg-blue-100 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Bukti Struk
+                  </a>
+                )}
                 <button 
                   onClick={() => setSelectedBookingForLayoutReview(booking)} 
                   className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-indigo-100"

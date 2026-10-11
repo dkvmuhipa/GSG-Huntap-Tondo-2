@@ -83,7 +83,7 @@ export async function compressImage(file: File, maxWidth = 1600, maxHeight = 160
  * @param file The file object to upload
  */
 export async function uploadToCloudinary(file: File): Promise<{ url: string; public_id: string }> {
-  // Compress the file if it's an image before sending to prevent Vercel's 4.5MB request limit
+  // Compress the file if it's an image before sending to prevent payload limit
   let processedFile = file;
   if (file.type.startsWith('image/')) {
     try {
@@ -94,40 +94,46 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
     }
   }
 
-  const formData = new FormData();
-  formData.append('file', processedFile);
+  // Direct client-side unsigned upload to Cloudinary as resilient fallback
+  const uploadDirect = async () => {
+    const cloudName = 'dxenprdms';
+    const uploadPreset = 'gsght2_preset';
+    const directFormData = new FormData();
+    directFormData.append('file', processedFile);
+    directFormData.append('upload_preset', uploadPreset);
+    directFormData.append('folder', 'gedung_serbaguna_huntap_tondo/bukti_transfer');
 
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData,
-  });
-
-  const contentType = response.headers.get('content-type');
-  if (!response.ok) {
-    let errorMessage = 'Gagal mengupload file ke Cloudinary.';
-    if (contentType && contentType.includes('application/json')) {
-      const errorData = await response.json();
-      errorMessage = errorData.error || errorMessage;
-    } else {
-      const textError = await response.text();
-      console.error('Non-JSON error response:', textError.substring(0, 200));
-      errorMessage = `Server Error (${response.status}): Endpoint API tidak ditemukan atau sedang bermasalah.`;
+    const directRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: directFormData
+    });
+    if (!directRes.ok) {
+      const err = await directRes.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'Gagal mengunggah gambar ke Cloudinary.');
     }
-    throw new Error(errorMessage);
-  }
+    const directData = await directRes.json();
+    return { url: directData.secure_url, public_id: directData.public_id };
+  };
 
-  if (contentType && contentType.includes('application/json')) {
-    return response.json();
-  }
-  
-  const text = await response.text();
-  console.error('Expected JSON but got:', contentType, text.substring(0, 500));
-  
-  if (text.toLowerCase().includes('<!doctype html>') || text.toLowerCase().includes('<html>')) {
-    throw new Error('Server mengembalikan halaman HTML. Kemungkinan terjadi redirect atau endpoint API tidak ditemukan.');
-  }
+  try {
+    const formData = new FormData();
+    formData.append('file', processedFile);
 
-  throw new Error('Server mengembalikan format response yang tidak valid (bukan JSON).');
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const contentType = response.headers.get('content-type');
+    if (response.ok && contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+    // If /api/upload returns 404/HTML (e.g. running vite dev server), fallback to direct upload
+    return await uploadDirect();
+  } catch (err) {
+    console.warn('[Upload] /api/upload failed, falling back to direct Cloudinary upload:', err);
+    return await uploadDirect();
+  }
 }
 
 /**
