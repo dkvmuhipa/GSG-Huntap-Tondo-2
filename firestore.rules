@@ -165,7 +165,16 @@ service cloud.firestore {
     // Booking Gedung
     match /bookings/{docId} {
       allow read: if true; // Publik perlu lihat jadwal
-      allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) && isValidBooking(incoming());
+      allow create: if (
+        hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) ||
+        (isValidBooking(incoming()) && incoming().status == 'pending' && incoming().paymentStatus == 'unpaid')
+      );
+      allow update: if (
+        hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) ||
+        // Izinkan penyewa mengunggah bukti pembayaran mandiri (hanya field bukti bayar)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['paymentProofUrl', 'paymentStatus', 'updatedAt']) &&
+         incoming().paymentStatus in ['unpaid', 'verifying', 'paid'])
+      );
       allow delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
     }
 
