@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet, useOutletContext } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, useOutletContext, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNavbar from './components/BottomNavbar';
 import Hero from './components/Hero';
@@ -93,6 +93,27 @@ function LandingPage() {
 
 import { useAppStore } from './store/useAppStore';
 
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+
+  React.useEffect(() => {
+    if (hash) {
+      const timer = setTimeout(() => {
+        const id = hash.replace('#', '');
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [pathname, hash]);
+
+  return null;
+}
+
 export default function App() {
   const initSubscriptions = useAppStore(state => state.initSubscriptions);
 
@@ -103,6 +124,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollManager />
       <React.Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<MainLayout />}>

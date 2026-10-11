@@ -16,7 +16,12 @@ import {
   CalendarCheck,
   ChevronRight,
   User,
-  Info
+  Info,
+  CreditCard,
+  Copy,
+  Check,
+  MessageCircle,
+  Building2
 } from 'lucide-react';
 import { checkCurrentAvailability } from '../lib/db';
 import { useAppStore } from '../store/useAppStore';
@@ -48,6 +53,7 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
   const [trackedBooking, setTrackedBooking] = useState<any>(null);
   const [trackingError, setTrackingError] = useState('');
   const [isTracking, setIsTracking] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState(false);
 
   // Upcoming Events States
   const [searchTerm, setSearchTerm] = useState('');
@@ -503,6 +509,77 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                     <p className="font-bold text-primary">Rp {Number(trackedBooking.amount || 0).toLocaleString('id-ID')}</p>
                   </div>
                 </div>
+
+                {/* Payment Instructions for Approved & Unpaid Bookings */}
+                {trackedBooking.status === 'approved' && trackedBooking.paymentStatus !== 'paid' && (
+                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3 mt-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-amber-700" />
+                        <span className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                          Instruksi Setoran Uang Muka (DP 30%)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-950">
+                        Maksimal H+3 Disetujui
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3.5 rounded-xl border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Nominal DP Minimal (30%)</span>
+                        <p className="text-base font-black text-amber-700">
+                          Rp {Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Sisa Pelunasan (H-7 Acara)</span>
+                        <p className="text-xs font-bold text-slate-600">
+                          Rp {Math.round(Number(trackedBooking.amount || 0) * 0.7).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Official Bank Account Details */}
+                    <div className="bg-white p-3.5 rounded-xl border border-amber-100 flex items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-xs font-black text-slate-800">Bank Syariah Indonesia (BSI)</span>
+                        </div>
+                        <p className="font-mono text-sm font-black text-slate-900 tracking-wider mt-0.5">
+                          7188 2938 19
+                        </p>
+                        <span className="text-[10px] text-slate-500 font-medium">a.n. Kas Gedung Serbaguna Huntap Tondo 2</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText('7188293819');
+                          setCopiedAccount(true);
+                          setTimeout(() => setCopiedAccount(false), 2000);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                      >
+                        {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedAccount ? 'Tersalin' : 'Salin Rekening'}</span>
+                      </button>
+                    </div>
+
+                    {/* Direct WhatsApp Transfer Confirmation */}
+                    <a
+                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(
+                        `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n\nBerikut saya lampirkan bukti transfer pembayarannya. Mohon diverifikasi. Terima kasih.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Kirim Bukti Transfer via WhatsApp</span>
+                    </a>
+                  </div>
+                )}
 
                 {/* Download PDF Buttons */}
                 <div className="pt-3 border-t border-slate-200 flex flex-wrap gap-2 justify-end">

@@ -130,9 +130,9 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
               const active = isLinkActive(link.href);
 
               return (
-                <a
+                <Link
                   key={link.name}
-                  href={link.href}
+                  to={link.href}
                   className={`px-3 py-2 rounded-xl transition-all whitespace-nowrap ${
                     active 
                       ? 'text-primary bg-primary/10 font-black' 
@@ -140,7 +140,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                   }`}
                 >
                   {link.name}
-                </a>
+                </Link>
               );
             })}
 
@@ -190,7 +190,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                           </div>
                         );
 
-                        return isInternalRoute ? (
+                        return (
                           <Link 
                             key={item.name} 
                             to={item.href}
@@ -198,14 +198,6 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                           >
                             {itemBody}
                           </Link>
-                        ) : (
-                          <a 
-                            key={item.name} 
-                            href={item.href}
-                            onClick={() => setIsMoreOpen(false)}
-                          >
-                            {itemBody}
-                          </a>
                         );
                       })}
                     </div>
@@ -294,7 +286,7 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                   </div>
                 );
 
-                return !isExternalOrHash ? (
+                return (
                   <Link 
                     key={link.name} 
                     to={link.href} 
@@ -303,15 +295,6 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                   >
                     {itemContent}
                   </Link>
-                ) : (
-                  <a 
-                    key={link.name} 
-                    href={link.href} 
-                    onClick={() => setIsOpen(false)}
-                    className="block"
-                  >
-                    {itemContent}
-                  </a>
                 );
               })}
 
