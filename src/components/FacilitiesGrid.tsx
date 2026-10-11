@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   PartyPopper, 
@@ -53,6 +53,172 @@ const DEFAULT_ADDONS: AddonItem[] = [
   { id: 'genset', name: 'Genset Silent Honda 10kVA', unitPrice: 300000, min: 0, max: 2, step: 1, unitLabel: 'unit' },
   { id: 'tenda', name: 'Tenda Sarnafil VIP 5x5m', unitPrice: 150000, min: 0, max: 10, step: 1, unitLabel: 'plafon' },
 ];
+
+interface FacilityCardProps {
+  fac: any;
+  index: number;
+  bookings: any[];
+  config: any;
+  onOpenBooking: (pkg?: string) => void;
+}
+
+function FacilityCard({ fac, index, bookings, config, onOpenBooking }: FacilityCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const IconComponent = ICON_MAP[fac.iconName] || Users2;
+  const availability = checkCurrentAvailability(bookings, config, fac.title);
+  const isBusy = availability.isBusy;
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const normX = (x / rect.width) - 0.5;
+    const normY = (y / rect.height) - 0.5;
+
+    // Subtle 3D tilt max ~5 degrees
+    setTilt({
+      x: normY * -6,
+      y: normX * 6
+    });
+
+    setMousePos({
+      x: (x / rect.width) * 100,
+      y: (y / rect.height) * 100
+    });
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+    setIsHovered(false);
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      initial={{ opacity: 0, scale: 0.95 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.1 }}
+      viewport={{ once: true }}
+      style={{
+        transform: isHovered 
+          ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px)` 
+          : 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)',
+        transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s ease-out, box-shadow 0.4s ease-out',
+        transformStyle: 'preserve-3d'
+      }}
+      className={`rounded-[2.5rem] border overflow-hidden relative group flex flex-col justify-between transition-shadow duration-300 will-change-transform ${
+        fac.highlight 
+          ? 'bg-white border-primary shadow-xl shadow-primary/10 hover:shadow-2xl hover:shadow-primary/20' 
+          : 'bg-gray-50/70 border-gray-100 hover:bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/50'
+      }`}
+    >
+      {/* Subtle cursor-following ambient spotlight */}
+      <div 
+        className="pointer-events-none absolute -inset-px rounded-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-20"
+        style={{
+          background: `radial-gradient(350px circle at ${mousePos.x}% ${mousePos.y}%, rgba(30, 64, 175, 0.08), transparent 75%)`
+        }}
+      />
+
+      {/* Image Section */}
+      <div>
+        <div className="h-48 relative overflow-hidden">
+          {fac.imageUrl ? (
+            <img 
+              src={fac.imageUrl} 
+              alt={fac.title} 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+            />
+          ) : (
+            <div className={`w-full h-full flex items-center justify-center ${fac.highlight ? 'bg-primary/5' : 'bg-gray-200/50'}`}>
+              <IconComponent className={`w-12 h-12 transition-transform duration-500 group-hover:scale-110 ${fac.highlight ? 'text-primary' : 'text-gray-300'}`} />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent flex items-end p-6 z-10">
+            <div className="flex flex-col text-left">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 ${fac.highlight ? 'bg-primary text-white shadow-lg' : 'bg-white/20 backdrop-blur-md text-white'}`}>
+                <IconComponent className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-white tracking-tight drop-shadow-sm">{fac.title}</h3>
+            </div>
+          </div>
+
+          {/* Status Badge with breathing pulse dot */}
+          <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md z-10 ${
+            isBusy ? 'bg-rose-500/90 text-white shadow-lg' : 'bg-white/95 text-emerald-700 shadow-md border border-emerald-100'
+          }`}>
+            <span className="relative flex h-2 w-2">
+              {!isBusy && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isBusy ? 'bg-white' : 'bg-emerald-500'}`} />
+            </span>
+            {isBusy ? 'Terpakai' : 'Tersedia'}
+          </div>
+        </div>
+        
+        <div className="p-7 text-left">
+          <div className="flex items-center gap-2 mb-4">
+            {fac.capacity && (
+              <div className="px-2.5 py-1 bg-gray-100 text-[10px] font-black text-gray-600 rounded-lg uppercase tracking-tight">
+                Kapasitas: {fac.capacity}
+              </div>
+            )}
+            {fac.highlight && (
+              <div className="px-2.5 py-1 bg-primary text-[10px] font-black text-white rounded-lg uppercase tracking-tight shadow-sm shadow-primary/30">
+                Terfavorit
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-baseline gap-1 mb-6">
+            <span className="text-3xl font-black text-primary tracking-tight">{fac.price}</span>
+            <span className="text-xs text-gray-400 font-bold tracking-tight">/ {fac.duration}</span>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {(fac.features || []).slice(0, 4).map((feat: string, i: number) => (
+              <div key={`${feat}-${i}`} className="flex items-center gap-2.5 text-xs text-gray-600 font-medium">
+                <div className="w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-emerald-600 stroke-[3px]" />
+                </div>
+                <span className="line-clamp-1">{feat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-7 pt-0 z-10">
+        <button 
+          onClick={() => onOpenBooking(fac.title)}
+          disabled={isBusy}
+          className={`w-full py-4 px-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 group/btn ${
+            isBusy 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              : fac.highlight 
+                ? 'bg-primary text-white shadow-xl shadow-primary/25 hover:bg-blue-800 hover:shadow-primary/40' 
+                : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 hover:border-gray-300'
+          }`}
+        >
+          <span>{isBusy ? 'Sudah Dipesan Hari Ini' : 'Booking Sekarang'}</span>
+          {!isBusy && (
+            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
+          )}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
 
 interface FacilitiesGridProps {
   onOpenBooking: (pkg?: string) => void;
@@ -174,104 +340,16 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
 
         {/* Facilities Grid Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {displayFacilities.map((fac, index) => {
-            const IconComponent = ICON_MAP[fac.iconName] || Users2;
-            const availability = checkCurrentAvailability(bookings, config, fac.title);
-            const isBusy = availability.isBusy;
-
-            return (
-              <motion.div
-                key={fac.id || `fac-${index}`}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className={`rounded-[2.5rem] border transition-all duration-300 overflow-hidden relative group flex flex-col justify-between ${
-                  fac.highlight 
-                    ? 'bg-white border-primary shadow-xl shadow-primary/10' 
-                    : 'bg-gray-50/70 border-gray-100 hover:border-gray-200'
-                }`}
-              >
-                {/* Image Section */}
-                <div>
-                  <div className="h-48 relative overflow-hidden">
-                    {fac.imageUrl ? (
-                      <img 
-                        src={fac.imageUrl} 
-                        alt={fac.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                      />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center ${fac.highlight ? 'bg-primary/5' : 'bg-gray-200/50'}`}>
-                        <IconComponent className={`w-12 h-12 ${fac.highlight ? 'text-primary' : 'text-gray-300'}`} />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-6">
-                      <div className="flex flex-col text-left">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${fac.highlight ? 'bg-primary text-white shadow-lg' : 'bg-white/20 backdrop-blur-md text-white'}`}>
-                          <IconComponent className="w-5 h-5" />
-                        </div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">{fac.title}</h3>
-                      </div>
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-md ${isBusy ? 'bg-red-500/90 text-white shadow-lg' : 'bg-white text-emerald-600 shadow-md'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isBusy ? 'bg-white' : 'bg-emerald-500 animate-pulse'}`} />
-                      {isBusy ? 'Terpakai' : 'Tersedia'}
-                    </div>
-                  </div>
-                  
-                  <div className="p-7 text-left">
-                    <div className="flex items-center gap-2 mb-4">
-                      {fac.capacity && (
-                        <div className="px-2.5 py-1 bg-gray-100 text-[10px] font-black text-gray-600 rounded-lg uppercase tracking-tight">
-                          Kapasitas: {fac.capacity}
-                        </div>
-                      )}
-                      {fac.highlight && (
-                        <div className="px-2.5 py-1 bg-primary text-[10px] font-black text-white rounded-lg uppercase tracking-tight">
-                          Terfavorit
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-baseline gap-1 mb-6">
-                      <span className="text-3xl font-black text-primary">{fac.price}</span>
-                      <span className="text-xs text-gray-400 font-bold tracking-tight">/ {fac.duration}</span>
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      {(fac.features || []).slice(0, 4).map((feat: string, i: number) => (
-                        <div key={`${feat}-${i}`} className="flex items-center gap-2.5 text-xs text-gray-600 font-medium">
-                          <div className="w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                            <Check className="w-3 h-3 text-emerald-600 stroke-[3px]" />
-                          </div>
-                          <span className="line-clamp-1">{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-7 pt-0">
-                  <button 
-                    onClick={() => onOpenBooking(fac.title)}
-                    disabled={isBusy}
-                    className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
-                      isBusy 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : fac.highlight 
-                          ? 'bg-primary text-white shadow-xl shadow-primary/25 hover:bg-blue-800' 
-                          : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50'
-                    }`}
-                  >
-                    {isBusy ? 'Sudah Dipesan Hari Ini' : 'Booking Sekarang'}
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
+          {displayFacilities.map((fac, index) => (
+            <FacilityCard
+              key={fac.id || `fac-${index}`}
+              fac={fac}
+              index={index}
+              bookings={bookings}
+              config={config}
+              onOpenBooking={onOpenBooking}
+            />
+          ))}
         </div>
 
         {/* INTEGRATED COST CALCULATOR DRAWER */}
