@@ -25,7 +25,9 @@ import {
   Upload,
   Loader2,
   Eye,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
 import { checkCurrentAvailability, updateBookingStatus } from '../lib/db';
 import { useAppStore } from '../store/useAppStore';
@@ -540,230 +542,358 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
               </div>
             )}
 
-            {/* Tracked Booking Card */}
-            {trackedBooking && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 text-left"
-              >
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-gray-400">ID Registrasi</span>
-                    <p className="font-mono text-sm font-black text-gray-900">
-                      #{trackedBooking.id?.substring(0, 8).toUpperCase()}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      trackedBooking.status === 'approved' 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : trackedBooking.status === 'rejected' 
-                          ? 'bg-rose-100 text-rose-800' 
-                          : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {trackedBooking.status === 'approved' ? 'DISETUJUI' : trackedBooking.status === 'rejected' ? 'DITOLAK' : 'MENUNGGU VERIFIKASI'}
-                    </span>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      trackedBooking.paymentStatus === 'paid'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : trackedBooking.paymentStatus === 'verifying'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                          : 'bg-amber-100 text-amber-800 border border-amber-200'
-                    }`}>
-                      {trackedBooking.paymentStatus === 'paid'
-                        ? 'LUNAS (SAH) ✅'
-                        : trackedBooking.paymentStatus === 'verifying'
-                          ? 'BUKTI SEDANG DIVERIFIKASI ⏳'
-                          : 'BELUM BAYAR ⚠️'}
-                    </span>
-                  </div>
-                </div>
+            {/* Tracked Booking Card - Digital Civic Boarding Pass */}
+            {trackedBooking && (() => {
+              const isApproved = trackedBooking.status === 'approved';
+              const isRejected = trackedBooking.status === 'rejected';
+              const isPaid = trackedBooking.paymentStatus === 'paid';
+              const isVerifying = trackedBooking.paymentStatus === 'verifying';
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Pemohon</span>
-                    <p className="font-bold text-gray-900">{trackedBooking.customerName}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Tanggal Acara</span>
-                    <p className="font-bold text-gray-900">{formatDateLong(trackedBooking.startDate)}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Keperluan</span>
-                    <p className="font-medium text-gray-700">{trackedBooking.purpose || '-'}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 text-[10px] uppercase font-bold block">Total Biaya</span>
-                    <p className="font-bold text-primary">Rp {Number(trackedBooking.amount || 0).toLocaleString('id-ID')}</p>
-                  </div>
-                </div>
+              // 4-Stage Stepper calculation
+              const steps = [
+                {
+                  id: 1,
+                  label: 'Permohonan Masuk',
+                  desc: 'Formulir tercatat di sistem',
+                  status: 'completed'
+                },
+                {
+                  id: 2,
+                  label: 'Verifikasi Pengurus',
+                  desc: isApproved ? 'Disetujui RT 02' : isRejected ? 'Permohonan Ditolak' : 'Pemeriksaan berkas',
+                  status: isApproved ? 'completed' : isRejected ? 'rejected' : 'current'
+                },
+                {
+                  id: 3,
+                  label: 'Setoran DP (30%)',
+                  desc: isPaid ? 'Pembayaran Sah' : isVerifying ? 'Verifikasi Struk' : isApproved ? 'Menunggu Transfer' : 'Menunggu Persetujuan',
+                  status: isPaid ? 'completed' : isVerifying ? 'current' : isApproved ? 'pending' : 'upcoming'
+                },
+                {
+                  id: 4,
+                  label: 'Serah Terima Gedung',
+                  desc: isApproved && isPaid ? 'Siap Digunakan' : 'Menunggu Pelunasan',
+                  status: isApproved && isPaid ? 'completed' : 'upcoming'
+                }
+              ];
 
-                {/* Payment Instructions for Approved & Unpaid Bookings */}
-                {trackedBooking.status === 'approved' && trackedBooking.paymentStatus !== 'paid' && (
-                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3 mt-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-amber-700" />
-                        <span className="text-xs font-black text-amber-950 uppercase tracking-wide">
-                          Instruksi Setoran Uang Muka (DP 30%)
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-3xl bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 overflow-hidden text-left"
+                >
+                  {/* TICKET TOP HEADER: CIVIC AUTHENTICITY BADGE */}
+                  <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-5 sm:p-7 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 shadow-inner backdrop-blur-xs">
+                          <Building2 className="w-6 h-6 text-blue-300" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-300">
+                              Pas Reservasi Resmi
+                            </span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          </div>
+                          <h4 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                            Gedung Serbaguna Huntap Tondo 2
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            Kompleks Huntap II Tondo, Kota Palu • RT 02 / RW 01
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-2.5 backdrop-blur-sm self-start sm:self-auto">
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-slate-300 block">KODE REGISTRASI</span>
+                        <span className="font-mono text-base sm:text-lg font-black text-amber-300 tracking-wider">
+                          #{trackedBooking.id?.substring(0, 8).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-950">
-                        Maksimal H+3 Disetujui
+                    </div>
+                  </div>
+
+                  {/* INTERACTIVE 4-STAGE STEPPER TIMELINE */}
+                  <div className="bg-slate-50/80 px-5 sm:px-7 py-5 border-b border-slate-100">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3.5 flex items-center justify-between">
+                      <span>Progres Alur Permohonan</span>
+                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                        isApproved ? 'bg-emerald-100 text-emerald-800' : isRejected ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {isApproved ? 'STATUS: DISETUJUI' : isRejected ? 'STATUS: DITOLAK' : 'STATUS: MENUNGGU VERIFIKASI'}
                       </span>
                     </div>
 
-                    <div className="bg-white p-3.5 rounded-xl border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Nominal DP Minimal (30%)</span>
-                        <p className="text-base font-black text-amber-700">
-                          Rp {Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}
-                        </p>
-                      </div>
-                      <div className="text-left sm:text-right">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Sisa Pelunasan (H-7 Acara)</span>
-                        <p className="text-xs font-bold text-slate-600">
-                          Rp {Math.round(Number(trackedBooking.amount || 0) * 0.7).toLocaleString('id-ID')}
-                        </p>
-                      </div>
-                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
+                      {steps.map((st, idx) => {
+                        const isDone = st.status === 'completed';
+                        const isCur = st.status === 'current';
+                        const isRej = st.status === 'rejected';
 
-                    {/* Official Bank Account Details */}
-                    <div className="bg-white p-3.5 rounded-xl border border-amber-100 flex items-center justify-between gap-3 shadow-xs">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-primary" />
-                          <span className="text-xs font-black text-slate-800">Bank Syariah Indonesia (BSI)</span>
-                        </div>
-                        <p className="font-mono text-sm font-black text-slate-900 tracking-wider mt-0.5">
-                          7188 2938 19
-                        </p>
-                        <span className="text-[10px] text-slate-500 font-medium">a.n. Kas Gedung Serbaguna Huntap Tondo 2</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText('7188293819');
-                          setCopiedAccount(true);
-                          setTimeout(() => setCopiedAccount(false), 2000);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
-                      >
-                        {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedAccount ? 'Tersalin' : 'Salin Rekening'}</span>
-                      </button>
-                    </div>
-
-                    {/* Existing Uploaded Proof Badge */}
-                    {trackedBooking.paymentProofUrl && (
-                      <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />
+                        return (
+                          <div 
+                            key={st.id} 
+                            className={`p-3 rounded-2xl border transition-all ${
+                              isDone 
+                                ? 'bg-white border-emerald-200 shadow-xs' 
+                                : isCur 
+                                  ? 'bg-blue-50/70 border-primary/30 ring-2 ring-primary/10 shadow-xs' 
+                                  : isRej 
+                                    ? 'bg-rose-50/70 border-rose-200' 
+                                    : 'bg-white/60 border-slate-200/60 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                isDone 
+                                  ? 'bg-emerald-600 text-white' 
+                                  : isCur 
+                                    ? 'bg-primary text-white animate-pulse' 
+                                    : isRej 
+                                      ? 'bg-rose-600 text-white' 
+                                      : 'bg-slate-200 text-slate-600'
+                              }`}>
+                                {isDone ? '✓' : isRej ? '✕' : st.id}
+                              </span>
+                              <span className="text-[11px] font-black text-slate-900 leading-tight truncate">
+                                {st.label}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 font-medium leading-tight pl-7 truncate">
+                              {st.desc}
+                            </p>
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* PERFORATED DIVIDER NOTCHES */}
+                  <div className="relative py-1 bg-white">
+                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border-r border-slate-200 shadow-inner" />
+                    <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border-l border-slate-200 shadow-inner" />
+                    <div className="border-b-2 border-dashed border-slate-200 mx-7" />
+                  </div>
+
+                  {/* MAIN TICKET BODY: DATA SPECIFICATIONS */}
+                  <div className="p-5 sm:p-7 space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Pemohon</span>
+                        <p className="font-black text-slate-900 text-sm mt-0.5">{trackedBooking.customerName}</p>
+                        <span className="text-[10px] text-slate-500 font-mono">{trackedBooking.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Tanggal Acara</span>
+                        <p className="font-black text-slate-900 text-sm mt-0.5">{formatDateLong(trackedBooking.startDate)}</p>
+                        <span className="text-[10px] text-primary font-bold">{getDaysRemainingText(trackedBooking.startDate).text}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Keperluan Acara</span>
+                        <p className="font-bold text-slate-800 text-sm mt-0.5">{trackedBooking.purpose || 'Kegiatan Warga'}</p>
+                        <span className="text-[10px] text-slate-400">{trackedBooking.organization || 'Penyewa Perorangan'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Total Nilai Sewa</span>
+                        <p className="font-black text-primary text-base mt-0.5">
+                          Rp {Number(trackedBooking.amount || 0).toLocaleString('id-ID')}
+                        </p>
+                        <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 ${
+                          isPaid ? 'bg-emerald-100 text-emerald-800' : isVerifying ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {isPaid ? 'Lunas (Sah) ✅' : isVerifying ? 'Verifikasi Bukti ⏳' : 'Belum Lunas'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* PAYMENT STUB FOR APPROVED & UNPAID BOOKINGS */}
+                    {isApproved && !isPaid && (
+                      <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-amber-200/60">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                              <CreditCard className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h5 className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                                Instruksi Setoran Uang Muka (DP 30%)
+                              </h5>
+                              <p className="text-[10px] text-amber-700">
+                                Kunci kepastian jadwal sewa gedung Anda maksimal 3 hari setelah disetujui.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-950 self-start sm:self-auto">
+                            Tenggat: H+3 Disetujui
+                          </span>
+                        </div>
+
+                        {/* Nominal Breakdown Split */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-xs">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Nominal DP Wajib (30%)</span>
+                            <p className="text-lg font-black text-amber-700 leading-tight mt-0.5">
+                              Rp {Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}
+                            </p>
+                            <span className="text-[10px] text-slate-400">Diperlukan untuk mengunci tanggal acara</span>
+                          </div>
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-xs">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Sisa Pelunasan (70%)</span>
+                            <p className="text-sm font-bold text-slate-700 leading-tight mt-0.5">
+                              Rp {Math.round(Number(trackedBooking.amount || 0) * 0.7).toLocaleString('id-ID')}
+                            </p>
+                            <span className="text-[10px] text-slate-400">Dilunasi paling lambat H-7 pelaksanaan acara</span>
+                          </div>
+                        </div>
+
+                        {/* Official BSI Account */}
+                        <div className="bg-white p-4 rounded-xl border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                           <div>
-                            <span className="text-[11px] font-black text-blue-900 block leading-tight">Bukti Transfer Berhasil Diunggah</span>
-                            <span className="text-[10px] text-blue-600 font-medium">Sedang menunggu konfirmasi bendahara pengurus</span>
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="w-4 h-4 text-primary" />
+                              <span className="text-xs font-black text-slate-900">Bank Syariah Indonesia (BSI)</span>
+                            </div>
+                            <p className="font-mono text-base font-black text-slate-900 tracking-wider mt-0.5">
+                              7188 2938 19
+                            </p>
+                            <span className="text-[10px] text-slate-500 font-medium">a.n. Kas Gedung Serbaguna Huntap Tondo 2</span>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText('7188293819');
+                              setCopiedAccount(true);
+                              setTimeout(() => setCopiedAccount(false), 2000);
+                            }}
+                            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer active:scale-95"
+                          >
+                            {copiedAccount ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            <span>{copiedAccount ? 'Nomor Tersalin' : 'Salin Nomor Rekening'}</span>
+                          </button>
                         </div>
+
+                        {/* Uploaded Proof Preview (If exists) */}
+                        {trackedBooking.paymentProofUrl && (
+                          <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <span className="text-[11px] font-black text-blue-900 block leading-tight">Bukti Transfer Telah Diunggah</span>
+                                <span className="text-[10px] text-blue-600 font-medium">Bendahara pengurus sedang melakukan verifikasi mutasi bank</span>
+                              </div>
+                            </div>
+                            <a
+                              href={trackedBooking.paymentProofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Lihat Struk</span>
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Upload Action */}
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                            {trackedBooking.paymentProofUrl ? 'Unggah Ulang Bukti Transfer Baru' : 'Unggah Struk / Bukti Transfer Sekarang'}
+                          </span>
+                          <label className={`w-full py-3.5 px-4 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-white hover:bg-amber-50/50 flex items-center justify-center gap-2 text-xs font-bold text-amber-900 cursor-pointer transition-all shadow-xs ${isUploadingProof ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {isUploadingProof ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                                <span>Mengunggah & Mengirim Alert ke Pengurus...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4 text-amber-600" />
+                                <span>Pilih Foto Bukti Transfer (JPG/PNG)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleUploadProof}
+                              disabled={isUploadingProof}
+                              className="sr-only"
+                            />
+                          </label>
+                          {uploadSuccessMsg && (
+                            <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>{uploadSuccessMsg}</span>
+                            </p>
+                          )}
+                          {uploadErrorMsg && (
+                            <p className="text-xs text-rose-700 font-bold bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                              <span>{uploadErrorMsg}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Direct WhatsApp Confirmation Button */}
                         <a
-                          href={trackedBooking.paymentProofUrl}
+                          href={`https://wa.me/${
+                            config?.contactPhone 
+                              ? (config.contactPhone.startsWith('0') ? '62' + config.contactPhone.slice(1) : config.contactPhone.replace(/\D/g, '')) 
+                              : '6285961194622'
+                          }?text=${encodeURIComponent(
+                            `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n${trackedBooking.paymentProofUrl ? `• Tautan Bukti: ${trackedBooking.paymentProofUrl}\n` : ''}\nMohon diverifikasi. Terima kasih.`
+                          )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                          className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Lihat Struk</span>
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Konfirmasi Langsung via WhatsApp Pengurus</span>
                         </a>
                       </div>
                     )}
 
-                    {/* Direct Upload Transfer Proof Input */}
-                    <div className="space-y-2 pt-1">
-                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
-                        {trackedBooking.paymentProofUrl ? 'Unggah Ulang Bukti Transfer Baru' : 'Unggah Struk / Bukti Transfer Sekarang'}
-                      </span>
-                      <label className={`w-full py-3 px-4 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-white hover:bg-amber-50/50 flex items-center justify-center gap-2 text-xs font-bold text-amber-900 cursor-pointer transition-all shadow-xs ${isUploadingProof ? 'opacity-50 pointer-events-none' : ''}`}>
-                        {isUploadingProof ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                            <span>Mengunggah & Mengirim Alert ke Pengurus...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-4 h-4 text-amber-600" />
-                            <span>Pilih Foto Bukti Transfer (JPG/PNG)</span>
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleUploadProof}
-                          disabled={isUploadingProof}
-                          className="sr-only"
-                        />
-                      </label>
-                      {uploadSuccessMsg && (
-                        <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>{uploadSuccessMsg}</span>
-                        </p>
-                      )}
-                      {uploadErrorMsg && (
-                        <p className="text-xs text-rose-700 font-bold bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                          <span>{uploadErrorMsg}</span>
-                        </p>
-                      )}
-                    </div>
+                    {/* TICKET FOOTER: OFFICIAL VERIFICATION & PDF DOCUMENTATION */}
+                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                        <span className="text-[10px] font-medium leading-tight">
+                          Dokumen sah terbitan resmi Pengurus RT 02 Huntap Tondo 2. Dapat diverifikasi secara terbuka.
+                        </span>
+                      </div>
 
-                    {/* Direct WhatsApp Transfer Confirmation Fallback */}
-                    <div className="pt-1">
-                      <a
-                        href={`https://wa.me/${
-                          config?.contactPhone 
-                            ? (config.contactPhone.startsWith('0') ? '62' + config.contactPhone.slice(1) : config.contactPhone.replace(/\D/g, '')) 
-                            : '6285961194622'
-                        }?text=${encodeURIComponent(
-                          `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n${trackedBooking.paymentProofUrl ? `• Tautan Bukti: ${trackedBooking.paymentProofUrl}\n` : ''}\nMohon diverifikasi. Terima kasih.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Konfirmasi via WhatsApp Pengurus</span>
-                      </a>
+                      <div className="flex flex-wrap items-center gap-2 justify-end">
+                        {isApproved && (
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewContract(trackedBooking)}
+                            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-primary text-slate-800 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-primary" />
+                            <span>Surat Perjanjian Sewa</span>
+                          </button>
+                        )}
+                        {isPaid && (
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewReceipt(trackedBooking)}
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-white" />
+                            <span>Kuitansi Resmi (Lunas)</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {/* Download PDF Buttons */}
-                <div className="pt-3 border-t border-slate-200 flex flex-wrap gap-2 justify-end">
-                  {trackedBooking.status === 'approved' && (
-                    <button
-                      type="button"
-                      onClick={() => handlePreviewContract(trackedBooking)}
-                      className="px-4 py-2 rounded-xl bg-white border border-gray-200 hover:border-primary text-gray-800 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-primary" />
-                      <span>Surat Perjanjian Sewa</span>
-                    </button>
-                  )}
-                  {trackedBooking.paymentStatus === 'paid' && (
-                    <button
-                      type="button"
-                      onClick={() => handlePreviewReceipt(trackedBooking)}
-                      className="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                    >
-                      <Receipt className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Kuitansi Resmi (Lunas)</span>
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              );
+            })()}
           </motion.div>
         )}
       </div>

@@ -25,7 +25,14 @@ import {
   ExternalLink,
   Send,
   MessageSquare,
-  X
+  X,
+  ClipboardCheck,
+  Volume2,
+  Ban,
+  HeartHandshake,
+  CheckSquare,
+  Square,
+  Building2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -42,6 +49,20 @@ export default function RulesProcedures() {
   const [templatePurpose, setTemplatePurpose] = useState('');
   const [templatePackage, setTemplatePackage] = useState('Paket Pernikahan Lengkap');
   const [templateCopied, setTemplateCopied] = useState(false);
+
+  // Interactive Readiness Checklist State
+  const [checkedItems, setCheckedItems] = useState<number[]>([0, 1]);
+  const toggleCheck = (idx: number) => {
+    setCheckedItems(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
+  };
+
+  const checklistTasks = [
+    { text: 'Memastikan ketersediaan tanggal acara di kalender reservasi online', tag: 'Administrasi' },
+    { text: 'Menyiapkan foto KTP asli pemohon untuk verifikasi legalitas pengurus', tag: 'Identitas' },
+    { text: 'Menyetorkan Uang Muka (DP 30%) maksimal 3 hari setelah disetujui', tag: 'Keuangan' },
+    { text: 'Koordinasi teknis penataan panggung, batas daya listrik, & area parkir (H-2)', tag: 'Operasional' },
+    { text: 'Pelunasan sisa biaya dan serah terima kunci serta inventaris aula', tag: 'Hari-H' }
+  ];
 
   const getPublicWAMessage = () => {
     const name = templateName.trim() || '[Nama Anda]';
@@ -256,76 +277,192 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
             </div>
           </div>
 
-          {/* Header Block */}
-          <header className="mb-12 text-center md:text-left print:hidden">
-            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm print:hidden">
-              <Scale className="w-4 h-4 text-indigo-500" />
-              Surat Keputusan Pengurus & SOP Resmi
+          {/* Header Block - Editorial Civic Handbook Style */}
+          <header className="mb-10 text-center md:text-left print:hidden">
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-[0.2em] mb-4 shadow-xs">
+              <Scale className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Buku Panduan Warga • Edisi Resmi RT 02 / RW 01</span>
             </div>
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
-                <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-                  Aturan & Prosedur <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-primary">Gedung Serbaguna</span>
+                <h1 className="text-3xl md:text-5xl font-black text-slate-950 tracking-tight leading-tight">
+                  Tata Tertib & SOP <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-primary to-blue-700 font-serif italic">Gedung Warga</span>
                 </h1>
-                <p className="text-gray-500 mt-4 text-base md:text-lg max-w-2xl leading-relaxed">
-                  Panduan lengkap tata tertib, hak, tanggung jawab, dan kewajiban penyewa demi menjaga kelestarian fasilitas publik Huntap Tondo 2.
+                <p className="text-slate-600 mt-3 text-sm md:text-base max-w-2xl leading-relaxed font-normal">
+                  Panduan hak, etika bersama, dan tanggung jawab penyewa demi menjaga kelestarian serta kenyamanan fasilitas umum Huntap Tondo 2.
                 </p>
               </div>
               
-              {/* Action Buttons (Hidden in Print) */}
-              <button 
-                onClick={handlePrint}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-gray-700 hover:text-primary rounded-2xl hover:border-primary/20 hover:shadow-md active:scale-95 transition-all text-xs font-bold shrink-0 self-center md:self-end print:hidden shadow-sm"
-              >
-                <Printer className="w-4 h-4 text-gray-400 group-hover:text-primary" />
-                Cetak Aturan Resmi
-              </button>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 self-center md:self-end">
+                <button 
+                  onClick={copyRulesToClipboard}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-3 bg-white border border-slate-200 text-slate-700 hover:text-primary rounded-2xl hover:border-primary/30 active:scale-95 transition-all text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-400" />}
+                  <span>{copied ? 'Tersalin!' : 'Salin Aturan'}</span>
+                </button>
+                <button 
+                  onClick={handlePrint}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary text-white hover:bg-blue-800 rounded-2xl shadow-md shadow-primary/20 active:scale-95 transition-all text-xs font-black shrink-0 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak SOP Resmi</span>
+                </button>
+              </div>
             </div>
           </header>
 
+          {/* 4 CORE CIVIC PILLARS ("EMPAT PILAR ETIKA GEDUNG") */}
+          <section className="mb-10 print:hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <Ban className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Bebas Asap Rokok</h4>
+                  <p className="text-[10px] text-slate-500 font-medium leading-normal mt-0.5">
+                    Ruang aula steril dari rokok & vape demi kesehatan lansia & anak-anak.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Volume2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Batas 23.00 WITA</h4>
+                  <p className="text-[10px] text-slate-500 font-medium leading-normal mt-0.5">
+                    Aktivitas musik & sound keras wajib selesai demi ketenangan lingkungan.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Kebersihan Bersama</h4>
+                  <p className="text-[10px] text-slate-500 font-medium leading-normal mt-0.5">
+                    Sampah katering & dekorasi dikemas rapi dan dipindahkan ke TPS luar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-primary flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 leading-tight">Keutuhan Fasilitas</h4>
+                  <p className="text-[10px] text-slate-500 font-medium leading-normal mt-0.5">
+                    Inventaris sound, AC, panggung, & kursi dijaga utuh sebagai aset warga.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Visual Step Timeline Step-By-Step (Hidden in Print) */}
-          <section className="mb-14 print:hidden">
-            <div className="bg-gradient-to-r from-gray-900 to-indigo-950 rounded-[2.5rem] p-8 md:p-10 text-white relative overflow-hidden shadow-xl">
-              <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none -translate-y-1/3 translate-x-1/3" />
+          <section className="mb-10 print:hidden">
+            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 rounded-3xl p-6 sm:p-9 text-white relative overflow-hidden shadow-xl">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-black uppercase text-emerald-400 tracking-widest">Alur Pendaftaran Praktis</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">Alur Pendaftaran Transparan</span>
                 </div>
-                <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-4 text-white">Bagaimana Alur Pemesanan Gedung?</h2>
-                <p className="text-gray-300 text-sm max-w-2xl font-medium leading-relaxed mb-10">
-                  Berikut adalah tahapan transparan mulai dari mendaftar online hingga hari pelaksanaan kegiatan Anda di gedung serbaguna.
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight mb-2 text-white">Tahapan Pemesanan & Serah Terima Gedung</h2>
+                <p className="text-slate-300 text-xs sm:text-sm max-w-2xl font-medium leading-relaxed mb-8">
+                  Proses mudah dan transparan dari pengecekan tanggal secara mandiri hingga kunci aula siap diserahkan kepada Anda.
                 </p>
 
                 {/* The Timeline Steps Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
                   {steps.map((step, idx) => {
                     const IconComponent = step.icon;
                     return (
-                      <div key={idx} className="relative flex flex-col group">
-                        {/* Line connector between steps (Desktop) */}
-                        {idx < steps.length - 1 && (
-                          <div className="hidden md:block absolute top-7 left-14 right-[-1.5rem] h-[2px] bg-gradient-to-r from-indigo-500/30 to-transparent z-0" />
-                        )}
-                        
-                        <div className="flex items-start md:flex-col gap-4 relative z-10">
-                          {/* Number & Icon Ball */}
-                          <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-300 ${step.color}`}>
-                            <IconComponent className="w-6 h-6 stroke-[2]" />
+                      <div key={idx} className="relative flex flex-col group p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+                        <div className="flex items-center gap-3 mb-2.5">
+                          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${step.color}`}>
+                            <IconComponent className="w-5 h-5 stroke-[2]" />
                           </div>
-
                           <div>
-                            {/* Step Indicator */}
-                            <span className="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">LANGKAH {step.num}</span>
-                            <h3 className="text-sm md:text-base font-black text-white tracking-tight mb-1">{step.title}</h3>
-                            <p className="text-xs text-gray-400 font-medium leading-relaxed">{step.desc}</p>
+                            <span className="block text-[9px] font-black text-indigo-300 uppercase tracking-widest">LANGKAH {step.num}</span>
+                            <h3 className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight">{step.title}</h3>
                           </div>
                         </div>
+                        <p className="text-[11px] text-slate-300 font-normal leading-relaxed">{step.desc}</p>
                       </div>
                     );
                   })}
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* INTERACTIVE READINESS CHECKLIST FOR CITIZENS */}
+          <section className="mb-10 print:hidden bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <ClipboardCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    Checklist Mandiri Persiapan Sewa
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pastikan seluruh poin administratif telah terpenuhi sebelum pelaksanaan hari-H.
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress counter */}
+              <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/80 self-start sm:self-auto">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Kesiapan Dokumen</span>
+                <span className="text-xs font-black text-slate-900">
+                  {checkedItems.length} dari {checklistTasks.length} Lengkap ({Math.round((checkedItems.length / checklistTasks.length) * 100)}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Checklist Grid */}
+            <div className="space-y-2.5">
+              {checklistTasks.map((task, idx) => {
+                const isChecked = checkedItems.includes(idx);
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => toggleCheck(idx)}
+                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      isChecked 
+                        ? 'bg-emerald-50/50 border-emerald-200/80' 
+                        : 'bg-white hover:bg-slate-50 border-slate-200/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                        isChecked ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white'
+                      }`}>
+                        {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                      <span className={`text-xs sm:text-sm font-semibold transition-colors ${
+                        isChecked ? 'text-emerald-950 font-bold line-through opacity-80' : 'text-slate-800'
+                      }`}>
+                        {task.text}
+                      </span>
+                    </div>
+
+                    <span className="text-[9px] font-mono uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0 ml-2">
+                      {task.tag}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
