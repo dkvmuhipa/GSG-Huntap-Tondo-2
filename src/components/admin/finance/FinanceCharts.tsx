@@ -25,7 +25,7 @@ export default function FinanceCharts({ chartData, categoryData, COLORS }: Finan
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
+        className="lg:col-span-2 min-w-0 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
       >
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -43,8 +43,8 @@ export default function FinanceCharts({ chartData, categoryData, COLORS }: Finan
             </div>
           </div>
         </div>
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[250px] w-full min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis 
@@ -71,11 +71,11 @@ export default function FinanceCharts({ chartData, categoryData, COLORS }: Finan
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
+        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm min-w-0"
       >
         <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs mb-8">Alokasi Biaya Keluar</h3>
-        <div className="h-[200px] w-full relative">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[200px] w-full min-w-0 relative">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
             <PieChart>
               <Pie
                 data={categoryData.length > 0 ? categoryData : [{ name: 'EMPTY', value: 1 }]}

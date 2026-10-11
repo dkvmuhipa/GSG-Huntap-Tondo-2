@@ -335,21 +335,6 @@ export default function FinanceManager() {
     }
   }, [allTransactions]);
 
-  useEffect(() => {
-    if (config?.devFundRate) {
-      setNewRate((config.devFundRate * 100).toString());
-    }
-    if (config?.monthlyBudget) {
-      setNewBudget(config.monthlyBudget.toString());
-    }
-    if (config) {
-      setLocalFinanceName(config.reportFinanceName || '');
-      setLocalBendaharaName(config.reportBendaharaName || '');
-      setLocalFinanceSig(config.reportFinanceSignature || null);
-      setLocalBendaharaSig(config.reportBendaharaSignature || null);
-      setLocalReceiptSignatureMode(config.receiptSignatureMode || 'both');
-    }
-  }, [config]);
 
   // Sync totals using all transactions to prevent overwriting with partial/limited data
   useEffect(() => {
