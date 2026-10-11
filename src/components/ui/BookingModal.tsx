@@ -49,9 +49,10 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPackage?: string | null;
+  initialDate?: string | null;
 }
 
-export default function BookingModal({ isOpen, onClose, selectedPackage }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, selectedPackage, initialDate }: BookingModalProps) {
   const [step, setStep] = useState(1);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [copiedMsg, setCopiedMsg] = useState(false);
@@ -149,6 +150,14 @@ export default function BookingModal({ isOpen, onClose, selectedPackage }: Booki
       }));
     }
   }, [isOpen, selectedPackage, packages]);
+
+  useEffect(() => {
+    if (!isOpen || !initialDate) return;
+    setFormData(prev => ({
+      ...prev,
+      startDate: initialDate
+    }));
+  }, [isOpen, initialDate]);
 
   // Combine DB inventory and default inventory to ensure data is always present
   const availableInventory = React.useMemo(() => {

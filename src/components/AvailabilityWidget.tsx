@@ -27,7 +27,11 @@ import { buildContractDoc, buildReceiptDoc } from '../services/contractService';
 import PdfPreviewModal from './ui/PdfPreviewModal';
 import { useLocation } from 'react-router-dom';
 
-export default function AvailabilityWidget() {
+interface AvailabilityWidgetProps {
+  onOpenBooking?: (pkg?: string, date?: string) => void;
+}
+
+export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidgetProps) {
   const bookings = useAppStore(state => state.bookings);
   const bookingsLoaded = useAppStore(state => state.isBookingsLoaded);
   const config = useAppStore(state => state.config);
@@ -533,6 +537,10 @@ export default function AvailabilityWidget() {
       <CalendarModal 
         isOpen={isCalendarOpen} 
         onClose={() => setIsCalendarOpen(false)} 
+        onSelectDateToBook={(dateStr) => {
+          setIsCalendarOpen(false);
+          onOpenBooking?.(undefined, dateStr);
+        }}
       />
 
       {/* PDF Preview Modal */}

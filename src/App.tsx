@@ -40,9 +40,11 @@ const AuditTrailManager = React.lazy(() => import('./pages/admin/AuditTrailManag
 function MainLayout() {
   const [isBookingOpen, setIsBookingOpen] = React.useState(false);
   const [selectedPackage, setSelectedPackage] = React.useState<string | undefined>();
+  const [selectedDate, setSelectedDate] = React.useState<string | undefined>();
 
-  const openBooking = (pkg?: string) => {
+  const openBooking = (pkg?: string, date?: string) => {
     setSelectedPackage(pkg);
+    setSelectedDate(date);
     setIsBookingOpen(true);
   };
 
@@ -59,8 +61,12 @@ function MainLayout() {
       <BottomNavbar onOpenBooking={() => openBooking()} />
       <BookingModal 
         isOpen={isBookingOpen} 
-        onClose={() => setIsBookingOpen(false)} 
+        onClose={() => {
+          setIsBookingOpen(false);
+          setSelectedDate(undefined);
+        }} 
         selectedPackage={selectedPackage}
+        initialDate={selectedDate}
       />
       <PWAInstallButton />
     </div>
@@ -68,12 +74,12 @@ function MainLayout() {
 }
 
 function LandingPage() {
-  const { openBooking } = useOutletContext() as { openBooking: (pkg?: string) => void };
+  const { openBooking } = useOutletContext() as { openBooking: (pkg?: string, date?: string) => void };
 
   return (
     <main>
       <Hero onOpenBooking={() => openBooking()} />
-      <AvailabilityWidget />
+      <AvailabilityWidget onOpenBooking={openBooking} />
       <FacilitiesGrid onOpenBooking={(pkg) => openBooking(pkg)} />
       <TransparencyDashboard />
       <GallerySection />

@@ -20,9 +20,10 @@ import '../../calendar.css';
 interface CalendarModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSelectDateToBook?: (dateStr: string) => void;
 }
 
-export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
+export default function CalendarModal({ isOpen, onClose, onSelectDateToBook }: CalendarModalProps) {
   const bookingsFromStore = useAppStore(state => state.bookings);
   const bookingsLoaded = useAppStore(state => state.isBookingsLoaded);
 
@@ -197,14 +198,29 @@ export default function CalendarModal({ isOpen, onClose }: CalendarModalProps) {
                     <p className="text-xs text-slate-400 font-bold">Memeriksa jadwal...</p>
                   </div>
                 ) : activeDateBookings.length === 0 ? (
-                  <div className="py-10 text-center bg-emerald-50/60 rounded-3xl border border-emerald-100 p-6">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                  <div className="py-8 text-center bg-emerald-50/60 rounded-3xl border border-emerald-100 p-6 flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
                       <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <p className="text-emerald-950 font-black text-sm">Gedung Tersedia!</p>
-                    <p className="text-[11px] text-emerald-700/80 mt-1 leading-relaxed">
+                    <p className="text-[11px] text-emerald-700/80 mt-1 leading-relaxed max-w-xs">
                       Belum ada jadwal sewa terkonfirmasi pada tanggal ini. Siap untuk dipesan.
                     </p>
+                    {onSelectDateToBook && selectedDate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const year = selectedDate.getFullYear();
+                          const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                          const day = String(selectedDate.getDate()).padStart(2, '0');
+                          onSelectDateToBook(`${year}-${month}-${day}`);
+                        }}
+                        className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-800 text-white text-xs font-black shadow-md shadow-primary/20 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Booking Tanggal Ini Sekarang</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   activeDateBookings.map((booking) => (

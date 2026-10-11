@@ -68,12 +68,35 @@ export default function DashboardOverview() {
 
   const chartData = getChartData();
   
-  // Example trend calculation (simple version)
-  const currentWeekRevenue = transactions
-    .filter(t => t.type === 'income')
+  // Real Occupancy Rate for Current Month
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const currentMonthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+  const currentMonthBookings = bookings.filter(b => 
+    (b.status === 'approved' || b.status === 'completed') &&
+    b.startDate && b.startDate.startsWith(currentMonthPrefix)
+  );
+  const occupiedDaysThisMonth = new Set(currentMonthBookings.map(b => b.startDate)).size;
+  const occupancyRate = daysInMonth > 0 ? ((occupiedDaysThisMonth / daysInMonth) * 100).toFixed(1) : '0';
+
+  // Previous Month for MoM comparison
+  const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const prevMonthPrefix = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+  // Real Month-over-Month (MoM) Revenue Trend
+  const currentMonthRevenue = transactions
+    .filter(t => t.type === 'income' && t.date && t.date.startsWith(currentMonthPrefix))
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-  const previousWeekRevenue = 0; // Just as example
-  const revenueTrend = calculateTrend(currentWeekRevenue, previousWeekRevenue);
+
+  const prevMonthRevenue = transactions
+    .filter(t => t.type === 'income' && t.date && t.date.startsWith(prevMonthPrefix))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const momRevenueTrend = calculateTrend(currentMonthRevenue, prevMonthRevenue);
+  const isMomRevenuePositive = currentMonthRevenue >= prevMonthRevenue;
 
   const confirmedBookings = bookings.filter(b => b.status === 'approved' || b.status === 'completed').length;
   const pendingBookings = bookings.filter(b => b.status === 'pending').length;
@@ -87,20 +110,26 @@ export default function DashboardOverview() {
       isPositive: pendingBookings === 0 
     },
     { 
+      label: 'Rasio Okupansi Bulan Ini', 
+      value: `${occupancyRate}%`, 
+      icon: LayoutGrid, 
+      trend: `${occupiedDaysThisMonth} dari ${daysInMonth} Hari`, 
+      isPositive: occupiedDaysThisMonth > 0 
+    },
+    { 
       label: 'Saldo Kas', 
       value: (userRole === 'editor') ? '••••••' : (config?.opsFund || 'Rp 0'), 
       icon: Wallet, 
-      trend: '+0%', 
+      trend: currentMonthRevenue > 0 ? `+Rp ${(currentMonthRevenue / 1000).toLocaleString('id-ID')}k bln ini` : 'Bulan Ini', 
       isPositive: true,
       hidden: userRole === 'editor'
     },
-    { label: 'Admin / Warga', value: adminCount.toString(), icon: Users, trend: `Aktif`, isPositive: true },
     { 
       label: 'Dana Pembangunan', 
       value: (userRole === 'editor') ? '••••••' : (config?.devFund || 'Rp 0'), 
       icon: TrendingUp, 
-      trend: revenueTrend, 
-      isPositive: true,
+      trend: `${momRevenueTrend} MoM`, 
+      isPositive: isMomRevenuePositive,
       hidden: userRole === 'editor'
     },
   ];
