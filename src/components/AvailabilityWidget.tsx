@@ -96,8 +96,21 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
   // Listen for custom event triggered by navbar clicks (even if hash is unchanged)
   useEffect(() => {
-    const handleActivateTracking = () => {
+    const handleActivateTracking = (e: Event) => {
+      const customEvent = e as CustomEvent;
       setActiveTab('tracking');
+      if (customEvent.detail?.phone) {
+        const phoneStr = String(customEvent.detail.phone);
+        setPhoneToTrack(phoneStr);
+        const cleaned = phoneStr.replace(/\D/g, '');
+        const found = [...bookings]
+          .sort((a, b) => new Date(b.createdAt || b.startDate).getTime() - new Date(a.createdAt || a.startDate).getTime())
+          .find(b => (b.phone || '').replace(/\D/g, '') === cleaned);
+        if (found) {
+          setTrackedBooking(found);
+          setTrackingError('');
+        }
+      }
       const timer = setTimeout(() => {
         const el = document.getElementById('lacak');
         if (el) {
@@ -108,7 +121,7 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
     window.addEventListener('activate-tracking-tab', handleActivateTracking);
     return () => window.removeEventListener('activate-tracking-tab', handleActivateTracking);
-  }, []);
+  }, [bookings]);
 
   const handlePreviewContract = (booking: any) => {
     setPdfPreviewModal({

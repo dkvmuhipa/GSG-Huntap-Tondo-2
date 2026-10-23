@@ -27,12 +27,16 @@ import {
   Check,
   Store,
   CreditCard,
-  ShieldCheck
+  ShieldCheck, Download, Ticket, Search,
 } from 'lucide-react';
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas, { HallLayoutData, LayoutTemplate, StagePosition } from './HallLayoutCanvas';
 import { notifyAdminNewBooking } from '../../services/whatsappGatewayService';
+import { formatWaNumber } from '../ContactSection';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../../lib/qrcode';
 
 // Fallback Inventory items with standard pricing if Firestore behaves empty
 const DEFAULT_INVENTORY = [
@@ -59,6 +63,10 @@ export default function BookingModal({ isOpen, onClose, selectedPackage, initial
   const packages = useAppStore(state => state.facilities);
   const bookings = useAppStore(state => state.bookings);
   const dbInventory = useAppStore(state => state.inventory);
+  const config = useAppStore(state => state.config);
+  const [submittedBookingId, setSubmittedBookingId] = useState<string>('');
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const TERMS = [
     "Pembayaran DP minimal 30% dilakukan maksimal 3 hari setelah permohonan disetujui.",
@@ -382,10 +390,137 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
 
   const getWALink = () => {
     const text = encodeURIComponent(generateWAMessage());
-    return `https://wa.me/6281234567890?text=${text}`;
+    const waTarget = formatWaNumber(config?.contactPhone || '+62 812-3456-7890');
+    return `https://wa.me/${waTarget}?text=${text}`;
   };
 
   const copyWAMessage = () => {
+    navigator.clipboard.writeText(generateWAMessage());
+    setCopiedMsg(true);
+    setTimeout(() => setCopiedMsg(false), 2000);
+  };
+
+  const bookingRefCode = submittedBookingId
+    ? `GSG-${submittedBookingId.slice(-6).toUpperCase()}`
+    : `GSG-${(formData.phone || '0000').replace(/\D/g, '').slice(-4)}`;
+
+  const copyBookingCode = () => {
+    navigator.clipboard.writeText(bookingRefCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const getGoogleCalendarUrl = () => {
+    if (!formData.startDate) return '#';
+    const cleanDate = formData.startDate.replace(/-/g, '');
+    const startH = (formData.startTime || '08:00').replace(':', '') + '00';
+    const endH = (formData.endTime || '17:00').replace(':', '') + '00';
+    const title = encodeURIComponent(`[GSG Tondo 2] ${formData.purpose || formData.packageName}`);
+    const details = encodeURIComponent(
+      `Kode Pengajuan: #${bookingRefCode}\nPemohon: ${formData.customerName}\nPaket: ${formData.packageName}\nStatus: Menunggu Verifikasi Admin\n\nLokasi: Gedung Serbaguna Huntap Tondo 2, Kota Palu`
+    );
+    const location = encodeURIComponent(config?.contactAddress || 'Gedung Serbaguna Huntap Tondo 2, Kota Palu');
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${cleanDate}T${startH}/${cleanDate}T${endH}&details=${details}&location=${location}`;
+  };
+
+  const handleDownloadETicket = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const margin = 15;
+
+      doc.setFillColor(30, 64, 175);
+      doc.rect(0, 0, pageWidth, 42, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('BUKTI PENGAJUAN SEWA GEDUNG (E-TICKET)', margin, 18);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(226, 232, 240);
+      doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2 - KOTA PALU', margin, 25);
+      doc.setFontSize(8);
+      doc.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, margin, 33);
+
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(pageWidth - margin - 52, 10, 52, 22, 3, 3, 'F');
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('KODE REFERENSI', pageWidth - margin - 26, 16, { align: 'center' });
+      doc.setTextColor(30, 64, 175);
+      doc.setFontSize(11);
+      doc.text(`#${bookingRefCode}`, pageWidth - margin - 26, 26, { align: 'center' });
+
+      autoTable(doc, {
+        startY: 52,
+        margin: { left: margin, right: margin },
+        head: [['Informasi Permohonan Sewa', 'Detail Tercatat']],
+        body: [
+          ['Kode Pengajuan', `#${bookingRefCode}`],
+          ['Nama Pemohon', formData.customerName || '-'],
+          ['Kategori / Instansi', `${formData.organizerType} - ${formData.organizerName || formData.customerName}`],
+          ['Nomor WhatsApp (Pelacakan)', formData.phone || '-'],
+          ['Paket Fasilitas', formData.packageName || '-'],
+          ['Tujuan Kegiatan', formData.purpose || '-'],
+          ['Tanggal & Waktu Acara', `${formData.startDate} (${formData.startTime} - ${formData.endTime} WITA)`],
+          ['Estimasi Tamu & Denah', `${formData.guests || '-'} Orang | Denah ${layout.template.toUpperCase()} (${layout.chairQuantity} Kursi, ${layout.tableQuantity} Meja)`],
+          ['Status Saat Ini', 'PENDING (Menunggu Verifikasi & Pembayaran DP)'],
+          ['Total Estimasi Biaya', `Rp ${calculatedBills.grandTotal.toLocaleString('id-ID')}`],
+          ['Minimal Uang Muka (DP 30%)', `Rp ${Math.ceil(calculatedBills.grandTotal * 0.3).toLocaleString('id-ID')}`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 10 },
+        bodyStyles: { fontSize: 9.5, cellPadding: 3.5 },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 65, fillColor: [248, 250, 252] },
+          1: { cellWidth: 'auto' }
+        }
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY + 12;
+
+      if (submittedBookingId) {
+        const verifyUrl = getDocumentVerificationUrl(submittedBookingId, 'booking');
+        const qrDataUrl = await generateVerificationQRDataURL(verifyUrl);
+        doc.addImage(qrDataUrl, 'PNG', margin, finalY, 32, 32);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('Verifikasi Digital & Pelacakan Status:', margin + 37, finalY + 8);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(71, 85, 105);
+        doc.text(
+          '1. Scan QR Code di samping untuk memverifikasi keaslian pengajuan secara real-time.\n' +
+          '2. Anda juga dapat mengecek status & mengunggah bukti transfer melalui menu "Lacak Booking"\n' +
+          `   di website menggunakan Nomor WhatsApp (${formData.phone}).\n` +
+          `3. Konfirmasi WA Admin Resmi: ${config?.contactPhone || '+62 812-3456-7890'}`,
+          margin + 37,
+          finalY + 14
+        );
+      }
+
+      doc.save(`ETicket_${bookingRefCode}_${formData.customerName.replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {
+      console.error('Failed to generate E-Ticket PDF:', e);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleGoToTracker = () => {
+    const trackedPhone = formData.phone;
+    handleResetAndClose();
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('activate-tracking-tab', { detail: { phone: trackedPhone } }));
+    }, 120);
+  };
+
+  const deprecatedNoop = () => {
     navigator.clipboard.writeText(generateWAMessage());
     setCopiedMsg(true);
     setTimeout(() => setCopiedMsg(false), 2000);
@@ -422,7 +557,7 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
     }
 
     try {
-      await addBooking({
+      const createdId = await addBooking({
         ...formData,
         endDate: formData.startDate, // Single day event
         status: 'pending',
@@ -446,6 +581,7 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
         amount: calculatedBills.grandTotal
       });
 
+      setSubmittedBookingId(createdId || '');
       setIsSuccess(true);
     } catch (err: any) {
       setError('Gagal mengirimkan permohonan. Silakan coba lagi.');
@@ -481,6 +617,51 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">Permohonan Berhasil Dikirim!</h3>
+                  
+                  {/* Kode Referensi Booking Badge */}
+                  <div className="inline-flex items-center gap-2.5 bg-blue-50 border border-blue-200 px-4 py-2 rounded-2xl mb-4">
+                    <Ticket className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold text-slate-600">Kode Pengajuan:</span>
+                    <span className="text-sm font-black text-primary tracking-wider">#{bookingRefCode}</span>
+                    <button
+                      type="button"
+                      onClick={copyBookingCode}
+                      className="ml-1 p-1 rounded-lg bg-white hover:bg-blue-100 text-primary transition-colors border border-blue-100"
+                      title="Salin Kode Booking"
+                    >
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {/* Quick Actions: E-Ticket PDF, Google Calendar, Lacak Status */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5 text-left">
+                    <button
+                      type="button"
+                      onClick={handleDownloadETicket}
+                      disabled={isGeneratingPdf}
+                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-wider shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-60"
+                    >
+                      <Download className="w-4 h-4 shrink-0" />
+                      <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Unduh E-Ticket PDF'}</span>
+                    </button>
+                    <a
+                      href={getGoogleCalendarUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      <CalendarIcon className="w-4 h-4 shrink-0" />
+                      <span>Simpan Kalender</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleGoToTracker}
+                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      <Search className="w-4 h-4 shrink-0" />
+                      <span>Lacak Boarding Pass</span>
+                    </button>
+                  </div>
                   <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
                     Data Anda telah tercatat rapi di sistem kami. <strong className="text-slate-900">Sangat Direkomendasikan:</strong> Kirim salinan rincian pengajuan ini langsung ke WhatsApp Admin agar diverifikasi lebih cepat.
                   </p>

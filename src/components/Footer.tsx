@@ -1,6 +1,16 @@
 import { Building2, Mail, Phone, MapPin, Instagram, Facebook } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { formatWaNumber } from './ContactSection';
 
 export default function Footer() {
+  const config = useAppStore((state) => state.config);
+
+  const displayPhone = config?.contactPhone || '+62 822-9157-8809';
+  const waNumber = formatWaNumber(displayPhone);
+  const displayEmail = config?.contactEmail || 'officialhuntaptondo2@gmail.com';
+  const displayAddress = config?.contactAddress || 'Huntap Tondo 2, Tondo, Mantikulore, Kota Palu, Sulawesi Tengah 94119';
+  const mapsUrl = config?.contactMapsUrl || 'https://maps.app.goo.gl/Zrm7XZ8GyRvqHK9o8';
+
   return (
     <footer className="bg-gray-900 text-white pt-20 pb-32 md:pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,10 +26,10 @@ export default function Footer() {
               Dikelola secara profesional oleh komunitas Huntap Tondo 2 untuk mewujudkan ekosistem lingkungan yang mandiri dan berdaya saing tinggi.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+              <a href="#kontak" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors" aria-label="Instagram">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+              <a href="#kontak" className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors" aria-label="Facebook">
                 <Facebook className="w-5 h-5" />
               </a>
             </div>
@@ -28,31 +38,43 @@ export default function Footer() {
           <div>
             <h4 className="font-bold text-lg mb-6">Kontak Admin</h4>
             <ul className="space-y-4">
-              <li className="flex items-center gap-3 text-gray-400 group cursor-pointer hover:text-white transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-primary">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <span>+62 812-3456-7890</span>
+              <li>
+                <a
+                  href={`https://wa.me/${waNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 text-gray-400 group cursor-pointer hover:text-white transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-primary shrink-0">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <span className="truncate">{displayPhone}</span>
+                </a>
               </li>
-              <li className="flex items-center gap-3 text-gray-400 group cursor-pointer hover:text-white transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-primary">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <span>admin@gsgtondo2.com</span>
+              <li>
+                <a
+                  href={`mailto:${displayEmail}`}
+                  className="flex items-center gap-3 text-gray-400 group cursor-pointer hover:text-white transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-primary shrink-0">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <span className="truncate">{displayEmail}</span>
+                </a>
               </li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-bold text-lg mb-6">Lokasi</h4>
-            <li className="flex items-start gap-4 text-gray-400">
+            <div className="flex items-start gap-4 text-gray-400">
               <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center shrink-0">
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm">Huntap Tondo 2,Tondo, Mantikulore, Kota Palu, Sulawesi Tengah 94119</p>
+                <p className="text-sm">{displayAddress}</p>
                 <a 
-                  href="https://maps.app.goo.gl/Zrm7XZ8GyRvqHK9o8" 
+                  href={mapsUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-block mt-3 text-primary text-xs font-bold uppercase tracking-wider hover:underline"
@@ -60,7 +82,7 @@ export default function Footer() {
                   Buka Google Maps
                 </a>
               </div>
-            </li>
+            </div>
           </div>
         </div>
 

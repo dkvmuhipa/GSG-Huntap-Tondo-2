@@ -194,10 +194,10 @@ service cloud.firestore {
 
     // Feedback Pengguna
     match /feedback/{docId} {
-      allow list: if (resource.data.status == 'approved') || hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow list: if (resource.data.status == 'approved') || hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
       allow get: if true;
       allow create: if isValidFeedback(incoming()) && incoming().status == 'pending';
-      allow update: if isValidFeedback(incoming()) && hasAnyRole(['owner', 'admin', 'bendahara']);
+      allow update: if isValidFeedback(incoming()) && hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
       allow delete: if isSuperAdmin();
     }
 

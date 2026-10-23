@@ -1,35 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Phone, Mail, Clock, Navigation, ExternalLink, MessageSquare, Copy, Check, ChevronDown, Calendar, User, Sparkles } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Navigation, MessageSquare, Copy, Check, ChevronDown, Calendar, User, Sparkles } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+
+export const formatWaNumber = (rawPhone: string): string => {
+  const digits = String(rawPhone || '').replace(/\D/g, '');
+  if (!digits) return '6282291578809';
+  if (digits.startsWith('0')) return '62' + digits.slice(1);
+  if (digits.startsWith('8')) return '62' + digits;
+  return digits;
+};
 
 export default function ContactSection() {
-  const [activeTab, setActiveTab] = useState<'map' | 'template'>('template'); // Default to template so it's instantly visible!
+  const config = useAppStore((state) => state.config);
+  const facilities = useAppStore((state) => state.facilities);
+
+  const [activeTab, setActiveTab] = useState<'map' | 'template'>('template');
   const [copied, setCopied] = useState(false);
-  
+
+  const packageOptions = useMemo(() => {
+    if (Array.isArray(facilities) && facilities.length > 0) {
+      return facilities.map((f) => `${f.title} (${f.price || 'Tarif Standar'})`);
+    }
+    return [
+      'Paket Pernikahan Lengkap',
+      'Paket Acara Umum / Komersil',
+      'Paket Kegiatan Kemasyarakatan',
+      'Sewa Gedung Saja (Harian)'
+    ];
+  }, [facilities]);
+
   // Interactive template states
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [selectedPkg, setSelectedPkg] = useState('Paket Pernikahan Lengkap');
+  const [selectedPkg, setSelectedPkg] = useState(packageOptions[0]);
+
+  useEffect(() => {
+    if (packageOptions.length > 0 && !packageOptions.includes(selectedPkg)) {
+      setSelectedPkg(packageOptions[0]);
+    }
+  }, [packageOptions, selectedPkg]);
+
+  const displayPhone = config?.contactPhone || '+62 822-9157-8809';
+  const waNumber = formatWaNumber(displayPhone);
+  const displayEmail = config?.contactEmail || 'officialhuntaptondo2@gmail.com';
+  const displayHours = config?.contactHours || 'Setiap Hari, 08:00 - 22:00 WITA';
+  const displayAddress = config?.contactAddress || 'Komplek Huntap Tondo 2, Kel. Tondo, Kec. Mantikulore, Kota Palu';
+  const mapsUrl = config?.contactMapsUrl || 'https://maps.app.goo.gl/Zrm7XZ8GyRvqHK9o8';
 
   const contactInfo = [
     {
       icon: Phone,
-      label: 'WhatsApp Admin',
-      value: '+62 812-3456-7890',
-      href: 'https://wa.me/6281234567890'
+      label: 'WhatsApp Pengelola Resmi',
+      value: displayPhone,
+      href: `https://wa.me/${waNumber}`
     },
     {
       icon: Mail,
-      label: 'Email Layanan',
-      value: 'admin.gsg@tondo2.com',
-      href: 'mailto:admin.gsg@tondo2.com'
+      label: 'Email Layanan Resmi',
+      value: displayEmail,
+      href: `mailto:${displayEmail}`
     },
     {
       icon: Clock,
-      label: 'Jam Operasional',
-      value: 'Setiap Hari, 08:00 - 22:00 WITA',
-      href: '#'
+      label: 'Jam Operasional Layanan',
+      value: displayHours,
+      href: '#jadwal'
     }
   ];
 
@@ -60,7 +97,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
 
   const getWALink = () => {
     const text = encodeURIComponent(generatePublicMessage());
-    return `https://wa.me/6281234567890?text=${text}`;
+    return `https://wa.me/${waNumber}?text=${text}`;
   };
 
   return (
@@ -72,13 +109,13 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/10 mb-6">
               <MapPin className="w-4 h-4" />
-              Lokasi & Kontak
+              Lokasi & Kontak Resmi
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight mb-6">
               Hubungi Kami & <span className="text-primary italic">Sewa Gedung</span>
             </h2>
             <p className="text-gray-500 font-medium text-base md:text-lg leading-relaxed mb-8">
-              Gedung Serbaguna Huntap 2 Tondo siap melayani berbagai kebutuhan acara sosial, pernikahan, keagamaan, dan pertemuan umum Anda.
+              Gedung Serbaguna Huntap 2 Tondo siap melayani berbagai kebutuhan acara sosial, pernikahan, keagamaan, dan pertemuan umum warga.
             </p>
 
             <div className="grid gap-4 mb-8">
@@ -86,6 +123,8 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
                 <a 
                   key={idx}
                   href={info.href}
+                  target={info.href.startsWith('http') ? '_blank' : undefined}
+                  rel={info.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                   className="flex items-center gap-5 p-5 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all group"
                 >
                   <div className="w-12 h-12 bg-primary/5 text-primary rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
@@ -103,7 +142,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
               <div className="relative z-10">
                 <span className="text-primary text-[10px] font-black uppercase tracking-wider block mb-1">Butuh Bantuan Lain?</span>
-                <h4 className="text-lg md:text-xl font-black mb-2">Lihat Prosedur Lengkap</h4>
+                <h4 className="text-lg md:text-xl font-black mb-2">Lihat Buku Saku & Prosedur Lengkap</h4>
                 <p className="text-slate-400 text-xs md:text-sm font-medium mb-5">Pelajari syarat ketetapan, tata cara pembayaran, aturan kebersihan, dan unduh dokumen panduan sewa resmi.</p>
                 <a 
                   href="/rules" 
@@ -207,7 +246,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
 
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
-                        Pilihan Paket Sewa
+                        Pilihan Paket Sewa (Tersinkronisasi)
                       </label>
                       <div className="relative">
                         <select
@@ -215,10 +254,11 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
                           onChange={(e) => setSelectedPkg(e.target.value)}
                           className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl focus:border-primary focus:bg-white text-xs font-semibold transition-all outline-none text-slate-800 appearance-none cursor-pointer pr-10"
                         >
-                          <option value="Paket Pernikahan Lengkap">Paket Pernikahan Lengkap</option>
-                          <option value="Paket Acara Umum / Komersil">Paket Acara Umum / Komersil</option>
-                          <option value="Paket Kegiatan Kemasyarakatan">Paket Kegiatan Kemasyarakatan</option>
-                          <option value="Sewa Gedung Saja (Harian)">Sewa Gedung Saja (Harian)</option>
+                          {packageOptions.map((pkg, idx) => (
+                            <option key={idx} value={pkg}>
+                              {pkg}
+                            </option>
+                          ))}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       </div>
@@ -296,13 +336,14 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
                   <div className="absolute bottom-10 left-10 right-10 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-white shadow-2xl flex items-center justify-between z-10">
                     <div className="min-w-0 flex-1 pr-3">
                       <h5 className="font-black text-gray-900 text-xs">Alamat Lengkap</h5>
-                      <p className="text-[11px] text-gray-500 italic truncate">Komplek Perumahan Huntap 2, Tondo, Palu.</p>
+                      <p className="text-[11px] text-gray-500 italic truncate">{displayAddress}</p>
                     </div>
                     <a
-                      href="https://maps.google.com/?q=Huntap+Tondo+2+Palu" 
+                      href={mapsUrl} 
                       target="_blank" 
                       rel="noreferrer"
                       className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all shrink-0"
+                      title="Buka di Google Maps"
                     >
                       <Navigation className="w-5 h-5" />
                     </a>
@@ -320,4 +361,3 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta panduan
     </section>
   );
 }
-

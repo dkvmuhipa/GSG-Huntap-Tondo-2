@@ -28,6 +28,9 @@ import { DEFAULT_ANNOUNCEMENTS } from '../../components/AnnouncementTicker';
 import WhatsAppGatewaySettingsCard from '../../components/admin/settings/WhatsAppGatewaySettingsCard';
 import HeroSettingsCard from '../../components/admin/content/HeroSettingsCard';
 import FacilityEditModal from '../../components/admin/content/FacilityEditModal';
+import ContactAndGoalSettingsCard from '../../components/admin/content/ContactAndGoalSettingsCard';
+import GallerySettingsCard from '../../components/admin/content/GallerySettingsCard';
+import FeedbackModerationCard from '../../components/admin/content/FeedbackModerationCard';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -671,6 +674,23 @@ export default function ContentManager() {
             </table>
           </div>
         </div>
+
+        {/* Pengaturan Kontak Resmi & Target Pembangunan Gedung */}
+        <ContactAndGoalSettingsCard
+          config={config}
+          setConfig={setConfig}
+          canEditFinancials={canEditFinancials}
+        />
+
+        {/* Kelola Galeri Foto & Kategori */}
+        <GallerySettingsCard
+          config={config}
+          setConfig={setConfig}
+          onErrorAlert={(title, message) => setConfirmConfig({ isOpen: true, title, message, onConfirm: () => {}, type: 'danger', isAlert: true })}
+        />
+
+        {/* Moderasi Ulasan & Testimoni Warga (Wall of Love) */}
+        <FeedbackModerationCard />
 
         {/* WhatsApp Gateway Integration */}
         <div className="lg:col-span-2">

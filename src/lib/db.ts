@@ -12,7 +12,8 @@ import {
   getDoc,
   serverTimestamp,
   limit,
-  getDocs
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -92,7 +93,7 @@ export const upsertFacility = async (id: string | null, data: any) => {
     if (id) {
       await updateDoc(doc(db, 'facilities', id), data);
     } else {
-      await addDoc(colRef, { ...data, createdAt: Timestamp.now() });
+      const docRef = await addDoc(colRef, { ...data, createdAt: Timestamp.now() });
     }
   } catch (err) {
     handleFirestoreError(err, id ? OperationType.UPDATE : OperationType.CREATE, 'facilities');
@@ -175,7 +176,7 @@ export const syncFinanceTotals = async (txs: any[]) => {
 export const addTransaction = async (data: any, authorInfo?: { email: string | null; displayName?: string; role?: string }) => {
   const colRef = collection(db, 'transactions');
   try {
-    await addDoc(colRef, {
+    const docRef = await addDoc(colRef, {
       ...data,
       addedBy: authorInfo?.email || 'system',
       addedByName: authorInfo?.displayName || authorInfo?.email?.split('@')[0] || 'Administrator',
@@ -183,6 +184,7 @@ export const addTransaction = async (data: any, authorInfo?: { email: string | n
       status: data.status || 'completed', // Default auto-complete
       createdAt: Timestamp.now()
     });
+    return docRef.id;
   } catch (err) {
     handleFirestoreError(err, OperationType.CREATE, 'transactions');
   }
@@ -310,12 +312,13 @@ export const checkCurrentAvailability = (bookings: any[], config: any, facilityI
 export const addBooking = async (data: any) => {
   const colRef = collection(db, 'bookings');
   try {
-    await addDoc(colRef, {
+    const docRef = await addDoc(colRef, {
       ...data,
       status: data.status || 'pending',
       paymentStatus: data.paymentStatus || 'unpaid',
       createdAt: Timestamp.now()
     });
+    return docRef.id;
   } catch (err) {
     handleFirestoreError(err, OperationType.CREATE, 'bookings');
   }
@@ -462,7 +465,7 @@ export const logAdminActivity = async (params: {
 }) => {
   try {
     const colRef = collection(db, 'audit_logs');
-    await addDoc(colRef, {
+    const docRef = await addDoc(colRef, {
       action: params.action,
       description: params.description,
       targetId: params.targetId || null,
@@ -518,7 +521,7 @@ export const upsertVendor = async (id: string | null, data: Partial<Vendor>) => 
         updatedAt: serverTimestamp()
       });
     } else {
-      await addDoc(colRef, {
+      const docRef = await addDoc(colRef, {
         ...data,
         status: data.status || 'active',
         isVerified: data.isVerified ?? true,
@@ -544,7 +547,7 @@ export const removeVendor = async (id: string) => {
 export const submitVendorRegistration = async (data: any) => {
   const colRef = collection(db, 'vendors');
   try {
-    await addDoc(colRef, {
+    const docRef = await addDoc(colRef, {
       ...data,
       status: 'pending', // Requires admin verification
       isVerified: false,
@@ -562,3 +565,104 @@ export const submitVendorRegistration = async (data: any) => {
 
 
 
+
+// ==========================================
+// FEEDBACK & ULASAN PENYEWA (WALL OF LOVE)
+// ==========================================
+export interface FeedbackItem {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  eventDate?: string;
+  eventType?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt?: any;
+}
+
+export const DEFAULT_APPROVED_FEEDBACK: FeedbackItem[] = [
+  {
+    id: 'default-fb-1',
+    name: 'Kel. Bpk. H. Ruslan & Ibu Hj. Rahmawati',
+    rating: 5,
+    comment: 'Alhamdulillah acara resepsi pernikahan putri kami berjalan sangat lancar. Gedung bersih, kursi dan meja tertata rapi, area parkir luas untuk tamu undangan, serta pengurus RT 02 sangat kooperatif membantu dari awal hingga selesai.',
+    eventDate: '2026-08-14',
+    eventType: 'Resepsi Pernikahan',
+    status: 'approved'
+  },
+  {
+    id: 'default-fb-2',
+    name: 'Panitia Karang Taruna & Komunitas Warga',
+    rating: 5,
+    comment: 'Sistem booking dan transparansi kas gedung ini luar biasa memudahkan warga. Jadwal ketersediaan selalu akurat dan tata suara (sound system) gedung sangat jernih untuk acara musyawarah akbar.',
+    eventDate: '2026-09-02',
+    eventType: 'Musyawarah & Kegiatan Warga',
+    status: 'approved'
+  },
+  {
+    id: 'default-fb-3',
+    name: 'Ibu Siti Nurhaliza (Majelis Taklim)',
+    rating: 5,
+    comment: 'Sangat nyaman digunakan untuk kegiatan pengajian bulanan dan acara sosial. Pencahayaan terang, sirkulasi udara baik, dan prosedur peminjamannya jelas serta transparan.',
+    eventDate: '2026-09-21',
+    eventType: 'Pengajian & Keagamaan',
+    status: 'approved'
+  }
+];
+
+export const subscribeToApprovedFeedback = (callback: (items: FeedbackItem[]) => void) => {
+  const colRef = collection(db, 'feedback');
+  const q = query(colRef, where('status', '==', 'approved'));
+  return onSnapshot(q, (snapshot) => {
+    if (snapshot.empty) {
+      callback(DEFAULT_APPROVED_FEEDBACK);
+      return;
+    }
+    const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as FeedbackItem[];
+    items.sort((a, b) => {
+      const tA = a.createdAt?.seconds || 0;
+      const tB = b.createdAt?.seconds || 0;
+      return tB - tA;
+    });
+    callback(items);
+  }, (err) => {
+    console.warn('Error fetching approved feedback, using default testimonials:', err);
+    callback(DEFAULT_APPROVED_FEEDBACK);
+  });
+};
+
+export const subscribeToAllFeedback = (callback: (items: FeedbackItem[]) => void) => {
+  const colRef = collection(db, 'feedback');
+  return onSnapshot(colRef, (snapshot) => {
+    const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as FeedbackItem[];
+    items.sort((a, b) => {
+      const tA = a.createdAt?.seconds || 0;
+      const tB = b.createdAt?.seconds || 0;
+      return tB - tA;
+    });
+    callback(items);
+  }, (err) => {
+    console.warn('Error fetching all feedback for moderation:', err);
+    callback([]);
+  });
+};
+
+export const updateFeedbackStatus = async (id: string, status: 'approved' | 'rejected' | 'pending') => {
+  try {
+    const docRef = doc(db, 'feedback', id);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `feedback/${id}`);
+  }
+};
+
+export const removeFeedback = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, 'feedback', id));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, `feedback/${id}`);
+  }
+};

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown, Award } from 'lucide-react';
+import { PiggyBank, Receipt, ShieldCheck, Download, LayoutGrid, CheckCircle2, Clock, Calendar, ChevronDown, Award, Target, Sparkles, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { 
   BarChart, 
@@ -80,6 +80,14 @@ export default function TransparencyDashboard() {
     .reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
   
   const budgetProgress = config?.monthlyBudget ? (currentMonthOpsExpense / config.monthlyBudget) * 100 : 0;
+
+  // Development Goal Progress Calculations
+  const devGoalTarget = Number(config?.devGoalTargetAmount) > 0 ? Number(config?.devGoalTargetAmount) : 15000000;
+  const devGoalTitle = config?.devGoalTitle || 'Pengadaan Sound System & Pendingin Tambahan';
+  const devGoalBadge = config?.devGoalBadge || 'TARGET PEMBANGUNAN 2026';
+  const devGoalDescription = config?.devGoalDescription || 'Akumulasi Dana Saving (20% dari setiap sewa gedung) digunakan secara gotong royong untuk peningkatan fasilitas warga Huntap Tondo 2.';
+  const devGoalProgress = Math.min(100, Math.max(0, (Math.max(0, totalDevFund) / devGoalTarget) * 100));
+  const devGoalRemaining = Math.max(0, devGoalTarget - Math.max(0, totalDevFund));
 
   // Calculate 4-month stats for chart
   const chartData = Array.from({ length: filterMode === 'monthly' ? 4 : 12 }).map((_, i) => {
@@ -615,6 +623,86 @@ export default function TransparencyDashboard() {
           ))}
         </div>
 
+        {/* Target Pembangunan & Pengadaan Fasilitas Warga (Goal Tracker) */}
+        {config?.showDevGoalTracker !== false && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-[2.5rem] p-8 sm:p-10 text-white mb-12 shadow-2xl border border-white/10 relative overflow-hidden"
+          >
+            <div className="absolute -right-16 -top-16 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -left-16 -bottom-16 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 grid lg:grid-cols-12 gap-8 items-center">
+              <div className="lg:col-span-7 space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-widest">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>{devGoalBadge}</span>
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white">
+                  {devGoalTitle}
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">
+                  {devGoalDescription}
+                </p>
+
+                <div className="pt-2 flex flex-wrap items-center gap-4 text-xs">
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="text-slate-300">Sumber: <strong className="text-white">Alokasi Otomatis {(config?.devFundRate ?? 0.2) * 100}% Sewa Gedung</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl">
+                    <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span className="text-slate-300">
+                      {devGoalRemaining === 0 ? (
+                        <strong className="text-emerald-400">Target Tercapai 100%! Siap Eksekusi Pengadaan</strong>
+                      ) : (
+                        <>Kurang <strong className="text-white">Rp {Math.floor(devGoalRemaining).toLocaleString('id-ID')}</strong> lagi menuju target</>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-5 bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 sm:p-8">
+                <div className="flex justify-between items-end mb-4 gap-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-1">Dana Saving Terkumpul</p>
+                    <p className="text-2xl sm:text-3xl font-black text-white">
+                      Rp {Math.floor(Math.max(0, totalDevFund)).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Target Dana</p>
+                    <p className="text-sm font-bold text-slate-200">
+                      Rp {Math.floor(devGoalTarget).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full h-4 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-white/10 mb-3">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${devGoalProgress}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-400 to-amber-400 relative"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider">
+                  <span className="text-amber-300">{devGoalProgress.toFixed(1)}% TERKUMPUL</span>
+                  <span className="text-slate-400">
+                    {devGoalProgress >= 100 ? 'TERCAPAI' : devGoalProgress >= 50 ? 'TAHAP AKUMULASI AKHIR' : 'TAHAP PENGUMPULAN'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Visual Insights for Public */}
         <div className="grid lg:grid-cols-3 gap-8 mb-12">
           <motion.div 
@@ -630,8 +718,8 @@ export default function TransparencyDashboard() {
                 <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />Pengeluaran</span>
               </div>
             </div>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[200px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={chartData}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
                   <Tooltip 
@@ -652,8 +740,8 @@ export default function TransparencyDashboard() {
             className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
           >
             <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px] mb-6">Distribusi Pengeluaran</h4>
-            <div className="h-[150px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[150px] w-full relative min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie data={categoryData.length > 0 ? categoryData : [{ name: 'N/A', value: 1 }]} innerRadius={45} outerRadius={60} paddingAngle={5} dataKey="value">
                     {categoryData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
