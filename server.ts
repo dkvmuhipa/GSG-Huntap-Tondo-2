@@ -34,6 +34,42 @@ async function startServer() {
     }
   });
 
+  // Security Headers Middleware
+  app.disable('x-powered-by');
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // Upload Rate Limiter (sliding window per IP: max 25 uploads per 15 minutes)
+  const uploadRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+  const UPLOAD_WINDOW_MS = 15 * 60 * 1000;
+  const MAX_UPLOADS_PER_WINDOW = 25;
+
+  const rateLimitUpload = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = uploadRateLimitMap.get(ip);
+
+    if (!entry || now > entry.resetTime) {
+      uploadRateLimitMap.set(ip, { count: 1, resetTime: now + UPLOAD_WINDOW_MS });
+      return next();
+    }
+
+    if (entry.count >= MAX_UPLOADS_PER_WINDOW) {
+      return res.status(429).json({
+        error: 'Terlalu banyak permintaan unggah file. Mohon tunggu beberapa saat sebelum mencoba lagi.',
+        retryAfter: Math.ceil((entry.resetTime - now) / 1000)
+      });
+    }
+
+    entry.count += 1;
+    next();
+  };
+
   app.use(express.json());
 
   // Health check
@@ -48,7 +84,7 @@ async function startServer() {
   });
 
   // Upload API
-  app.post('/api/upload', (req, res, next) => {
+  app.post('/api/upload', rateLimitUpload, (req, res, next) => {
     upload.single('file')(req, res, (err: any) => {
       if (err) {
         console.error('Multer upload error:', err.message);

@@ -119,6 +119,20 @@ service cloud.firestore {
              data.status in ['draft', 'signed', 'archived'];
     }
 
+    function isValidVendor(data) {
+      return data.keys().hasAll(['name', 'category', 'ownerName', 'phone', 'status', 'isVerified']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.category is string &&
+             data.ownerName is string && data.ownerName.size() <= 150 &&
+             data.phone is string && data.phone.size() <= 50 &&
+             data.status in ['active', 'pending', 'inactive'] &&
+             data.isVerified is bool &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+             (!('startingPrice' in data) || (data.startingPrice is int || data.startingPrice is float)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
     // --- Rules ---
 
     // Koleksi Admins
@@ -143,7 +157,8 @@ service cloud.firestore {
 
     // Global Config
     match /config/{docId} {
-      allow read: if true;
+      // Sembunyikan dokumen kredensial sensitif seperti whatsapp_gateway dari akses publik
+      allow read: if docId != 'whatsapp_gateway' || hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
       allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
       allow delete: if isSuperAdmin();
     }
@@ -218,7 +233,10 @@ service cloud.firestore {
     // Mitra & Vendor UMKM Warga
     match /vendors/{docId} {
       allow read: if true; // Publik dapat melihat direktori vendor
-      allow create: if true; // Warga lokal dapat mengajukan pendaftaran usaha (status pending)
+      allow create: if (
+        hasAnyRole(['owner', 'admin', 'editor', 'bendahara']) ||
+        (isValidVendor(incoming()) && incoming().status == 'pending' && incoming().isVerified == false)
+      );
       allow update, delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
     }
   }
