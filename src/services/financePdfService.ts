@@ -30,8 +30,8 @@ export interface BuildFinanceReportParams {
   activeYear: string;
   customStartDate?: string;
   customEndDate?: string;
-  totalIncome: number;
-  totalExpense: number;
+  totalIncome?: number;
+  totalExpense?: number;
   totalDevFund: number;
   totalOps: number;
 }

@@ -274,6 +274,22 @@ Status: *BERHASIL TERHUBUNG* ✅`;
  */
 export async function notifyAdminNewBooking(bookingData: any) {
   try {
+    // 1. Try secure backend dispatch first (keeps gateway secrets off client)
+    try {
+      const serverRes = await fetch('/api/notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'new_booking', bookingData })
+      });
+      if (serverRes.ok) {
+        const json = await serverRes.json();
+        if (json.success) return;
+      }
+    } catch {
+      // Server endpoint not reachable (e.g. pure static host); continue to client fallback
+    }
+
+    // 2. Client-side fallback
     const config = await getWhatsAppGatewayConfig();
     if (!config.enabled || !config.autoNotifyAdminOnNewBooking || !config.adminNotificationPhone) {
       return;
@@ -367,6 +383,22 @@ export async function notifyCitizenHMinus1Reminder(booking: any, globalConfig?: 
  */
 export async function notifyAdminPaymentProofUploaded(bookingData: any, paymentProofUrl: string) {
   try {
+    // 1. Try secure backend dispatch first (keeps gateway secrets off client)
+    try {
+      const serverRes = await fetch('/api/notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'payment_proof', bookingData, paymentProofUrl })
+      });
+      if (serverRes.ok) {
+        const json = await serverRes.json();
+        if (json.success) return { sent: true, message: json.message };
+      }
+    } catch {
+      // Server endpoint not reachable; continue to client fallback
+    }
+
+    // 2. Client-side fallback
     const config = await getWhatsAppGatewayConfig();
     if (!config.enabled || !config.adminNotificationPhone) {
       return { sent: false, message: 'WhatsApp Gateway nonaktif.' };

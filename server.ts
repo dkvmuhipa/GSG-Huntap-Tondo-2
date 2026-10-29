@@ -70,6 +70,32 @@ async function startServer() {
     next();
   };
 
+  // Notify Admin Rate Limiter (sliding window per IP: max 15 requests per 15 minutes)
+  const notifyRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+  const NOTIFY_WINDOW_MS = 15 * 60 * 1000;
+  const MAX_NOTIFY_PER_WINDOW = 15;
+
+  const rateLimitNotify = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = notifyRateLimitMap.get(ip);
+
+    if (!entry || now > entry.resetTime) {
+      notifyRateLimitMap.set(ip, { count: 1, resetTime: now + NOTIFY_WINDOW_MS });
+      return next();
+    }
+
+    if (entry.count >= MAX_NOTIFY_PER_WINDOW) {
+      return res.status(429).json({
+        error: 'Terlalu banyak permintaan notifikasi. Mohon tunggu beberapa saat.',
+        retryAfter: Math.ceil((entry.resetTime - now) / 1000)
+      });
+    }
+
+    entry.count += 1;
+    next();
+  };
+
   app.use(express.json());
 
   // Health check
@@ -148,6 +174,77 @@ async function startServer() {
         error: 'Gagal mengupload file ke Cloudinary.',
         message: error.message 
       });
+    }
+  });
+
+  // Server-side Automated Notification to Admin (keeps gateway secrets off client)
+  app.post('/api/notify-admin', rateLimitNotify, async (req, res) => {
+    try {
+      const { type, bookingData, paymentProofUrl } = req.body || {};
+      if (!type || !bookingData) {
+        return res.status(400).json({ error: 'Data notifikasi tidak lengkap.' });
+      }
+
+      const adminPhone = (process.env.ADMIN_NOTIFICATION_PHONE || '085961194622').trim();
+      const secretKey = (process.env.SIDOBE_SECRET_KEY || process.env.VITE_SIDOBE_SECRET_KEY || '').trim();
+
+      if (!secretKey) {
+        return res.status(200).json({ 
+          success: false, 
+          message: 'SIDOBE_SECRET_KEY belum dikonfigurasi di server environment.' 
+        });
+      }
+
+      let message = '';
+      if (type === 'new_booking') {
+        const customerName = String(bookingData.customerName || 'Warga').slice(0, 100);
+        const purpose = String(bookingData.purpose || 'Acara Warga').slice(0, 150);
+        const dateStr = String(bookingData.startDate || '-').slice(0, 30);
+        const amount = Number(bookingData.amount || 0).toLocaleString('id-ID');
+        const phone = String(bookingData.phone || '-').slice(0, 30);
+
+        message = `🔔 *PENGAJUAN SEWA GEDUNG BARU*\n*Gedung Serbaguna Huntap Tondo 2*\n----------------------------------------\nAda permohonan reservasi baru yang memerlukan persetujuan:\n\n• *Nama Pemohon:* ${customerName}\n• *No. WhatsApp:* ${phone}\n• *Keperluan:* ${purpose}\n• *Tanggal Acara:* ${dateStr}\n• *Estimasi Biaya:* Rp ${amount}\n\nSilakan buka Dashboard Pengurus untuk memeriksa dan menyetujui jadwal:\n👉 https://gsght2.vercel.app/admin/bookings`;
+      } else if (type === 'payment_proof') {
+        const customerName = String(bookingData.customerName || 'Warga').slice(0, 100);
+        const purpose = String(bookingData.purpose || 'Acara Warga').slice(0, 150);
+        const dateStr = String(bookingData.startDate || '-').slice(0, 30);
+        const amount = Number(bookingData.amount || 0).toLocaleString('id-ID');
+        const dpAmount = Math.round(Number(bookingData.amount || 0) * 0.3).toLocaleString('id-ID');
+        const phone = String(bookingData.phone || '-').slice(0, 30);
+        const proofUrl = String(paymentProofUrl || '-').slice(0, 500);
+
+        message = `🔔 *BUKTI TRANSFER PEMBAYARAN MASUK*\n*Gedung Serbaguna Huntap Tondo 2*\n----------------------------------------\nPenyewa telah mengunggah bukti pembayaran sewa gedung:\n\n• *Nama Pemohon:* ${customerName}\n• *No. WhatsApp:* ${phone}\n• *Keperluan:* ${purpose}\n• *Tanggal Acara:* ${dateStr}\n• *Estimasi DP (30%):* Rp ${dpAmount} (Total: Rp ${amount})\n• *Tautan Bukti Struk:* ${proofUrl}\n\nSilakan periksa mutasi rekening dan verifikasi status pembayaran:\n👉 https://gsght2.vercel.app/admin/bookings`;
+      } else {
+        return res.status(400).json({ error: 'Tipe notifikasi tidak didukung.' });
+      }
+
+      let formattedPhone = adminPhone.replace(/[^0-9]/g, '');
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = '62' + formattedPhone.slice(1);
+      }
+      const phoneE164 = formattedPhone.startsWith('+') ? formattedPhone : `+${formattedPhone}`;
+
+      const response = await fetch('https://api.sidobe.com/wa/v1/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Secret-Key': secretKey
+        },
+        body: JSON.stringify({
+          phone: phoneE164,
+          message: message,
+          is_async: true
+        })
+      });
+
+      const resData: any = await response.json();
+      return res.json({
+        success: resData.is_success === true || response.ok,
+        message: resData.message || (response.ok ? 'Notifikasi admin terkirim via server' : 'Gagal mengirim pesan')
+      });
+    } catch (err: any) {
+      console.error('Server Notify Error:', err);
+      return res.status(500).json({ error: 'Gagal memproses notifikasi gateway server.' });
     }
   });
 

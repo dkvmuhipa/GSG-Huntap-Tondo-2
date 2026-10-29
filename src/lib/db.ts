@@ -13,7 +13,8 @@ import {
   serverTimestamp,
   limit,
   getDocs,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -354,9 +355,11 @@ export const recordBookingToFinance = async (booking: any, authorInfo?: { email:
     const devFund = amount * devFundRate;
     const ops = amount - devFund;
 
-    // 1. Create Transaction
-    const txRef = collection(db, 'transactions');
-    await addDoc(txRef, {
+    // Atomic Batch: Create Transaction and Update Booking simultaneously
+    const batch = writeBatch(db);
+    const newTxRef = doc(collection(db, 'transactions'));
+    
+    batch.set(newTxRef, {
       date: booking.startDate,
       source: `Sewa: ${booking.purpose} (${booking.customerName})`,
       type: 'income',
@@ -373,15 +376,17 @@ export const recordBookingToFinance = async (booking: any, authorInfo?: { email:
       addedBy: authorInfo?.email || 'system',
       addedByName: authorInfo?.displayName || authorInfo?.email?.split('@')[0] || 'Administrator',
       addedByRole: authorInfo?.role || 'system',
-      createdAt: Timestamp.now()
+      createdAt: serverTimestamp()
     });
 
-    // 2. Update Booking
-    await updateDoc(doc(db, 'bookings', booking.id), {
+    const bookingRef = doc(db, 'bookings', booking.id);
+    batch.update(bookingRef, {
       financeAdded: true,
       paymentStatus: 'paid',
       updatedAt: serverTimestamp()
     });
+
+    await batch.commit();
 
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, 'integration/booking-finance');

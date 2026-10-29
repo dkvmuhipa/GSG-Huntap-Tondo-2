@@ -723,8 +723,6 @@ export default function FinanceManager() {
       activeYear,
       customStartDate,
       customEndDate,
-      totalIncome,
-      totalExpense,
       totalDevFund: periodDevFund,
       totalOps: periodOps
     });

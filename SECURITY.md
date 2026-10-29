@@ -17,7 +17,7 @@ Audit keamanan menyeluruh dilakukan secara periodik dengan fokus pada pencegahan
 | **2. Injection & XSS Prevention (OWASP #1)** | 🟢 PASSED | Tidak ditemukan penggunaan `dangerouslySetInnerHTML`, `innerHTML`, `eval()`, atau `document.write()`. Seluruh input disanitasi otomatis oleh JSX React engine. Tautan eksternal terproteksi dengan `rel="noopener noreferrer"`. |
 | **3. Broken Access Control (OWASP #2)** | 🟢 PASSED | Rute admin (`/admin/*`) dilindungi verifikasi ganda via Firebase Auth dan lookup peran di Firestore. Dokumen kredensial sensitif `/config/whatsapp_gateway` dikunci khusus hanya untuk pengurus berwenang. |
 | **4. Insecure Design & IDOR Guard** | 🟢 PASSED | Skema permohonan reservasi warga terkunci pada status `pending` & `unpaid`. Pendaftaran UMKM mitra warga divalidasi via `isValidVendor` dengan status wajib `pending` dan `isVerified == false`. |
-| **5. API Protection & Rate Limiting** | 🟢 PASSED | Endpoint upload (`/api/upload`) diproteksi rate limiter (*sliding window* per IP), filter ekstensi MIME, batas ukuran 5MB, serta HTTP Security Headers (`nosniff`, `SAMEORIGIN`, `XSS-Protection`). |
+| **5. API Protection & Rate Limiting** | 🟢 PASSED | Endpoint API (`/api/upload` dan `/api/notify-admin`) diproteksi rate limiter (*sliding window* per IP), validasi payload, batas ukuran 5MB, serta HTTP Security Headers (`nosniff`, `SAMEORIGIN`, `XSS-Protection`). |
 | **6. Supply Chain & Dependencies** | 🟢 PASSED | Paket dependensi terkelola bersih tanpa dependensi kritis yang rentan. `xlsx-js-style` digunakan secara terkontrol untuk ekspor laporan keuangan. |
 
 ---
