@@ -692,22 +692,43 @@ export default function FinanceManager() {
     }
   };
 
-  const generateFinanceReport = () => buildFinanceReportDoc({
-    config,
-    admins,
-    adminProfile,
-    allTransactions,
-    filteredReportTransactions,
-    filterMode,
-    activeMonth,
-    activeYear,
-    customStartDate,
-    customEndDate,
-    totalIncome,
-    totalExpense,
-    totalDevFund,
-    totalOps
-  });
+  const generateFinanceReport = () => {
+    const isFilteredPeriod = (filterMode === 'monthly' && activeMonth !== 'all') || 
+                             (filterMode === 'annual') || 
+                             (filterMode === 'custom' && (!!customStartDate || !!customEndDate));
+
+    const txsUpToCutoff = allTransactions.filter(t => {
+      if (!t.date) return false;
+      if (filterMode === 'monthly' && activeMonth !== 'all') return t.date.slice(0, 7) <= activeMonth;
+      if (filterMode === 'annual') return t.date.slice(0, 4) <= activeYear;
+      if (filterMode === 'custom' && customEndDate) return t.date <= customEndDate;
+      return true;
+    });
+
+    const periodOps = isFilteredPeriod 
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0)
+      : totalOps;
+    const periodDevFund = isFilteredPeriod
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0)
+      : totalDevFund;
+
+    return buildFinanceReportDoc({
+      config,
+      admins,
+      adminProfile,
+      allTransactions,
+      filteredReportTransactions,
+      filterMode,
+      activeMonth,
+      activeYear,
+      customStartDate,
+      customEndDate,
+      totalIncome,
+      totalExpense,
+      totalDevFund: periodDevFund,
+      totalOps: periodOps
+    });
+  };
 
   const exportToPDF = async () => {
     const { doc, filename } = await generateFinanceReport();
@@ -852,6 +873,25 @@ export default function FinanceManager() {
       periodLabel = `${s} s.d. ${e}`;
     }
 
+    const isFilteredPeriod = (filterMode === 'monthly' && activeMonth !== 'all') || 
+                             (filterMode === 'annual') || 
+                             (filterMode === 'custom' && (!!customStartDate || !!customEndDate));
+
+    const txsUpToCutoff = allTransactions.filter(t => {
+      if (!t.date) return false;
+      if (filterMode === 'monthly' && activeMonth !== 'all') return t.date.slice(0, 7) <= activeMonth;
+      if (filterMode === 'annual') return t.date.slice(0, 4) <= activeYear;
+      if (filterMode === 'custom' && customEndDate) return t.date <= customEndDate;
+      return true;
+    });
+
+    const periodOps = isFilteredPeriod 
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0)
+      : totalOps;
+    const periodDevFund = isFilteredPeriod
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0)
+      : totalDevFund;
+
     const reportIncome = filteredReportTransactions
       .filter((t: any) => t.type === 'income')
       .reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
@@ -863,8 +903,8 @@ export default function FinanceManager() {
       totalIncome: reportIncome,
       totalExpense: reportExpense,
       netBalance: reportIncome - reportExpense,
-      opsBalance: totalOps,
-      devBalance: totalDevFund,
+      opsBalance: periodOps,
+      devBalance: periodDevFund,
       periodLabel
     });
   };

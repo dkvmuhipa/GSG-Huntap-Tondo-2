@@ -166,7 +166,7 @@ export default function TransparencyDashboard() {
         doc.setTextColor(226, 232, 240); // slate-200 color
         doc.text('KOTA PALU, SULAWESI TENGAH', margin, 33);
 
-        if (activeMonth !== 'all') {
+        if (filterMode === 'monthly' && activeMonth !== 'all') {
           const [year, month] = activeMonth.split('-');
           const mDate = new Date(parseInt(year), parseInt(month) - 1);
           const monthName = mDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -174,6 +174,11 @@ export default function TransparencyDashboard() {
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(255, 255, 255);
           doc.text(`PERIODE: ${monthName.toUpperCase()}`, margin, 40);
+        } else if (filterMode === 'annual') {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.text(`PERIODE: TAHUN ${activeYear}`, margin, 40);
         }
 
         // Metadata Right (Page 1)
@@ -216,20 +221,53 @@ export default function TransparencyDashboard() {
     // Initial Header
     drawHeader(1);
 
+    const isFilteredPeriod = (filterMode === 'monthly' && activeMonth !== 'all') || (filterMode === 'annual');
+
+    const txsUpToCutoff = transactions.filter(t => {
+      if (!t.date) return false;
+      if (filterMode === 'monthly' && activeMonth !== 'all') {
+        return t.date.slice(0, 7) <= activeMonth;
+      }
+      if (filterMode === 'annual') {
+        return t.date.slice(0, 4) <= activeYear;
+      }
+      return true;
+    });
+
+    const docOps = isFilteredPeriod
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0)
+      : totalOps;
+    const docDevFund = isFilteredPeriod
+      ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0)
+      : totalDevFund;
+    const docTotal = docOps + docDevFund;
+
     // Summary Section
     doc.setTextColor(30, 64, 175);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('I. RINGKASAN POSISI KEUANGAN', margin, 62);
+    
+    let section1Title = 'I. RINGKASAN POSISI KEUANGAN';
+    let totalLabel = 'TOTAL AKUMULASI SELURUH DANA GEDUNG';
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
+      const [year, month] = activeMonth.split('-');
+      const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      section1Title = `I. RINGKASAN POSISI KEUANGAN (PER AKHIR ${monthName.toUpperCase()})`;
+      totalLabel = `TOTAL SALDO PER AKHIR ${monthName.toUpperCase()}`;
+    } else if (filterMode === 'annual') {
+      section1Title = `I. RINGKASAN POSISI KEUANGAN (PER AKHIR TAHUN ${activeYear})`;
+      totalLabel = `TOTAL SALDO PER AKHIR TAHUN ${activeYear}`;
+    }
+    doc.text(section1Title, margin, 62);
 
     autoTable(doc, {
       startY: 65,
       margin: { left: margin, right: margin, bottom: 20 },
       head: [['Keterangan Alokasi Dana', 'Jumlah Saldo']],
       body: [
-        ['Dana Operasional (Likuid / Rutin)', `Rp ${Math.floor(totalOps).toLocaleString('id-ID')}`],
-        ['Dana Saving (Cadangan / Strategis)', `Rp ${Math.floor(totalDevFund).toLocaleString('id-ID')}`],
-        [{ content: 'TOTAL AKUMULASI SELURUH DANA GEDUNG', styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, { content: `Rp ${Math.floor(totalDevFund + totalOps).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
+        ['Dana Operasional (Likuid / Rutin)', `Rp ${Math.floor(docOps).toLocaleString('id-ID')}`],
+        ['Dana Saving (Cadangan / Strategis)', `Rp ${Math.floor(docDevFund).toLocaleString('id-ID')}`],
+        [{ content: totalLabel, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, { content: `Rp ${Math.floor(docTotal).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
       ],
       theme: 'grid',
       headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 10 },
@@ -322,22 +360,40 @@ export default function TransparencyDashboard() {
     doc.setFont('helvetica', 'bold');
     
     let recapTitle = 'III. REKAPITULASI ARUS KAS PERIODE';
-    if (activeMonth !== 'all') {
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
       const [year, month] = activeMonth.split('-');
       const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
       recapTitle += ` (${monthName.toUpperCase()})`;
+    } else if (filterMode === 'annual') {
+      recapTitle += ` (TAHUN ${activeYear})`;
     }
     doc.text(recapTitle, margin + 5, finalRecapY + 2);
 
-    const periodIncome = sortedTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    const periodExpense = sortedTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+    const periodTxs = transactions.filter(t => {
+      if (!t.date) return false;
+      if (filterMode === 'monthly') {
+        return activeMonth === 'all' || t.date.startsWith(activeMonth);
+      }
+      return t.date.startsWith(activeYear);
+    });
+
+    const periodIncome = periodTxs.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+    const periodExpense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
     
-    // Initial balance calculation (all time before activeMonth)
+    // Initial balance calculation (before period)
     const allTxsSorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     let initialBalance = 0;
-    if (activeMonth !== 'all') {
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
       initialBalance = allTxsSorted
-        .filter(t => t.date < activeMonth + '-01')
+        .filter(t => t.date && t.date < activeMonth + '-01')
+        .reduce((acc, curr) => {
+          if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
+          if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
+          return acc;
+        }, 0);
+    } else if (filterMode === 'annual') {
+      initialBalance = allTxsSorted
+        .filter(t => t.date && t.date < activeYear + '-01-01')
         .reduce((acc, curr) => {
           if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
           if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
@@ -365,7 +421,8 @@ export default function TransparencyDashboard() {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.text('SALDO AKHIR PERIODE (TOTAL KAS)', margin + 5, finalRecapY + 36.5);
-    doc.text(`Rp ${Math.floor(initialBalance + periodIncome - periodExpense).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 36.5, { align: 'right' });
+    const finalBalance = isFilteredPeriod ? (initialBalance + periodIncome - periodExpense) : (totalDevFund + totalOps);
+    doc.text(`Rp ${Math.floor(finalBalance).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 36.5, { align: 'right' });
 
     // --- SIGNATURES SECTION ---
     const sigY = finalRecapY + 50;

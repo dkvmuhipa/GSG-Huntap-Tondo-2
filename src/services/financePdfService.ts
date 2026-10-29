@@ -582,11 +582,57 @@ export const buildFinanceReportDoc = async (
   // Initial Header
   drawHeader(1);
 
+  // 1. Determine if the report has a filtered period
+  const isFilteredPeriod = (filterMode === 'monthly' && activeMonth !== 'all') || 
+                           (filterMode === 'annual') || 
+                           (filterMode === 'custom' && (!!customStartDate || !!customEndDate));
+
+  // 2. Cutoff transactions for period-ending balances (ops, devFund, total)
+  const txsUpToCutoff = allTransactions.filter(t => {
+    if (!t.date) return false;
+    if (filterMode === 'monthly' && activeMonth !== 'all') {
+      return t.date.slice(0, 7) <= activeMonth;
+    }
+    if (filterMode === 'annual') {
+      return t.date.slice(0, 4) <= activeYear;
+    }
+    if (filterMode === 'custom' && customEndDate) {
+      return t.date <= customEndDate;
+    }
+    return true;
+  });
+
+  const periodOps = isFilteredPeriod 
+    ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.ops) || 0), 0)
+    : totalOps;
+  const periodDevFund = isFilteredPeriod
+    ? txsUpToCutoff.reduce((acc, curr) => acc + (Number(curr.devFund) || 0), 0)
+    : totalDevFund;
+  const periodTotalBalance = periodOps + periodDevFund;
+
+  // Title and label for Section 1
+  let section1Title = 'I. RINGKASAN SALDO KAS TERSEDIA (REAL-TIME)';
+  let totalLabel = 'TOTAL AKUMULASI SELURUH DANA';
+
+  if (filterMode === 'monthly' && activeMonth !== 'all') {
+    const [year, month] = activeMonth.split('-');
+    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    section1Title = `I. RINGKASAN SALDO KAS (PER AKHIR ${monthName.toUpperCase()})`;
+    totalLabel = `TOTAL SALDO PER AKHIR ${monthName.toUpperCase()}`;
+  } else if (filterMode === 'annual') {
+    section1Title = `I. RINGKASAN SALDO KAS (PER AKHIR TAHUN ${activeYear})`;
+    totalLabel = `TOTAL SALDO PER AKHIR TAHUN ${activeYear}`;
+  } else if (filterMode === 'custom' && customEndDate) {
+    const endLabel = new Date(customEndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    section1Title = `I. RINGKASAN SALDO KAS (PER ${endLabel.toUpperCase()})`;
+    totalLabel = `TOTAL SALDO PER ${endLabel.toUpperCase()}`;
+  }
+
   // Section 1: Ringkasan Saldo
   doc.setTextColor(30, 64, 175);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('I. RINGKASAN SALDO KAS TERSEDIA', margin, 62);
+  doc.text(section1Title, margin, 62);
 
   const currentRate = (config?.devFundRate ?? 0.2) * 100;
   
@@ -595,9 +641,9 @@ export const buildFinanceReportDoc = async (
     margin: { left: margin, right: margin, bottom: 20 },
     head: [['Keterangan Klasifikasi Dana', 'Porsi (%)', 'Jumlah Saldo']],
     body: [
-      ['Dana Operasional', `${100 - currentRate}%`, `Rp ${totalOps.toLocaleString('id-ID')}`],
-      ['Dana Cadangan', `${currentRate}%`, `Rp ${totalDevFund.toLocaleString('id-ID')}`],
-      [{ content: 'TOTAL AKUMULASI SELURUH DANA', styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, '', { content: `Rp ${(totalDevFund + totalOps).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
+      ['Dana Operasional', `${100 - currentRate}%`, `Rp ${Math.floor(periodOps).toLocaleString('id-ID')}`],
+      ['Dana Cadangan', `${currentRate}%`, `Rp ${Math.floor(periodDevFund).toLocaleString('id-ID')}`],
+      [{ content: totalLabel, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }, '', { content: `Rp ${Math.floor(periodTotalBalance).toLocaleString('id-ID')}`, styles: { fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }]
     ],
     headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 10, halign: 'center', fontStyle: 'bold' },
     styles: { fontSize: 10, cellPadding: 5 } ,
@@ -619,7 +665,10 @@ export const buildFinanceReportDoc = async (
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100);
-  doc.text('* Dana Operasional: Siap digunakan untuk kebutuhan rutin harian. Dana Cadangan: Dialokasikan khusus untuk pengembangan fisik atau dana darurat.', margin, noteY);
+  const noteText = isFilteredPeriod
+    ? '* Menampilkan posisi saldo kas kumulatif pada akhir periode yang dipilih. Dana Operasional siap pakai harian, Dana Cadangan dialokasikan untuk pembangunan fisik/darurat.'
+    : '* Dana Operasional: Siap digunakan untuk kebutuhan rutin harian. Dana Cadangan: Dialokasikan khusus untuk pengembangan fisik atau dana darurat.';
+  doc.text(noteText, margin, noteY);
 
   // Section 2: Rincian Transaksi
   const txStartY = (doc as any).lastAutoTable.finalY + 18; 
@@ -717,15 +766,29 @@ export const buildFinanceReportDoc = async (
   }
   doc.text(recapTitle, margin + 5, finalRecapY + 2);
 
-  const periodIncome = sortedTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const periodExpense = sortedTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
+  const periodTxs = allTransactions.filter(t => {
+    if (!t.date) return false;
+    if (filterMode === 'monthly') {
+      return activeMonth === 'all' || t.date.startsWith(activeMonth);
+    } else if (filterMode === 'annual') {
+      return t.date.startsWith(activeYear);
+    } else if (filterMode === 'custom') {
+      const afterStart = customStartDate ? t.date >= customStartDate : true;
+      const beforeEnd = customEndDate ? t.date <= customEndDate : true;
+      return afterStart && beforeEnd;
+    }
+    return true;
+  });
+
+  const periodIncome = periodTxs.filter(t => t.type === 'income').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const periodExpense = periodTxs.filter(t => t.type === 'expense').reduce((acc, curr) => acc + Math.abs(Number(curr.amount) || 0), 0);
   
   // Initial balance (Balance before the period start)
   const allTxsSorted = [...allTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   let initialBalance = 0;
   if (filterMode === 'monthly' && activeMonth !== 'all') {
     initialBalance = allTxsSorted
-      .filter(t => t.date < activeMonth + '-01')
+      .filter(t => t.date && t.date < activeMonth + '-01')
       .reduce((acc, curr) => {
         if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
         if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
@@ -733,7 +796,7 @@ export const buildFinanceReportDoc = async (
       }, 0);
   } else if (filterMode === 'annual') {
     initialBalance = allTxsSorted
-      .filter(t => t.date < activeYear + '-01-01')
+      .filter(t => t.date && t.date < activeYear + '-01-01')
       .reduce((acc, curr) => {
         if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
         if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
@@ -741,7 +804,7 @@ export const buildFinanceReportDoc = async (
       }, 0);
   } else if (filterMode === 'custom' && customStartDate) {
     initialBalance = allTxsSorted
-      .filter(t => t.date < customStartDate)
+      .filter(t => t.date && t.date < customStartDate)
       .reduce((acc, curr) => {
         if (curr.type === 'income') return acc + (Number(curr.amount) || 0);
         if (curr.type === 'expense') return acc - Math.abs(Number(curr.amount) || 0);
@@ -769,7 +832,7 @@ export const buildFinanceReportDoc = async (
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.text('TOTAL SALDO AKHIR PERIODE (AVAILABLE)', margin + 5, finalRecapY + 40.5);
-  const finalBalance = activeMonth !== 'all' ? (initialBalance + periodIncome - periodExpense) : (totalDevFund + totalOps);
+  const finalBalance = isFilteredPeriod ? (initialBalance + periodIncome - periodExpense) : (totalDevFund + totalOps);
   doc.text(`Rp ${Math.floor(finalBalance).toLocaleString('id-ID')}`, pageWidth - margin - 5, finalRecapY + 40.5, { align: 'right' });
 
   // Section 3: Signature Area
