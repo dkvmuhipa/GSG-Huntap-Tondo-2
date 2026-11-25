@@ -39,6 +39,48 @@ import PdfPreviewModal from './ui/PdfPreviewModal';
 import { useLocation } from 'react-router-dom';
 import { uploadToCloudinary } from '../lib/cloudinary';
 import { notifyAdminPaymentProofUploaded } from '../services/whatsappGatewayService';
+import { getLocalDateISO, getOffsetLocalDateISO, parseLocalDate, maskPhoneNumber } from '../lib/dateUtils';
+import { formatWhatsAppPhoneNumber } from '../lib/whatsapp';
+
+const normalizePhoneDigits = (raw: string): string => {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('62')) return '0' + digits.slice(2);
+  if (digits.startsWith('8')) return '0' + digits;
+  return digits;
+};
+
+const findBookingByQuery = (bookingsList: any[], queryInput: string) => {
+  const trimmed = queryInput.trim();
+  if (!trimmed) return undefined;
+  const sorted = [...bookingsList].sort(
+    (a, b) => new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime()
+  );
+
+  const cleanedCode = trimmed.replace(/^#/, '').replace(/^GSG-/i, '').replace(/\s+/g, '').toUpperCase();
+  if (/[A-Z]/i.test(trimmed) || trimmed.startsWith('#')) {
+    const byCode = sorted.find((b) => {
+      const idUpper = String(b.id || '').toUpperCase();
+      return (
+        idUpper === cleanedCode ||
+        (cleanedCode.length >= 6 && idUpper.slice(-6) === cleanedCode) ||
+        (cleanedCode.length >= 8 && idUpper.slice(0, 8) === cleanedCode)
+      );
+    });
+    if (byCode) return byCode;
+  }
+
+  const targetPhone = normalizePhoneDigits(trimmed);
+  if (targetPhone.length >= 6) {
+    const byPhone = sorted.find((b) => normalizePhoneDigits(b.phone) === targetPhone);
+    if (byPhone) return byPhone;
+  }
+
+  return sorted.find((b) => {
+    const idUpper = String(b.id || '').toUpperCase();
+    return cleanedCode.length >= 6 && (idUpper === cleanedCode || idUpper.slice(-6) === cleanedCode);
+  });
+};
 
 interface AvailabilityWidgetProps {
   onOpenBooking?: (pkg?: string, date?: string) => void;
@@ -99,13 +141,11 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
     const handleActivateTracking = (e: Event) => {
       const customEvent = e as CustomEvent;
       setActiveTab('tracking');
-      if (customEvent.detail?.phone) {
-        const phoneStr = String(customEvent.detail.phone);
-        setPhoneToTrack(phoneStr);
-        const cleaned = phoneStr.replace(/\D/g, '');
-        const found = [...bookings]
-          .sort((a, b) => new Date(b.createdAt || b.startDate).getTime() - new Date(a.createdAt || a.startDate).getTime())
-          .find(b => (b.phone || '').replace(/\D/g, '') === cleaned);
+      const queryVal = customEvent.detail?.code || customEvent.detail?.phone;
+      if (queryVal) {
+        const queryStr = String(queryVal);
+        setPhoneToTrack(queryStr);
+        const found = findBookingByQuery(bookings, queryStr);
         if (found) {
           setTrackedBooking(found);
           setTrackingError('');
@@ -140,19 +180,16 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
   };
 
   const handleTrack = () => {
-    if (!phoneToTrack) return;
+    if (!phoneToTrack.trim()) return;
     setIsTracking(true);
     setTrackingError('');
-    
-    const cleaned = phoneToTrack.replace(/\D/g, '');
-    const found = [...bookings]
-      .sort((a, b) => new Date(b.createdAt || b.startDate).getTime() - new Date(a.createdAt || a.startDate).getTime())
-      .find(b => (b.phone || '').replace(/\D/g, '') === cleaned);
+
+    const found = findBookingByQuery(bookings, phoneToTrack);
 
     if (found) {
       setTrackedBooking(found);
     } else {
-      setTrackingError('Permohonan booking tidak ditemukan untuk nomor ini. Pastikan nomor WhatsApp yang Anda masukkan sesuai saat pengajuan.');
+      setTrackingError('Permohonan booking tidak ditemukan. Pastikan Nomor WhatsApp atau Kode Pengajuan (#GSG-XXXXXX) sesuai saat pendaftaran.');
       setTrackedBooking(null);
     }
     setIsTracking(false);
@@ -218,9 +255,8 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
   // Upcoming events calculation
   const upcomingEvents = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayIso = today.toISOString().split('T')[0];
+    const now = new Date();
+    const todayIso = getLocalDateISO(now);
     
     let filtered = bookings.filter(b => {
       const isApproved = b.status === 'approved' || b.status === 'completed';
@@ -239,16 +275,14 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
     }
 
     if (activeFilter === 'this-month') {
-      const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
       filtered = filtered.filter(b => {
-        const eventDate = new Date(b.startDate);
+        const eventDate = parseLocalDate(b.startDate);
         return eventDate.getFullYear() === currentYear && eventDate.getMonth() === currentMonth;
       });
     } else if (activeFilter === 'next-30-days') {
-      const thirtyDaysLater = new Date();
-      thirtyDaysLater.setDate(today.getDate() + 30);
-      const thirtyDaysLaterStr = thirtyDaysLater.toISOString().split('T')[0];
+      const thirtyDaysLaterStr = getOffsetLocalDateISO(30, now);
       filtered = filtered.filter(b => (b.startDate || '') <= thirtyDaysLaterStr);
     }
 
@@ -256,30 +290,29 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
   }, [bookings, searchTerm, activeFilter]);
 
   const getDaysRemainingText = (eventDateStr: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const eventDate = new Date(eventDateStr);
-    eventDate.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDate = parseLocalDate(eventDateStr);
     
-    const diffTime = eventDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = eventDate.getTime() - todayMidnight.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return { text: 'Hari Ini', style: 'bg-emerald-500 text-white' };
-    if (diffDays === 1) return { text: 'Besok', style: 'bg-amber-500 text-white' };
-    return { text: `${diffDays} Hari Lagi`, style: 'bg-slate-100 text-slate-700 border border-slate-200' };
+    if (diffDays <= 0) return { text: 'Hari ini', style: 'bg-[#16A34A] text-white' };
+    if (diffDays === 1) return { text: 'Besok', style: 'bg-[#B45309] text-white' };
+    return { text: `${diffDays} hari lagi`, style: 'bg-[#F1F3F5] text-[#4B5563] border border-[#E5E7EB]' };
   };
 
   const getCalendarParts = (dateStr: string) => {
-    const dateObj = new Date(dateStr);
+    const dateObj = parseLocalDate(dateStr);
     const day = dateObj.getDate();
-    const month = dateObj.toLocaleDateString('id-ID', { month: 'short' }).toUpperCase();
+    const month = dateObj.toLocaleDateString('id-ID', { month: 'short' });
     const weekday = dateObj.toLocaleDateString('id-ID', { weekday: 'short' });
     const year = dateObj.getFullYear();
     return { day, month, weekday, year };
   };
 
   const formatDateLong = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
+    return parseLocalDate(dateStr).toLocaleDateString('id-ID', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -288,62 +321,63 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
   };
 
   return (
-    <section id="jadwal" className="bg-slate-50/60 py-16 scroll-mt-20 border-b border-gray-100">
+    <section id="jadwal" className="bg-[#F8F9FA] py-12 sm:py-16 lg:py-20 scroll-mt-28 border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 text-left">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 sm:gap-6 mb-8 sm:mb-10 text-left">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-3.5 py-1.5 rounded-full mb-3">
-              <CalendarCheck className="w-4 h-4 text-primary" />
-              <span className="text-xs font-black text-primary uppercase tracking-widest">Jadwal & Agenda Terpadu</span>
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF] mb-2">
+              <CalendarCheck className="w-4 h-4" strokeWidth={1.75} />
+              <span>Jadwal &amp; agenda terpadu</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 leading-tight tracking-tight">
-              Ketersediaan & Agenda Gedung
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] leading-tight tracking-tight">
+              Ketersediaan &amp; Agenda Gedung
             </h2>
-            <p className="text-sm md:text-base text-gray-500 mt-2 leading-relaxed">
+            <p className="text-sm sm:text-base text-[#4B5563] mt-2.5 leading-relaxed">
               Pantau jadwal terpakai hari ini, agenda kegiatan warga terverifikasi, dan lacak status reservasi Anda secara transparan.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
             <button 
               type="button"
               onClick={() => setIsCalendarOpen(true)}
-              className="inline-flex items-center gap-2 bg-primary hover:bg-blue-800 text-white font-black text-xs px-5 py-3 rounded-2xl shadow-lg shadow-primary/25 transition-all active:scale-95"
+              className="w-full md:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 bg-[#1E40AF] hover:bg-[#1D3A8A] text-white font-medium text-xs px-4 py-2.5 rounded-lg transition-colors cursor-pointer"
             >
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4" strokeWidth={1.75} />
               <span>Buka Kalender Lengkap</span>
             </button>
           </div>
         </div>
 
-        {/* Status Ketersediaan Hari Ini (Hero Card) */}
+        {/* Status Ketersediaan Hari Ini */}
         <motion.div 
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-gray-100 shadow-sm mb-10"
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-[#FCFCFD] rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5 border border-[#E5E7EB] mb-8"
         >
-          <div className="flex items-center gap-5 w-full md:w-auto">
-            <div className="w-14 h-14 bg-blue-50 text-primary rounded-2xl flex items-center justify-center shrink-0">
-              <Clock className="w-7 h-7" />
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] rounded-xl flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.75} />
             </div>
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Status Operasional Hari Ini</span>
-              <h3 className="font-extrabold text-lg text-gray-900 leading-snug">{todayStr}</h3>
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[#6B7280]">Status operasional hari ini</span>
+              <h3 className="font-semibold text-base sm:text-lg text-[#111827] leading-snug mt-0.5">{todayStr}</h3>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 w-full md:w-auto justify-end">
-            <div className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2.5 ${!isBusy ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${!isBusy ? 'bg-emerald-500 animate-ping' : 'bg-red-500'}`} />
+          <div className="flex items-center gap-4 w-full md:w-auto md:justify-end">
+            <div className={`w-full md:w-auto px-4 py-2.5 rounded-xl font-medium text-xs flex items-center gap-2.5 ${!isBusy ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]' : 'bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]'}`}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${!isBusy ? 'bg-[#16A34A]' : 'bg-[#DC2626]'}`} />
               {!isBusy ? (
-                <span>GEDUNG TERSEDIA UNTUK DISEWA</span>
+                <span>Gedung tersedia untuk disewa</span>
               ) : (
-                <div className="text-left">
-                  <span>SEDANG DIGUNAKAN</span>
-                  <span className="block text-[11px] font-medium text-red-600 normal-case opacity-90">
+                <div className="text-left min-w-0">
+                  <span className="font-semibold">Sedang digunakan</span>
+                  <span className="block text-[11px] text-[#B91C1C] opacity-90 truncate">
                     {currentEvent} ({facilityName})
                   </span>
                 </div>
@@ -353,31 +387,31 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
         </motion.div>
 
         {/* Segmented Switcher Tabs */}
-        <div id="lacak" className="flex items-center justify-center mb-8 scroll-mt-28 md:scroll-mt-32">
-          <div className="bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-1 w-full max-w-md">
+        <div id="lacak" className="flex items-center justify-center mb-6 sm:mb-8 scroll-mt-28">
+          <div className="bg-[#F1F3F5] p-1 rounded-xl border border-[#E5E7EB] flex items-center gap-1 w-full max-w-md">
             <button
               type="button"
               onClick={() => setActiveTab('events')}
-              className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 min-h-[44px] py-2 px-3 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'events'
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-[#FCFCFD] text-[#111827] shadow-xs border border-[#E5E7EB]'
+                  : 'text-[#4B5563] hover:text-[#111827]'
               }`}
             >
-              <CalendarCheck className="w-4 h-4" />
-              <span>Agenda Acara Warga</span>
+              <CalendarCheck className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span className="truncate">Agenda Acara Warga</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('tracking')}
-              className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex-1 min-h-[44px] py-2 px-3 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === 'tracking'
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-[#FCFCFD] text-[#111827] shadow-xs border border-[#E5E7EB]'
+                  : 'text-[#4B5563] hover:text-[#111827]'
               }`}
             >
-              <Search className="w-4 h-4" />
-              <span>Lacak Status Sewa</span>
+              <Search className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span className="truncate">Lacak Status Sewa</span>
             </button>
           </div>
         </div>
@@ -385,21 +419,22 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
         {/* TAB 1: AGENDA ACARA MENDATANG */}
         {activeTab === 'events' && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="space-y-6"
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-5 sm:space-y-6"
           >
             {/* Filter Toolbar */}
-            <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-[#FCFCFD] rounded-2xl p-4 border border-[#E5E7EB] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveFilter('all')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
                     activeFilter === 'all'
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      ? 'bg-[#1E40AF] text-white border-[#1E40AF]'
+                      : 'bg-[#F8F9FA] text-[#4B5563] border-[#E5E7EB] hover:bg-[#F1F3F5]'
                   }`}
                 >
                   Semua Acara
@@ -407,10 +442,10 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                 <button
                   type="button"
                   onClick={() => setActiveFilter('this-month')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
                     activeFilter === 'this-month'
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      ? 'bg-[#1E40AF] text-white border-[#1E40AF]'
+                      : 'bg-[#F8F9FA] text-[#4B5563] border-[#E5E7EB] hover:bg-[#F1F3F5]'
                   }`}
                 >
                   Bulan Ini
@@ -418,10 +453,10 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                 <button
                   type="button"
                   onClick={() => setActiveFilter('next-30-days')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
                     activeFilter === 'next-30-days'
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      ? 'bg-[#1E40AF] text-white border-[#1E40AF]'
+                      : 'bg-[#F8F9FA] text-[#4B5563] border-[#E5E7EB] hover:bg-[#F1F3F5]'
                   }`}
                 >
                   30 Hari Kedepan
@@ -429,30 +464,30 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
               </div>
 
               <div className="relative w-full md:w-72">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-[#6B7280] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Cari acara atau nama warga..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200/80 rounded-xl text-xs font-medium text-gray-800 placeholder-gray-400 focus:bg-white focus:border-primary outline-none transition-all"
+                  className="w-full min-h-[40px] pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#D1D5DB] rounded-lg text-xs font-medium text-[#111827] placeholder:text-[#6B7280] focus:bg-[#FCFCFD] focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
             </div>
 
             {/* Events Grid */}
             {upcomingEvents.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-gray-100">
-                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-gray-400">
-                  <Calendar className="w-8 h-8" />
+              <div className="bg-[#FCFCFD] rounded-2xl p-10 sm:p-12 text-center border border-[#E5E7EB]">
+                <div className="w-14 h-14 bg-[#F1F3F5] rounded-xl flex items-center justify-center mx-auto mb-3 text-[#6B7280]">
+                  <Calendar className="w-7 h-7" strokeWidth={1.5} />
                 </div>
-                <h4 className="font-extrabold text-gray-900 text-base">Belum Ada Agenda Terjadwal</h4>
-                <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                <h4 className="font-semibold text-[#111827] text-base">Belum Ada Agenda Terjadwal</h4>
+                <p className="text-xs text-[#4B5563] mt-1 max-w-sm mx-auto">
                   Tidak ada kegiatan warga pada filter yang dipilih. Gedung siap digunakan untuk reservasi Anda.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {upcomingEvents.map((evt) => {
                   const cal = getCalendarParts(evt.startDate);
                   const rem = getDaysRemainingText(evt.startDate);
@@ -461,45 +496,46 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                   return (
                     <motion.div
                       key={evt.id}
-                      initial={{ opacity: 0, y: 15 }}
+                      initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
-                      className="bg-white rounded-3xl p-5 border border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-primary/5 transition-all flex flex-col justify-between group"
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="bg-[#FCFCFD] rounded-2xl p-4 sm:p-5 border border-[#E5E7EB] hover:border-[#1E40AF]/35 transition-colors flex flex-col justify-between group"
                     >
                       <div className="flex items-start gap-4 mb-4">
                         {/* Calendar Badge */}
-                        <div className="w-14 h-16 bg-slate-900 text-white rounded-2xl flex flex-col items-center justify-center shrink-0 text-center shadow-md shadow-slate-900/10">
-                          <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider leading-none">{cal.month}</span>
-                          <span className="text-xl font-black leading-tight mt-0.5">{cal.day}</span>
-                          <span className="text-[9px] text-gray-400 leading-none">{cal.weekday}</span>
+                        <div className="w-14 h-16 bg-[#1E40AF] text-white rounded-xl flex flex-col items-center justify-center shrink-0 text-center">
+                          <span className="text-[10px] font-mono uppercase text-blue-200 leading-none">{cal.month}</span>
+                          <span className="text-xl font-mono tabular-nums font-bold leading-tight mt-0.5">{cal.day}</span>
+                          <span className="text-[10px] text-blue-100 leading-none">{cal.weekday}</span>
                         </div>
 
                         {/* Event Details */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${rem.style}`}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono tabular-nums ${rem.style}`}>
                               {rem.text}
                             </span>
-                            <span className="text-[10px] font-bold text-gray-400 truncate">
+                            <span className="text-[11px] text-[#6B7280] truncate">
                               {evt.packageTitle || evt.packageName || 'Paket Standar'}
                             </span>
                           </div>
-                          <h4 className="font-black text-sm text-gray-900 truncate group-hover:text-primary transition-colors" title={isPublic ? evt.purpose : 'Acara Warga'}>
+                          <h4 className="font-semibold text-sm text-[#111827] truncate group-hover:text-[#1E40AF] transition-colors" title={isPublic ? evt.purpose : 'Acara Warga'}>
                             {isPublic ? (evt.purpose || 'Acara Warga') : 'Acara Warga (Privat)'}
                           </h4>
-                          <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
-                            <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                          <p className="text-xs text-[#4B5563] flex items-center gap-1.5 mt-1">
+                            <User className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
                             <span className="truncate">{isPublic ? (evt.customerName || 'Warga') : 'Warga Huntap 2'}</span>
                           </p>
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400 font-medium">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
+                      <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2 text-[11px] text-[#6B7280]">
+                        <span className="flex items-center gap-1 font-mono tabular-nums">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
                           {evt.startTime || '08:00'} - {evt.endTime || 'Selesai'} WITA
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] uppercase">
+                        <span className="px-2 py-0.5 rounded-md bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] font-medium text-[11px] shrink-0">
                           Terverifikasi
                         </span>
                       </div>
@@ -514,50 +550,51 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
         {/* TAB 2: LACAK PENGAJUAN BOOKING */}
         {activeTab === 'tracking' && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="bg-white rounded-3xl p-6 sm:p-10 border border-gray-100 shadow-sm max-w-2xl mx-auto"
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-[#FCFCFD] rounded-2xl p-4 sm:p-8 border border-[#E5E7EB] max-w-2xl mx-auto"
           >
             <div className="text-center mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
-                <Search className="w-6 h-6" />
+              <div className="w-11 h-11 rounded-xl bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] flex items-center justify-center mx-auto mb-3">
+                <Search className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <h3 className="font-black text-xl text-gray-900">Lacak Pengajuan Sewa Anda</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Masukkan nomor WhatsApp yang Anda gunakan saat mengajukan permohonan sewa gedung.
+              <h3 className="font-display font-semibold text-xl sm:text-2xl text-[#111827]">Lacak Pengajuan Sewa Anda</h3>
+              <p className="text-xs sm:text-sm text-[#4B5563] mt-1">
+                Masukkan nomor WhatsApp atau kode registrasi #GSG yang Anda gunakan saat pengajuan.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <input
                 type="text"
-                placeholder="Contoh: 081234567890"
+                placeholder="No. WA (08xx) atau Kode Booking (#GSG-XXXXXX)"
                 value={phoneToTrack}
                 onChange={(e) => setPhoneToTrack(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleTrack()}
-                className="flex-1 bg-gray-50 border border-gray-200/80 rounded-2xl px-5 py-3 text-sm font-medium text-gray-800 placeholder-gray-400 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                className="w-full sm:flex-1 min-h-[44px] bg-[#F8F9FA] border border-[#D1D5DB] rounded-lg px-4 py-2.5 text-sm font-mono text-[#111827] placeholder:font-sans placeholder:text-[#6B7280] focus:bg-[#FCFCFD] focus:border-[#1E40AF] transition-colors outline-none"
               />
               <button
                 type="button"
                 onClick={handleTrack}
                 disabled={isTracking || !phoneToTrack}
-                className="px-6 py-3 rounded-2xl bg-primary hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-lg bg-[#1E40AF] hover:bg-[#1D3A8A] text-white font-medium text-xs transition-colors disabled:opacity-50 cursor-pointer shrink-0"
               >
                 {isTracking ? 'Mencari...' : 'Lacak Status'}
               </button>
             </div>
 
             {trackingError && (
-              <div className="p-4 rounded-2xl bg-red-50 text-red-700 text-xs font-medium border border-red-200 mb-6 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <div className="p-4 rounded-xl bg-[#FEF2F2] text-[#B91C1C] text-xs font-medium border border-[#FECACA] mb-6 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-[#DC2626]" />
                 <span>{trackingError}</span>
               </div>
             )}
 
             {/* Tracked Booking Card - Digital Civic Boarding Pass */}
             {trackedBooking && (() => {
-              const isApproved = trackedBooking.status === 'approved';
+              const isApproved = trackedBooking.status === 'approved' || trackedBooking.status === 'completed';
               const isRejected = trackedBooking.status === 'rejected';
               const isPaid = trackedBooking.paymentStatus === 'paid';
               const isVerifying = trackedBooking.paymentStatus === 'verifying';
@@ -592,57 +629,60 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
               return (
                 <motion.div
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="rounded-3xl bg-white border border-slate-200/90 shadow-xl shadow-slate-900/5 overflow-hidden text-left"
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className="rounded-2xl bg-[#FCFCFD] border border-[#D1D5DB] overflow-hidden text-left"
                 >
-                  {/* TICKET TOP HEADER: CIVIC AUTHENTICITY BADGE */}
-                  <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-5 sm:p-7 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-72 h-72 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 shadow-inner backdrop-blur-xs">
-                          <Building2 className="w-6 h-6 text-blue-300" />
+                  {/* TICKET TOP HEADER: CIVIC PASS STUB */}
+                  <div className="bg-[#1E3A8A] text-white p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+                          <Building2 className="w-5 h-5 text-blue-200" strokeWidth={1.75} />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-300">
+                            <span className="text-xs font-medium text-blue-200">
                               Pas Reservasi Resmi
                             </span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
                           </div>
-                          <h4 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                          <h4 className="text-base sm:text-lg font-display font-bold tracking-tight text-white leading-tight mt-0.5 truncate">
                             Gedung Serbaguna Huntap Tondo 2
                           </h4>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            Kompleks Huntap II Tondo, Kota Palu • RT 02 / RW 01
+                          <span className="text-[11px] text-blue-200 block truncate">
+                            Kompleks Huntap II Tondo, Kota Palu · RT 02 / RW 01
                           </span>
                         </div>
                       </div>
 
-                      <div className="bg-white/10 border border-white/15 rounded-2xl px-4 py-2.5 backdrop-blur-sm self-start sm:self-auto">
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-slate-300 block">KODE REGISTRASI</span>
-                        <span className="font-mono text-base sm:text-lg font-black text-amber-300 tracking-wider">
-                          #{trackedBooking.id?.substring(0, 8).toUpperCase()}
+                      <div className="bg-white/15 border border-white/20 rounded-xl px-4 py-2.5 self-start sm:self-auto shrink-0">
+                        <span className="text-[10px] font-mono text-blue-100 block">Kode Pengajuan</span>
+                        <span className="font-mono tabular-nums text-base sm:text-lg font-bold text-[#FCD34D] tracking-wider">
+                          #GSG-{trackedBooking.id?.slice(-6).toUpperCase()}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* INTERACTIVE 4-STAGE STEPPER TIMELINE */}
-                  <div className="bg-slate-50/80 px-5 sm:px-7 py-5 border-b border-slate-100">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3.5 flex items-center justify-between">
-                      <span>Progres Alur Permohonan</span>
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                        isApproved ? 'bg-emerald-100 text-emerald-800' : isRejected ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                  <div className="bg-[#F8F9FA] px-4 sm:px-6 py-5 border-b border-[#E5E7EB]">
+                    <div className="text-xs font-medium text-[#6B7280] mb-3.5 flex flex-wrap items-center justify-between gap-2">
+                      <span>Progres alur permohonan</span>
+                      <span className={`px-2.5 py-0.5 rounded-md font-medium text-[11px] border ${
+                        isApproved
+                          ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
+                          : isRejected
+                            ? 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]'
+                            : 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]'
                       }`}>
-                        {isApproved ? 'STATUS: DISETUJUI' : isRejected ? 'STATUS: DITOLAK' : 'STATUS: MENUNGGU VERIFIKASI'}
+                        {isApproved ? 'Disetujui' : isRejected ? 'Ditolak' : 'Menunggu verifikasi'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
-                      {steps.map((st, idx) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative">
+                      {steps.map((st) => {
                         const isDone = st.status === 'completed';
                         const isCur = st.status === 'current';
                         const isRej = st.status === 'rejected';
@@ -650,33 +690,33 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                         return (
                           <div 
                             key={st.id} 
-                            className={`p-3 rounded-2xl border transition-all ${
+                            className={`p-3 rounded-xl border transition-colors ${
                               isDone 
-                                ? 'bg-white border-emerald-200 shadow-xs' 
+                                ? 'bg-[#FCFCFD] border-[#BBF7D0]' 
                                 : isCur 
-                                  ? 'bg-blue-50/70 border-primary/30 ring-2 ring-primary/10 shadow-xs' 
+                                  ? 'bg-[#EFF6FF] border-[#1E40AF]/35' 
                                   : isRej 
-                                    ? 'bg-rose-50/70 border-rose-200' 
-                                    : 'bg-white/60 border-slate-200/60 opacity-60'
+                                    ? 'bg-[#FEF2F2] border-[#FECACA]' 
+                                    : 'bg-[#FCFCFD]/70 border-[#E5E7EB] opacity-70'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 ${
+                              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-mono font-semibold shrink-0 ${
                                 isDone 
-                                  ? 'bg-emerald-600 text-white' 
+                                  ? 'bg-[#16A34A] text-white' 
                                   : isCur 
-                                    ? 'bg-primary text-white animate-pulse' 
+                                    ? 'bg-[#1E40AF] text-white' 
                                     : isRej 
-                                      ? 'bg-rose-600 text-white' 
-                                      : 'bg-slate-200 text-slate-600'
+                                      ? 'bg-[#DC2626] text-white' 
+                                      : 'bg-[#F1F3F5] text-[#4B5563]'
                               }`}>
                                 {isDone ? '✓' : isRej ? '✕' : st.id}
                               </span>
-                              <span className="text-[11px] font-black text-slate-900 leading-tight truncate">
+                              <span className="text-xs font-semibold text-[#111827] leading-tight truncate">
                                 {st.label}
                               </span>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-medium leading-tight pl-7 truncate">
+                            <p className="text-[11px] text-[#4B5563] leading-tight pl-7 truncate">
                               {st.desc}
                             </p>
                           </div>
@@ -686,94 +726,98 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                   </div>
 
                   {/* PERFORATED DIVIDER NOTCHES */}
-                  <div className="relative py-1 bg-white">
-                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border-r border-slate-200 shadow-inner" />
-                    <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 border-l border-slate-200 shadow-inner" />
-                    <div className="border-b-2 border-dashed border-slate-200 mx-7" />
+                  <div className="relative py-1 bg-[#FCFCFD]">
+                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#F8F9FA] border-r border-[#D1D5DB]" />
+                    <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#F8F9FA] border-l border-[#D1D5DB]" />
+                    <div className="border-b-2 border-dashed border-[#D1D5DB] mx-7" />
                   </div>
 
                   {/* MAIN TICKET BODY: DATA SPECIFICATIONS */}
-                  <div className="p-5 sm:p-7 space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Pemohon</span>
-                        <p className="font-black text-slate-900 text-sm mt-0.5">{trackedBooking.customerName}</p>
-                        <span className="text-[10px] text-slate-500 font-mono">{trackedBooking.phone}</span>
+                  <div className="p-4 sm:p-6 space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                      <div className="min-w-0">
+                        <span className="text-[#6B7280] text-[11px] font-medium block">Pemohon</span>
+                        <p className="font-semibold text-[#111827] text-sm mt-0.5 truncate">{trackedBooking.customerName}</p>
+                        <span className="text-[11px] text-[#4B5563] font-mono tabular-nums">{maskPhoneNumber(trackedBooking.phone)}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Tanggal Acara</span>
-                        <p className="font-black text-slate-900 text-sm mt-0.5">{formatDateLong(trackedBooking.startDate)}</p>
-                        <span className="text-[10px] text-primary font-bold">{getDaysRemainingText(trackedBooking.startDate).text}</span>
+                      <div className="min-w-0">
+                        <span className="text-[#6B7280] text-[11px] font-medium block">Tanggal Acara</span>
+                        <p className="font-semibold text-[#111827] text-sm mt-0.5">{formatDateLong(trackedBooking.startDate)}</p>
+                        <span className="text-[11px] text-[#1E40AF] font-medium font-mono">{getDaysRemainingText(trackedBooking.startDate).text}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Keperluan Acara</span>
-                        <p className="font-bold text-slate-800 text-sm mt-0.5">{trackedBooking.purpose || 'Kegiatan Warga'}</p>
-                        <span className="text-[10px] text-slate-400">{trackedBooking.organization || 'Penyewa Perorangan'}</span>
+                      <div className="min-w-0">
+                        <span className="text-[#6B7280] text-[11px] font-medium block">Keperluan Acara</span>
+                        <p className="font-semibold text-[#111827] text-sm mt-0.5 truncate">{trackedBooking.purpose || 'Kegiatan Warga'}</p>
+                        <span className="text-[11px] text-[#6B7280] truncate block">{trackedBooking.organization || 'Penyewa Perorangan'}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Total Nilai Sewa</span>
-                        <p className="font-black text-primary text-base mt-0.5">
+                      <div className="min-w-0">
+                        <span className="text-[#6B7280] text-[11px] font-medium block">Total Nilai Sewa</span>
+                        <p className="font-mono tabular-nums font-semibold text-[#1E40AF] text-base mt-0.5">
                           Rp {Number(trackedBooking.amount || 0).toLocaleString('id-ID')}
                         </p>
-                        <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 ${
-                          isPaid ? 'bg-emerald-100 text-emerald-800' : isVerifying ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                        <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-md mt-1 border ${
+                          isPaid
+                            ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
+                            : isVerifying
+                              ? 'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE]'
+                              : 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]'
                         }`}>
-                          {isPaid ? 'Lunas (Sah) ✅' : isVerifying ? 'Verifikasi Bukti ⏳' : 'Belum Lunas'}
+                          {isPaid ? 'Lunas (Sah)' : isVerifying ? 'Verifikasi bukti' : 'Belum lunas'}
                         </span>
                       </div>
                     </div>
 
                     {/* PAYMENT STUB FOR APPROVED & UNPAID BOOKINGS */}
                     {isApproved && !isPaid && (
-                      <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-amber-200/60">
+                      <div className="p-4 sm:p-5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#FDE68A]">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-[#FEF3C7] text-[#B45309] flex items-center justify-center shrink-0">
                               <CreditCard className="w-4 h-4" />
                             </div>
                             <div>
-                              <h5 className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                              <h5 className="text-xs font-semibold text-[#111827]">
                                 Instruksi Setoran Uang Muka (DP 30%)
                               </h5>
-                              <p className="text-[10px] text-amber-700">
+                              <p className="text-[11px] text-[#B45309]">
                                 Kunci kepastian jadwal sewa gedung Anda maksimal 3 hari setelah disetujui.
                               </p>
                             </div>
                           </div>
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-200/80 text-amber-950 self-start sm:self-auto">
+                          <span className="text-[11px] font-mono tabular-nums font-medium px-2.5 py-1 rounded-md bg-[#FEF3C7] text-[#92400E] self-start sm:self-auto shrink-0">
                             Tenggat: H+3 Disetujui
                           </span>
                         </div>
 
                         {/* Nominal Breakdown Split */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-xs">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Nominal DP Wajib (30%)</span>
-                            <p className="text-lg font-black text-amber-700 leading-tight mt-0.5">
+                          <div className="bg-[#FCFCFD] p-3.5 rounded-lg border border-[#FDE68A]">
+                            <span className="text-[11px] text-[#6B7280] font-medium block">Nominal DP Wajib (30%)</span>
+                            <p className="text-lg font-mono tabular-nums font-semibold text-[#B45309] leading-tight mt-0.5">
                               Rp {Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}
                             </p>
-                            <span className="text-[10px] text-slate-400">Diperlukan untuk mengunci tanggal acara</span>
+                            <span className="text-[11px] text-[#6B7280]">Diperlukan untuk mengunci tanggal acara</span>
                           </div>
-                          <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-xs">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Sisa Pelunasan (70%)</span>
-                            <p className="text-sm font-bold text-slate-700 leading-tight mt-0.5">
+                          <div className="bg-[#FCFCFD] p-3.5 rounded-lg border border-[#FDE68A]">
+                            <span className="text-[11px] text-[#6B7280] font-medium block">Sisa Pelunasan (70%)</span>
+                            <p className="text-base font-mono tabular-nums font-semibold text-[#111827] leading-tight mt-0.5">
                               Rp {Math.round(Number(trackedBooking.amount || 0) * 0.7).toLocaleString('id-ID')}
                             </p>
-                            <span className="text-[10px] text-slate-400">Dilunasi paling lambat H-7 pelaksanaan acara</span>
+                            <span className="text-[11px] text-[#6B7280]">Dilunasi paling lambat H-7 pelaksanaan acara</span>
                           </div>
                         </div>
 
                         {/* Official BSI Account */}
-                        <div className="bg-white p-4 rounded-xl border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                          <div>
+                        <div className="bg-[#FCFCFD] p-4 rounded-lg border border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <Building2 className="w-4 h-4 text-primary" />
-                              <span className="text-xs font-black text-slate-900">Bank Syariah Indonesia (BSI)</span>
+                              <Building2 className="w-4 h-4 text-[#1E40AF] shrink-0" />
+                              <span className="text-xs font-semibold text-[#111827]">Bank Syariah Indonesia (BSI)</span>
                             </div>
-                            <p className="font-mono text-base font-black text-slate-900 tracking-wider mt-0.5">
+                            <p className="font-mono tabular-nums text-base font-semibold text-[#111827] tracking-wider mt-0.5">
                               7188 2938 19
                             </p>
-                            <span className="text-[10px] text-slate-500 font-medium">a.n. Kas Gedung Serbaguna Huntap Tondo 2</span>
+                            <span className="text-[11px] text-[#4B5563] block">a.n. Kas Gedung Serbaguna Huntap Tondo 2</span>
                           </div>
                           <button
                             type="button"
@@ -782,30 +826,30 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                               setCopiedAccount(true);
                               setTimeout(() => setCopiedAccount(false), 2000);
                             }}
-                            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer active:scale-95"
+                            className="w-full sm:w-auto min-h-[44px] px-3.5 py-2 rounded-lg bg-[#F1F3F5] hover:bg-[#E5E7EB] text-[#111827] text-xs font-medium flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                           >
-                            {copiedAccount ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            {copiedAccount ? <Check className="w-4 h-4 text-[#16A34A]" /> : <Copy className="w-4 h-4" />}
                             <span>{copiedAccount ? 'Nomor Tersalin' : 'Salin Nomor Rekening'}</span>
                           </button>
                         </div>
 
                         {/* Uploaded Proof Preview (If exists) */}
                         {trackedBooking.paymentProofUrl && (
-                          <div className="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-8 h-8 rounded-lg bg-[#DBEAFE] text-[#1E40AF] flex items-center justify-center shrink-0">
                                 <CheckCircle2 className="w-4 h-4" />
                               </div>
-                              <div>
-                                <span className="text-[11px] font-black text-blue-900 block leading-tight">Bukti Transfer Telah Diunggah</span>
-                                <span className="text-[10px] text-blue-600 font-medium">Bendahara pengurus sedang melakukan verifikasi mutasi bank</span>
+                              <div className="min-w-0">
+                                <span className="text-xs font-semibold text-[#1E40AF] block leading-tight">Bukti Transfer Telah Diunggah</span>
+                                <span className="text-[11px] text-[#1D4ED8] block">Bendahara pengurus sedang melakukan verifikasi mutasi bank</span>
                               </div>
                             </div>
                             <a
                               href={trackedBooking.paymentProofUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-bold flex items-center gap-1 transition-colors shrink-0"
+                              className="w-full sm:w-auto min-h-[40px] px-3 py-1.5 rounded-lg bg-white border border-[#BFDBFE] text-[#1E40AF] hover:bg-[#EFF6FF] text-xs font-medium flex items-center justify-center gap-1 transition-colors shrink-0"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               <span>Lihat Struk</span>
@@ -815,18 +859,18 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
                         {/* Upload Action */}
                         <div className="space-y-2">
-                          <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                          <span className="text-xs font-medium text-[#4B5563] block">
                             {trackedBooking.paymentProofUrl ? 'Unggah Ulang Bukti Transfer Baru' : 'Unggah Struk / Bukti Transfer Sekarang'}
                           </span>
-                          <label className={`w-full py-3.5 px-4 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-white hover:bg-amber-50/50 flex items-center justify-center gap-2 text-xs font-bold text-amber-900 cursor-pointer transition-all shadow-xs ${isUploadingProof ? 'opacity-50 pointer-events-none' : ''}`}>
+                          <label className={`w-full min-h-[44px] py-3 px-4 rounded-lg border-2 border-dashed border-[#D97706]/50 hover:border-[#B45309] bg-[#FCFCFD] hover:bg-white flex items-center justify-center gap-2 text-xs font-medium text-[#92400E] cursor-pointer transition-colors ${isUploadingProof ? 'opacity-50 pointer-events-none' : ''}`}>
                             {isUploadingProof ? (
                               <>
-                                <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                                <span>Mengunggah & Mengirim Alert ke Pengurus...</span>
+                                <Loader2 className="w-4 h-4 animate-spin text-[#B45309]" />
+                                <span>Mengunggah &amp; Mengirim Notifikasi ke Pengurus...</span>
                               </>
                             ) : (
                               <>
-                                <Upload className="w-4 h-4 text-amber-600" />
+                                <Upload className="w-4 h-4 text-[#B45309]" />
                                 <span>Pilih Foto Bukti Transfer (JPG/PNG)</span>
                               </>
                             )}
@@ -839,14 +883,14 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                             />
                           </label>
                           {uploadSuccessMsg && (
-                            <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-1.5">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <p className="text-xs text-[#15803D] font-medium bg-[#F0FDF4] p-2.5 rounded-lg border border-[#BBF7D0] flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
                               <span>{uploadSuccessMsg}</span>
                             </p>
                           )}
                           {uploadErrorMsg && (
-                            <p className="text-xs text-rose-700 font-bold bg-rose-50 p-2.5 rounded-xl border border-rose-200 flex items-center gap-1.5">
-                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <p className="text-xs text-[#B91C1C] font-medium bg-[#FEF2F2] p-2.5 rounded-lg border border-[#FECACA] flex items-center gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-[#DC2626] shrink-0" />
                               <span>{uploadErrorMsg}</span>
                             </p>
                           )}
@@ -854,16 +898,14 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
 
                         {/* Direct WhatsApp Confirmation Button */}
                         <a
-                          href={`https://wa.me/${
-                            config?.contactPhone 
-                              ? (config.contactPhone.startsWith('0') ? '62' + config.contactPhone.slice(1) : config.contactPhone.replace(/\D/g, '')) 
-                              : '6285961194622'
-                          }?text=${encodeURIComponent(
-                            `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• ID Registrasi: #${trackedBooking.id?.substring(0, 8).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n${trackedBooking.paymentProofUrl ? `• Tautan Bukti: ${trackedBooking.paymentProofUrl}\n` : ''}\nMohon diverifikasi. Terima kasih.`
+                          href={`https://wa.me/${formatWhatsAppPhoneNumber(
+                            config?.contactPhone || '+62 822-9157-8809'
+                          )}?text=${encodeURIComponent(
+                            `Yth. Pengelola GSG Huntap Tondo 2,\n\nSaya ingin mengonfirmasi pembayaran uang muka (DP) sewa gedung:\n• Kode Pengajuan: #GSG-${trackedBooking.id?.slice(-6).toUpperCase()}\n• Nama Pemohon: ${trackedBooking.customerName}\n• Tanggal Acara: ${trackedBooking.startDate}\n• Nominal DP: Rp ${Math.round(Number(trackedBooking.amount || 0) * 0.3).toLocaleString('id-ID')}\n${trackedBooking.paymentProofUrl ? `• Tautan Bukti: ${trackedBooking.paymentProofUrl}\n` : ''}\nMohon diverifikasi. Terima kasih.`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                          className="w-full min-h-[44px] py-2.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-medium text-xs flex items-center justify-center gap-2 transition-colors"
                         >
                           <MessageCircle className="w-4 h-4" />
                           <span>Konfirmasi Langsung via WhatsApp Pengurus</span>
@@ -872,22 +914,22 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                     )}
 
                     {/* TICKET FOOTER: OFFICIAL VERIFICATION & PDF DOCUMENTATION */}
-                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                        <span className="text-[10px] font-medium leading-tight">
+                    <div className="pt-4 border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 text-[#6B7280]">
+                        <ShieldCheck className="w-4 h-4 text-[#1E40AF] shrink-0" />
+                        <span className="text-[11px] leading-tight">
                           Dokumen sah terbitan resmi Pengurus RT 02 Huntap Tondo 2. Dapat diverifikasi secara terbuka.
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 justify-end">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto justify-end">
                         {isApproved && (
                           <button
                             type="button"
                             onClick={() => handlePreviewContract(trackedBooking)}
-                            className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-primary text-slate-800 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                            className="w-full sm:w-auto min-h-[44px] px-3.5 py-2 rounded-lg bg-white border border-[#D1D5DB] hover:border-[#1E40AF] text-[#111827] text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            <FileText className="w-3.5 h-3.5 text-primary" />
+                            <FileText className="w-3.5 h-3.5 text-[#1E40AF]" />
                             <span>Surat Perjanjian Sewa</span>
                           </button>
                         )}
@@ -895,7 +937,7 @@ export default function AvailabilityWidget({ onOpenBooking }: AvailabilityWidget
                           <button
                             type="button"
                             onClick={() => handlePreviewReceipt(trackedBooking)}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                            className="w-full sm:w-auto min-h-[44px] px-3.5 py-2 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           >
                             <Receipt className="w-3.5 h-3.5 text-white" />
                             <span>Kuitansi Resmi (Lunas)</span>

@@ -31,18 +31,6 @@ import {
   Award
 } from 'lucide-react';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie
-} from 'recharts';
-import { 
   addTransaction, 
   updateTransaction, 
   removeTransaction, 
@@ -50,11 +38,13 @@ import {
   updateGlobalConfig
 } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
-import { uploadToCloudinary, getTransparentPNG } from '../../lib/cloudinary';
+import { uploadToCloudinary } from '../../lib/cloudinary';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import { auth } from '../../lib/firebase';
 import { jsPDF } from 'jspdf';
 import PdfPreviewModal from '../../components/ui/PdfPreviewModal';
+import { getLocalDateISO } from '../../lib/dateUtils';
+import { sanitizeCsvCell } from '../../lib/csvUtils';
 
 import { useOutletContext } from 'react-router-dom';
 
@@ -449,46 +439,6 @@ export default function FinanceManager() {
     });
   };
 
-  const exportCSV = () => {
-    const headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Sumber/Tujuan', 'Jumlah', 'Catatan'];
-    const rows = filteredTransactions.length > 0 
-      ? filteredTransactions.map(t => [
-          t.id,
-          t.date,
-          t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-          displayCategory(t.category),
-          t.source,
-          t.amount,
-          t.notes || ''
-        ])
-      : [
-          [
-            '-',
-            '-',
-            'Laporan Nihil',
-            '-',
-            'Tidak ada aktivitas transaksi pada periode ini (Nihil)',
-            '0',
-            '-'
-          ]
-        ];
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Keuangan_Gedung_Serbaguna_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const rate = config?.devFundRate ?? 0.2;
   const totalIncome = allTransactions
     .filter(t => t.type === 'income')
@@ -827,11 +777,8 @@ export default function FinanceManager() {
         ];
 
     const csvContent = [
-      '\ufeff' + headers.join(','), // UTF-8 BOM for Excel
-      ...rows.map(row => row.map(cell => {
-        const val = cell === null || cell === undefined ? '' : String(cell);
-        return `"${val.replace(/"/g, '""')}"`;
-      }).join(','))
+      '\ufeff' + headers.map(sanitizeCsvCell).join(','), // UTF-8 BOM for Excel
+      ...rows.map(row => row.map(sanitizeCsvCell).join(','))
     ].join('\n');
 
     let periodLabel = 'Semua_Waktu';
@@ -852,7 +799,7 @@ export default function FinanceManager() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Ekspor_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Ekspor_Keuangan_${periodLabel}${suffix}_${getLocalDateISO()}.csv`);
     link.click();
     URL.revokeObjectURL(url);
   };

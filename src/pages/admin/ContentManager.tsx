@@ -11,15 +11,10 @@ import {
   CheckCircle2, 
   Save, 
   Settings2, 
-  X,
   Image as ImageIcon,
   Upload,
   Bell,
-  RotateCcw,
-  Sparkles,
-  Building2,
-  Loader2,
-  Layout
+  RotateCcw
 } from 'lucide-react';
 import { updateGlobalConfig, upsertFacility, removeFacility } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
@@ -107,28 +102,6 @@ export default function ContentManager() {
   };
 
   const [isUploading, setIsUploading] = useState<string | null>(null);
-  const [isUploadingHero, setIsUploadingHero] = useState(false);
-
-  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploadingHero(true);
-    try {
-      const { url } = await uploadToCloudinary(file);
-      setConfig((prev: any) => ({ ...prev, heroImageUrl: url }));
-    } catch (err: any) {
-      setConfirmConfig({
-        isOpen: true,
-        title: 'Gagal Upload Foto Hero',
-        message: err.message || 'Terjadi kesalahan saat mengunggah foto.',
-        onConfirm: () => {},
-        type: 'danger',
-        isAlert: true
-      });
-    } finally {
-      setIsUploadingHero(false);
-    }
-  };
 
   const handleImageUpload = async (id: string, file: File) => {
     setIsUploading(id);
@@ -208,17 +181,6 @@ export default function ContentManager() {
     await upsertFacility(null, newFac);
   };
 
-  const ICON_OPTIONS = [
-    { name: 'Users2', label: 'Umum' },
-    { name: 'PartyPopper', label: 'Pesta' },
-    { name: 'Dumbbell', label: 'Olahraga' },
-    { name: 'Music', label: 'Hiburan' },
-    { name: 'Building2', label: 'Gedung' },
-    { name: 'Calendar', label: 'Agenda' },
-    { name: 'Heart', label: 'Sosial' },
-    { name: 'Utensils', label: 'Katering' }
-  ];
-
   // Announcement Handlers
   const handleAddAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,17 +227,17 @@ export default function ContentManager() {
   if (!isAuthorized) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-gray-100 max-w-lg w-full text-center">
-          <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-8">
-            <ToggleRight className="w-10 h-10" />
+        <div className="bg-white p-10 rounded-2xl border border-[#E4E4E7] max-w-lg w-full text-center">
+          <div className="w-14 h-14 bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] rounded-xl flex items-center justify-center mx-auto mb-6">
+            <ToggleRight className="w-7 h-7" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 mb-4 tracking-tight">Akses Terbatas</h2>
-          <p className="text-gray-500 leading-relaxed mb-8">
+          <h2 className="text-xl font-semibold text-[#171717] mb-3 tracking-tight">Akses Terbatas</h2>
+          <p className="text-[#525252] text-sm leading-relaxed mb-6">
             Maaf, anda tidak memiliki izin untuk mengakses modul Pengaturan Gedung. 
             Modul ini hanya dapat diakses oleh Owner, Admin, atau Editor Konten.
           </p>
-          <div className="p-4 bg-gray-50 rounded-2xl text-xs font-bold text-gray-400 uppercase tracking-widest">
-            Level Akses Anda: {
+          <div className="p-3 bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg text-xs font-medium text-[#525252]">
+            Level akses Anda: {
               userRole === 'owner' ? 'System Owner' :
               userRole === 'admin' ? 'Administrator' :
               userRole === 'bendahara' ? 'Bendahara Gedung Serbaguna' :
@@ -292,25 +254,25 @@ export default function ContentManager() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Pengaturan Konten Publik</h2>
-          <p className="text-gray-500 text-sm">Kelola informasi yang tampil pada halaman depan website.</p>
+          <h2 className="text-2xl font-semibold text-[#171717] tracking-tight">Pengaturan Konten Publik</h2>
+          <p className="text-[#737373] text-sm mt-0.5">Kelola informasi yang tampil pada halaman depan website.</p>
         </div>
         <button 
           onClick={handleSave}
-          className="bg-primary text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 flex items-center gap-2 hover:bg-blue-800 transition-all"
+          className="bg-[#1E40AF] text-white px-5 py-2.5 rounded-lg font-medium text-xs flex items-center gap-2 hover:bg-[#1D3A8A] transition-colors cursor-pointer"
         >
           {saveStatus === 'saving' ? (
-            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : saveStatus === 'success' ? (
-            <CheckCircle2 className="w-5 h-5" />
+            <CheckCircle2 className="w-4 h-4" />
           ) : (
-            <Save className="w-5 h-5" />
+            <Save className="w-4 h-4" />
           )}
-          {saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'success' ? 'Berhasil!' : 'Update Tampilan Publik'}
+          {saveStatus === 'saving' ? 'Menyimpan...' : saveStatus === 'success' ? 'Tersimpan' : 'Update Tampilan Publik'}
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* PENGATURAN HERO SECTION (BANNER BERANDA) */}
         <HeroSettingsCard
           config={config}
@@ -319,36 +281,36 @@ export default function ContentManager() {
         />
 
         {/* Status Ketersediaan (Peningkatan) */}
-        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <ToggleRight className="w-6 h-6 text-primary" />
-            <h3 className="font-bold text-gray-900 leading-none">Status Operasional Gedung</h3>
+        <div className="bg-white p-6 rounded-xl border border-[#E4E4E7]">
+          <div className="flex items-center gap-3 mb-6">
+            <ToggleRight className="w-5 h-5 text-[#1E40AF]" />
+            <h3 className="font-semibold text-[#171717] leading-none">Status Operasional Gedung</h3>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center justify-between px-1">
-                Mode Kontrol
-                <span className={`px-2 py-0.5 rounded-full text-[8px] ${config?.manualStatus === 'maintenance' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}`}>
-                  {config?.manualStatus === 'maintenance' ? 'LOCKED: MAINTENANCE' : 'AUTO: BERDASARKAN BOOKING'}
+              <label className="block text-xs font-medium text-[#737373] mb-3 flex items-center justify-between">
+                <span>Mode Kontrol</span>
+                <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium border ${config?.manualStatus === 'maintenance' ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' : 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'}`}>
+                  {config?.manualStatus === 'maintenance' ? 'Terkunci: Maintenance' : 'Otomatis: Berdasarkan Booking'}
                 </span>
               </label>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => setConfig({...config, manualStatus: 'auto', isAvailable: true})}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${config?.manualStatus !== 'maintenance' ? 'border-primary bg-blue-50/50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                  className={`p-4 rounded-xl border transition-colors flex flex-col items-center gap-2 cursor-pointer ${config?.manualStatus !== 'maintenance' ? 'border-[#1E40AF] bg-[#EFF6FF]' : 'border-[#E4E4E7] bg-white hover:bg-[#FAFAFA]'}`}
                 >
-                  <ToggleRight className={`w-6 h-6 ${config?.manualStatus !== 'maintenance' ? 'text-primary' : 'text-gray-300'}`} />
-                  <span className="text-[10px] font-black uppercase text-gray-900">Otomatis / Normal</span>
+                  <ToggleRight className={`w-5 h-5 ${config?.manualStatus !== 'maintenance' ? 'text-[#1E40AF]' : 'text-[#A1A1AA]'}`} />
+                  <span className="text-xs font-medium text-[#171717]">Otomatis / Normal</span>
                 </button>
                 
                 <button 
                   onClick={() => setConfig({...config, manualStatus: 'maintenance', isAvailable: false})}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${config?.manualStatus === 'maintenance' ? 'border-amber-500 bg-amber-50/50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                  className={`p-4 rounded-xl border transition-colors flex flex-col items-center gap-2 cursor-pointer ${config?.manualStatus === 'maintenance' ? 'border-[#D97706] bg-[#FFFBEB]' : 'border-[#E4E4E7] bg-white hover:bg-[#FAFAFA]'}`}
                 >
-                  <AlertCircle className={`w-6 h-6 ${config?.manualStatus === 'maintenance' ? 'text-amber-500' : 'text-gray-300'}`} />
-                  <span className="text-[10px] font-black uppercase text-gray-900">Maintenance / Tutup</span>
+                  <AlertCircle className={`w-5 h-5 ${config?.manualStatus === 'maintenance' ? 'text-[#B45309]' : 'text-[#A1A1AA]'}`} />
+                  <span className="text-xs font-medium text-[#171717]">Maintenance / Tutup</span>
                 </button>
               </div>
             </div>
@@ -424,15 +386,15 @@ export default function ContentManager() {
         </div>
 
         {/* Info Warga / Announcement Ticker Manager */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-[#E4E4E7]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-[#E4E4E7]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] flex items-center justify-center">
                 <Bell className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 leading-tight">Pengumuman Berjalan (Info Warga)</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Kelola pesan teks berputar yang tampil di baris teratas website publik.</p>
+                <h3 className="font-semibold text-[#171717] leading-tight">Pengumuman Berjalan (Info Warga)</h3>
+                <p className="text-xs text-[#737373] mt-0.5">Kelola pesan teks berputar yang tampil di baris teratas website publik.</p>
               </div>
             </div>
 
@@ -443,20 +405,20 @@ export default function ContentManager() {
                   ...config,
                   showAnnouncementTicker: config?.showAnnouncementTicker === false ? true : false
                 })}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
                   config?.showAnnouncementTicker !== false
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                    ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
+                    : 'bg-[#F4F4F5] text-[#525252] border-[#E4E4E7]'
                 }`}
               >
                 {config?.showAnnouncementTicker !== false ? (
                   <>
-                    <ToggleRight className="w-4 h-4 text-emerald-600" />
+                    <ToggleRight className="w-4 h-4 text-[#16A34A]" />
                     <span>Status: Aktif Tayang</span>
                   </>
                 ) : (
                   <>
-                    <ToggleLeft className="w-4 h-4 text-gray-400" />
+                    <ToggleLeft className="w-4 h-4 text-[#737373]" />
                     <span>Status: Disembunyikan</span>
                   </>
                 )}
@@ -465,7 +427,7 @@ export default function ContentManager() {
               <button
                 type="button"
                 onClick={handleResetToDefaultAnnouncements}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-[#171717] bg-[#FAFAFA] hover:bg-[#F4F4F5] border border-[#E4E4E7] transition-colors cursor-pointer"
                 title="Muat teks default awal"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -475,9 +437,9 @@ export default function ContentManager() {
           </div>
 
           {/* Form Tambah Pengumuman */}
-          <form onSubmit={handleAddAnnouncement} className="mb-6 p-4 sm:p-5 bg-gray-50/70 rounded-2xl border border-gray-100 space-y-4">
-            <div className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-              <Plus className="w-3.5 h-3.5 text-primary" /> Tambah Pengumuman Baru
+          <form onSubmit={handleAddAnnouncement} className="mb-6 p-4 sm:p-5 bg-[#FAFAFA] rounded-xl border border-[#E4E4E7] space-y-4">
+            <div className="text-xs font-semibold text-[#171717] flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5 text-[#1E40AF]" /> Tambah Pengumuman Baru
             </div>
             
             <div className="flex flex-col md:flex-row gap-3">
@@ -487,7 +449,7 @@ export default function ContentManager() {
                   placeholder="Ketik isi pengumuman untuk warga (contoh: Kerja bakti hari Minggu jam 07.00...)"
                   value={newAnnouncementText}
                   onChange={(e) => setNewAnnouncementText(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  className="w-full bg-white border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-sm font-medium text-[#171717] placeholder:text-[#737373] outline-none focus:border-[#1E40AF] transition-colors"
                 />
               </div>
 
@@ -495,17 +457,17 @@ export default function ContentManager() {
                 <select
                   value={newAnnouncementType}
                   onChange={(e: any) => setNewAnnouncementType(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-xl px-3 py-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+                  className="bg-white border border-[#E4E4E7] rounded-lg px-3 py-2.5 text-xs font-medium text-[#171717] outline-none focus:border-[#1E40AF] transition-colors"
                 >
-                  <option value="info">ℹ️ Tipe: Informasi (Normal)</option>
-                  <option value="warning">⚠️ Tipe: Perhatian / Penting</option>
-                  <option value="success">✅ Tipe: Sukses / Agenda</option>
+                  <option value="info">Tipe: Informasi (Normal)</option>
+                  <option value="warning">Tipe: Perhatian / Penting</option>
+                  <option value="success">Tipe: Sukses / Agenda</option>
                 </select>
 
                 <button
                   type="submit"
                   disabled={!newAnnouncementText.trim()}
-                  className="px-5 py-3 bg-primary text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 bg-[#1E40AF] text-white rounded-lg text-xs font-medium hover:bg-[#1D3A8A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Tambah</span>
@@ -516,12 +478,12 @@ export default function ContentManager() {
 
           {/* Daftar Pengumuman Saat Ini */}
           <div className="space-y-2.5">
-            <label className="block text-[11px] font-black text-gray-400 uppercase tracking-wider mb-2">
-              Daftar Pesan Berputar ({((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).length} Pesan)
+            <label className="block text-xs font-medium text-[#737373] mb-2">
+              Daftar Pesan Berputar (<span className="font-mono tabular-nums">{((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).length}</span> Pesan)
             </label>
 
             {((config?.announcements || DEFAULT_ANNOUNCEMENTS) as any[]).length === 0 ? (
-              <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-gray-400 text-xs">
+              <div className="p-8 text-center bg-[#FAFAFA] rounded-xl border border-dashed border-[#E4E4E7] text-[#737373] text-xs">
                 Belum ada pengumuman. Ketik di atas atau klik "Reset Default" untuk memuat contoh pengumuman.
               </div>
             ) : (
@@ -530,26 +492,26 @@ export default function ContentManager() {
                 return (
                   <div 
                     key={ann.id || index}
-                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
+                    className={`p-3.5 rounded-xl border transition-colors flex items-start sm:items-center justify-between gap-3 ${
                       isActive 
-                        ? 'bg-white border-gray-200/80 hover:border-gray-300 shadow-sm' 
-                        : 'bg-gray-50/80 border-gray-100 opacity-60'
+                        ? 'bg-white border-[#E4E4E7] hover:border-[#D4D4D8]' 
+                        : 'bg-[#FAFAFA] border-[#E4E4E7] opacity-60'
                     }`}
                   >
                     <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                      <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-black text-[10px] flex items-center justify-center shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-[#F4F4F5] text-[#525252] font-mono tabular-nums font-semibold text-[11px] flex items-center justify-center shrink-0">
                         {index + 1}
                       </span>
 
-                      <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        ann.type === 'warning' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                        ann.type === 'success' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                        'bg-blue-100 text-blue-800 border border-blue-200'
+                      <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-md border ${
+                        ann.type === 'warning' ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' :
+                        ann.type === 'success' ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]' :
+                        'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE]'
                       }`}>
                         {ann.type === 'warning' ? 'Perhatian' : ann.type === 'success' ? 'Agenda' : 'Info'}
                       </span>
 
-                      <p className={`text-xs sm:text-sm font-medium ${isActive ? 'text-gray-900 font-semibold' : 'text-gray-500 line-through'}`}>
+                      <p className={`text-xs sm:text-sm font-medium ${isActive ? 'text-[#171717]' : 'text-[#737373] line-through'}`}>
                         {ann.text}
                       </p>
                     </div>
@@ -640,23 +602,23 @@ export default function ContentManager() {
                          )}
                        </div>
                     </td>
-                    <td className="py-6 px-2">
+                    <td className="py-5 px-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900">{fac.title}</span>
-                        {fac.highlight && <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded-full">POPULER</div>}
+                        <span className="font-semibold text-[#171717] text-sm">{fac.title}</span>
+                        {fac.highlight && <div className="px-2 py-0.5 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] text-[11px] font-medium rounded-md">Terfavorit</div>}
                       </div>
                     </td>
-                    <td className="py-6 px-2">
-                      <span className="font-bold text-primary">{fac.price}</span>
+                    <td className="py-5 px-2">
+                      <span className="font-mono tabular-nums font-semibold text-[#171717] text-sm">{fac.price}</span>
                     </td>
-                    <td className="py-6 px-2">
-                      <span className="text-sm text-gray-500">{fac.duration}</span>
+                    <td className="py-5 px-2">
+                      <span className="text-xs text-[#737373]">{fac.duration}</span>
                     </td>
-                    <td className="py-6 px-2 text-right">
+                    <td className="py-5 px-2 text-right">
                       <div className="flex justify-end gap-2 px-2">
                         <button 
                           onClick={() => setEditingFacility(fac)}
-                          className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 hover:shadow-sm transition-all"
+                          className="px-3.5 py-2 bg-white border border-[#E4E4E7] rounded-lg text-xs font-medium text-[#171717] hover:bg-[#F4F4F5] transition-colors cursor-pointer"
                         >
                           Atur Detail
                         </button>

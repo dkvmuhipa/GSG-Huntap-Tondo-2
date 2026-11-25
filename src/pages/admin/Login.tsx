@@ -21,9 +21,13 @@ import {
   checkIsAdminAuthorized 
 } from '../../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useAppStore } from '../../store/useAppStore';
+import { formatWaNumber } from '../../components/ContactSection';
 
 export default function Login() {
   const navigate = useNavigate();
+  const config = useAppStore(state => state.config);
+  const adminWaNumber = formatWaNumber(config?.contactPhone);
 
   const [error, setError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -178,7 +182,7 @@ export default function Login() {
               <div className="pt-2 border-t border-rose-200/60 flex items-center justify-between text-[10px]">
                 <span className="text-rose-600 font-bold">Butuh bantuan pendaftaran?</span>
                 <a 
-                  href="https://wa.me/6281234567890?text=Halo%20Admin%20GSG,%20mohon%20bantuan%20pendaftaran%20email%20saya%20ke%20sistem"
+                  href={`https://wa.me/${adminWaNumber}?text=Halo%20Admin%20GSG,%20mohon%20bantuan%20pendaftaran%20email%20saya%20ke%20sistem`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-rose-900 hover:text-rose-950 font-black underline flex items-center gap-1"

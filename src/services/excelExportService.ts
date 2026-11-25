@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx-js-style';
+import { getLocalDateISO } from '../lib/dateUtils';
 
 export interface Transaction {
   id?: string;
@@ -616,7 +617,7 @@ export function exportTransactionsToExcel(
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Buku Kas Utama');
   XLSX.utils.book_append_sheet(workbook, worksheet2, 'Analisis Kategori');
 
-  const fileName = `Laporan_Kas_GSG_Tondo2_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = `Laporan_Kas_GSG_Tondo2_${getLocalDateISO()}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 
@@ -883,7 +884,7 @@ export function exportBookingsToExcel(bookings: Booking[], filterStatus = 'Semua
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Booking GSG');
 
-  const fileName = `Rekap_Booking_GSG_Tondo2_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = `Rekap_Booking_GSG_Tondo2_${getLocalDateISO()}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 
@@ -1002,6 +1003,6 @@ export function exportAuditLogsToExcel(logs: any[]) {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Audit Trail GSG');
 
-  const fileName = `Audit_Log_GSG_Tondo2_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fileName = `Audit_Log_GSG_Tondo2_${getLocalDateISO()}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }

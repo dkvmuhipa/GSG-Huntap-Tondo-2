@@ -109,6 +109,7 @@ service cloud.firestore {
              data.comment is string && data.comment.size() <= 2000 &&
              data.status in ['pending', 'approved', 'rejected'] &&
              (!('eventDate' in data) || data.eventDate is string) &&
+             (!('eventType' in data) || (data.eventType is string && data.eventType.size() <= 100)) &&
              (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
@@ -159,15 +160,28 @@ service cloud.firestore {
     match /config/{docId} {
       // Sembunyikan dokumen kredensial sensitif seperti whatsapp_gateway dari akses publik
       allow read: if docId != 'whatsapp_gateway' || hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
-      allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
-      allow delete: if isSuperAdmin();
+      allow create: if (
+        docId == 'whatsapp_gateway'
+          ? hasAnyRole(['owner', 'admin', 'bendahara'])
+          : hasAnyRole(['owner', 'admin', 'bendahara', 'finance'])
+      );
+      allow update: if (
+        docId == 'whatsapp_gateway'
+          ? hasAnyRole(['owner', 'admin', 'bendahara'])
+          : (
+              hasAnyRole(['owner', 'admin', 'bendahara', 'finance']) ||
+              (hasAnyRole(['editor']) &&
+               !incoming().diff(existing()).affectedKeys().hasAny(['devFundRate', 'monthlyBudget', 'devGoalTargetAmount', 'devFund', 'opsFund']))
+            )
+      );
+      allow delete: if hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
     }
 
     // Facilities / Gedung
     match /facilities/{docId} {
       allow read: if true;
       allow create, update: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara']);
-      allow delete: if isSuperAdmin();
+      allow delete: if hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
     }
 
     // Transaksi / Keuangan
@@ -186,9 +200,15 @@ service cloud.firestore {
       );
       allow update: if (
         hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']) ||
-        // Izinkan penyewa mengunggah bukti pembayaran mandiri (hanya field bukti bayar)
-        (incoming().diff(existing()).affectedKeys().hasOnly(['paymentProofUrl', 'paymentStatus', 'updatedAt']) &&
-         incoming().paymentStatus in ['unpaid', 'verifying', 'paid'])
+        // Izinkan penyewa mengunggah bukti pembayaran mandiri (hanya transisi ke 'verifying' + URL https valid)
+        (existing().paymentStatus in ['unpaid', 'verifying'] &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['paymentProofUrl', 'paymentStatus', 'paymentProofUploadedAt', 'updatedAt']) &&
+         incoming().paymentStatus == 'verifying' &&
+         incoming().paymentProofUrl is string &&
+         incoming().paymentProofUrl.size() > 0 &&
+         incoming().paymentProofUrl.size() <= 1000 &&
+         incoming().paymentProofUrl.matches('^https://.*') &&
+         (!('paymentProofUploadedAt' in incoming()) || incoming().paymentProofUploadedAt is string))
       );
       allow delete: if hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
     }
@@ -213,7 +233,7 @@ service cloud.firestore {
       allow get: if true;
       allow create: if isValidFeedback(incoming()) && incoming().status == 'pending';
       allow update: if isValidFeedback(incoming()) && hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
-      allow delete: if isSuperAdmin();
+      allow delete: if hasAnyRole(['owner', 'admin', 'bendahara', 'editor']);
     }
 
     // Kontrak Digital
@@ -226,7 +246,7 @@ service cloud.firestore {
     // Audit Trail Log (Aktivitas Pengurus / Admin)
     match /audit_logs/{docId} {
       allow read: if hasAnyRole(['owner', 'admin', 'bendahara', 'finance', 'editor']);
-      allow create: if isSignedIn();
+      allow create: if hasAnyRole(['owner', 'admin', 'bendahara', 'finance', 'editor']);
       allow update, delete: if false; // Immutable audit trail
     }
 

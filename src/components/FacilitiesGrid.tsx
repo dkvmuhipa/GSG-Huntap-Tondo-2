@@ -62,134 +62,79 @@ interface FacilityCardProps {
   onOpenBooking: (pkg?: string) => void;
 }
 
-function FacilityCard({ fac, index, bookings, config, onOpenBooking }: FacilityCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-  const [isHovered, setIsHovered] = useState(false);
-
+const FacilityCard: React.FC<FacilityCardProps> = ({ fac, index, bookings, config, onOpenBooking }) => {
   const IconComponent = ICON_MAP[fac.iconName] || Users2;
   const availability = checkCurrentAvailability(bookings, config, fac.title);
   const isBusy = availability.isBusy;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const normX = (x / rect.width) - 0.5;
-    const normY = (y / rect.height) - 0.5;
-
-    // Subtle 3D tilt max ~5 degrees
-    setTilt({
-      x: normY * -6,
-      y: normX * 6
-    });
-
-    setMousePos({
-      x: (x / rect.width) * 100,
-      y: (y / rect.height) * 100
-    });
-    setIsHovered(true);
-  };
-
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
-    setIsHovered(false);
-  };
-
   return (
     <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      initial={{ opacity: 0, scale: 0.95 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.1 }}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
       viewport={{ once: true }}
-      style={{
-        transform: isHovered 
-          ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-6px)` 
-          : 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)',
-        transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.4s ease-out, box-shadow 0.4s ease-out',
-        transformStyle: 'preserve-3d'
-      }}
-      className={`rounded-[2.5rem] border overflow-hidden relative group flex flex-col justify-between transition-shadow duration-300 will-change-transform ${
+      className={`rounded-2xl border overflow-hidden relative group flex flex-col justify-between transition-colors ${
         fac.highlight 
-          ? 'bg-white border-primary shadow-xl shadow-primary/10 hover:shadow-2xl hover:shadow-primary/20' 
-          : 'bg-gray-50/70 border-gray-100 hover:bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-slate-200/50'
+          ? 'bg-[#FCFCFD] border-[#1E40AF] ring-1 ring-[#1E40AF]/15' 
+          : 'bg-[#F8F9FA] border-[#E5E7EB] hover:bg-[#FCFCFD] hover:border-[#1E40AF]/35'
       }`}
     >
-      {/* Subtle cursor-following ambient spotlight */}
-      <div 
-        className="pointer-events-none absolute -inset-px rounded-[2.5rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100 z-20"
-        style={{
-          background: `radial-gradient(350px circle at ${mousePos.x}% ${mousePos.y}%, rgba(30, 64, 175, 0.08), transparent 75%)`
-        }}
-      />
-
       {/* Image Section */}
       <div>
-        <div className="h-48 relative overflow-hidden">
+        <div className="h-48 relative overflow-hidden bg-[#F1F3F5]">
           {fac.imageUrl ? (
             <img 
               src={fac.imageUrl} 
               alt={fac.title} 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" 
             />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center ${fac.highlight ? 'bg-primary/5' : 'bg-gray-200/50'}`}>
-              <IconComponent className={`w-12 h-12 transition-transform duration-500 group-hover:scale-110 ${fac.highlight ? 'text-primary' : 'text-gray-300'}`} />
+            <div className={`w-full h-full flex items-center justify-center ${fac.highlight ? 'bg-[#EFF6FF]' : 'bg-[#F1F3F5]'}`}>
+              <IconComponent className={`w-12 h-12 ${fac.highlight ? 'text-[#1E40AF]' : 'text-[#6B7280]'}`} strokeWidth={1.5} />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent flex items-end p-6 z-10">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/80 via-[#111827]/20 to-transparent flex items-end p-5 z-10">
             <div className="flex flex-col text-left">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3 ${fac.highlight ? 'bg-primary text-white shadow-lg' : 'bg-white/20 backdrop-blur-md text-white'}`}>
-                <IconComponent className="w-5 h-5" />
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${fac.highlight ? 'bg-[#1E40AF] text-white' : 'bg-white/95 text-[#1E40AF] border border-white/40'}`}>
+                <IconComponent className="w-4 h-4" strokeWidth={1.75} />
               </div>
-              <h3 className="text-xl font-bold text-white tracking-tight drop-shadow-sm">{fac.title}</h3>
+              <h3 className="text-lg font-semibold text-white tracking-tight">{fac.title}</h3>
             </div>
           </div>
 
-          {/* Status Badge with breathing pulse dot */}
-          <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md z-10 ${
-            isBusy ? 'bg-rose-500/90 text-white shadow-lg' : 'bg-white/95 text-emerald-700 shadow-md border border-emerald-100'
+          {/* Status Badge */}
+          <div className={`absolute top-3.5 right-3.5 px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center gap-1.5 z-10 border ${
+            isBusy ? 'bg-[#DC2626] text-white border-[#B91C1C]' : 'bg-[#FCFCFD]/95 text-[#15803D] border-[#BBF7D0]'
           }`}>
-            <span className="relative flex h-2 w-2">
-              {!isBusy && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${isBusy ? 'bg-white' : 'bg-emerald-500'}`} />
-            </span>
+            <span className={`inline-flex rounded-full h-2 w-2 ${isBusy ? 'bg-white' : 'bg-[#16A34A]'}`} />
             {isBusy ? 'Terpakai' : 'Tersedia'}
           </div>
         </div>
         
-        <div className="p-7 text-left">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="p-5 sm:p-6 text-left">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             {fac.capacity && (
-              <div className="px-2.5 py-1 bg-gray-100 text-[10px] font-black text-gray-600 rounded-lg uppercase tracking-tight">
+              <div className="px-2.5 py-1 bg-[#F1F3F5] text-[11px] font-medium text-[#4B5563] rounded-md border border-[#E5E7EB]">
                 Kapasitas: {fac.capacity}
               </div>
             )}
             {fac.highlight && (
-              <div className="px-2.5 py-1 bg-primary text-[10px] font-black text-white rounded-lg uppercase tracking-tight shadow-sm shadow-primary/30">
+              <div className="px-2.5 py-1 bg-[#1E40AF] text-[11px] font-medium text-white rounded-md">
                 Terfavorit
               </div>
             )}
           </div>
 
-          <div className="flex items-baseline gap-1 mb-6">
-            <span className="text-3xl font-black text-primary tracking-tight">{fac.price}</span>
-            <span className="text-xs text-gray-400 font-bold tracking-tight">/ {fac.duration}</span>
+          <div className="flex items-baseline gap-1.5 mb-5">
+            <span className="text-2xl sm:text-3xl font-mono tabular-nums font-semibold text-[#111827] tracking-tight">{fac.price}</span>
+            <span className="text-xs text-[#6B7280]">/ {fac.duration}</span>
           </div>
 
-          <div className="space-y-3 mb-6">
+          <div className="space-y-2.5 mb-4">
             {(fac.features || []).slice(0, 4).map((feat: string, i: number) => (
-              <div key={`${feat}-${i}`} className="flex items-center gap-2.5 text-xs text-gray-600 font-medium">
-                <div className="w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-emerald-600 stroke-[3px]" />
+              <div key={`${feat}-${i}`} className="flex items-center gap-2.5 text-xs text-[#4B5563]">
+                <div className="w-4 h-4 rounded-full bg-[#F0FDF4] border border-[#BBF7D0] flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 text-[#16A34A] stroke-[2.5px]" />
                 </div>
                 <span className="line-clamp-1">{feat}</span>
               </div>
@@ -198,21 +143,21 @@ function FacilityCard({ fac, index, bookings, config, onOpenBooking }: FacilityC
         </div>
       </div>
 
-      <div className="p-7 pt-0 z-10">
+      <div className="p-5 sm:p-6 pt-0 z-10">
         <button 
           onClick={() => onOpenBooking(fac.title)}
           disabled={isBusy}
-          className={`w-full py-4 px-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 group/btn ${
+          className={`w-full min-h-[44px] py-3 px-4 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer ${
             isBusy 
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              ? 'bg-[#F1F3F5] text-[#6B7280] cursor-not-allowed' 
               : fac.highlight 
-                ? 'bg-primary text-white shadow-xl shadow-primary/25 hover:bg-blue-800 hover:shadow-primary/40' 
-                : 'bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 hover:border-gray-300'
+                ? 'bg-[#1E40AF] text-white hover:bg-[#1D3A8A]' 
+                : 'bg-[#FCFCFD] border border-[#D1D5DB] text-[#111827] hover:bg-[#F1F3F5]'
           }`}
         >
-          <span>{isBusy ? 'Sudah Dipesan Hari Ini' : 'Booking Sekarang'}</span>
+          <span>{isBusy ? 'Sudah Dipesan Hari Ini' : 'Ajukan Paket Ini'}</span>
           {!isBusy && (
-            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
+            <ArrowRight className="w-4 h-4" />
           )}
         </button>
       </div>
@@ -247,7 +192,7 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
       price: 'Rp 500.000',
       duration: 'Durasi 12 Jam',
       iconName: 'PartyPopper',
-      features: ['Kapasitas 500 Orang', 'Meja & Kursi Standar', 'Sirkulasi Udara Alami', 'Ruang Ganti'],
+      features: ['Kapasitas 300 Orang', 'Meja & Kursi Standar', 'Sirkulasi Udara Alami', 'Ruang Ganti'],
       highlight: true
     },
     {
@@ -315,31 +260,31 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
   };
 
   return (
-    <section id="fasilitas" className="py-20 bg-white scroll-mt-20 border-b border-gray-100">
+    <section id="fasilitas" className="py-12 sm:py-16 lg:py-20 bg-[#FCFCFD] scroll-mt-28 border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-14 gap-6 text-left">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 sm:mb-12 gap-5 sm:gap-6 text-left">
           <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-3.5 py-1.5 rounded-full mb-3">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-xs font-black text-primary uppercase tracking-widest">Pilihan Fasilitas</span>
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF] mb-2">
+              <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+              <span>Pilihan fasilitas</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-3 tracking-tight">
-              Fasilitas & Tarif Sewa
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] mb-3 tracking-tight">
+              Fasilitas &amp; Tarif Sewa
             </h2>
-            <p className="text-gray-500 text-sm md:text-base leading-relaxed">
-              Pilih paket penggunaan sesuai kebutuhan acara Anda. Harga flat, terjangkau, dan kompetitif untuk kenyamanan warga.
+            <p className="text-[#4B5563] text-sm sm:text-base leading-relaxed">
+              Pilih paket penggunaan sesuai kebutuhan acara Anda. Harga flat, terjangkau, dan transparan untuk seluruh warga.
             </p>
           </div>
-          <div className="bg-blue-50 px-4 py-2.5 rounded-2xl border border-blue-100 flex items-center gap-2 text-xs font-bold text-primary">
+          <div className="bg-[#EFF6FF] px-4 py-2.5 rounded-xl border border-[#BFDBFE] flex items-center gap-2 text-xs font-medium text-[#1E40AF] w-full md:w-auto">
             <Info className="w-4 h-4 shrink-0" />
-            <span>Tarif di luar iuran kebersihan gedung (Rp 25.000)</span>
+            <span className="font-mono tabular-nums">Tarif di luar iuran kebersihan gedung (Rp 25.000)</span>
           </div>
         </div>
 
         {/* Facilities Grid Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {displayFacilities.map((fac, index) => (
             <FacilityCard
               key={fac.id || `fac-${index}`}
@@ -353,27 +298,27 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
         </div>
 
         {/* INTEGRATED COST CALCULATOR DRAWER */}
-        <div className="mt-14">
+        <div className="mt-10 sm:mt-12">
           <button
             type="button"
             onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
-            className="w-full bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 p-5 rounded-3xl transition-all flex items-center justify-between text-left group"
+            className="w-full min-h-[44px] bg-[#F8F9FA] hover:bg-[#F1F3F5] border border-[#E5E7EB] p-4 sm:p-5 rounded-2xl transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-left group cursor-pointer"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Calculator className="w-6 h-6" />
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] rounded-xl flex items-center justify-center shrink-0">
+                <Calculator className="w-5 h-5" strokeWidth={1.75} />
               </div>
-              <div>
-                <h4 className="font-black text-base text-gray-900 leading-snug">
+              <div className="min-w-0">
+                <h4 className="font-semibold text-sm sm:text-base text-[#111827] leading-snug">
                   Butuh Tambahan Kursi, Meja, AC, atau Sound System?
                 </h4>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-[#4B5563] mt-0.5">
                   Klik untuk membuka simulasi perhitungan biaya perlengkapan tambahan secara transparan.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-black uppercase text-primary shrink-0 ml-4">
+            <div className="flex items-center gap-2 text-xs font-medium text-[#1E40AF] shrink-0 self-end sm:self-center sm:ml-4">
               <span>{isCalculatorOpen ? 'Tutup Simulasi' : 'Buka Kalkulator Biaya'}</span>
               {isCalculatorOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
@@ -383,19 +328,18 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
           <AnimatePresence>
             {isCalculatorOpen && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-6 sm:p-10 mt-4 text-left">
-                  <div className="flex flex-col lg:flex-row justify-between items-start gap-8">
+                <div className="bg-[#FCFCFD] rounded-2xl border border-[#E5E7EB] p-4 sm:p-8 mt-4 text-left">
+                  <div className="flex flex-col lg:flex-row justify-between items-start gap-6 sm:gap-8">
                     
                     {/* Left: Controls */}
-                    <div className="flex-1 w-full space-y-6">
+                    <div className="flex-1 w-full min-w-0 space-y-6">
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">
+                        <label className="text-xs font-medium text-[#6B7280] block mb-2">
                           1. Pilih Paket Dasar Gedung
                         </label>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -404,14 +348,14 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
                               key={f.id}
                               type="button"
                               onClick={() => setSelectedPackageId(f.id)}
-                              className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                              className={`min-h-[44px] p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                                 selectedPackageId === f.id
-                                  ? 'border-primary bg-blue-50/50'
-                                  : 'border-gray-100 hover:border-gray-200'
+                                  ? 'border-[#1E40AF] bg-[#EFF6FF]'
+                                  : 'border-[#E5E7EB] bg-[#F8F9FA] hover:border-[#D1D5DB]'
                               }`}
                             >
-                              <span className="font-bold text-xs text-gray-900 block truncate">{f.title}</span>
-                              <span className="font-extrabold text-xs text-primary">{f.price}</span>
+                              <span className="font-semibold text-xs text-[#111827] block truncate">{f.title}</span>
+                              <span className="font-mono tabular-nums font-semibold text-xs text-[#1E40AF]">{f.price}</span>
                             </button>
                           ))}
                         </div>
@@ -419,13 +363,13 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
 
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                            2. Tambahan Inventaris & Fasilitas
+                          <label className="text-xs font-medium text-[#6B7280]">
+                            2. Tambahan Inventaris &amp; Fasilitas
                           </label>
                           <button
                             type="button"
                             onClick={resetAddons}
-                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                            className="min-h-[36px] px-2 text-xs font-medium text-[#6B7280] hover:text-[#111827] flex items-center gap-1 transition-colors cursor-pointer"
                           >
                             <RotateCcw className="w-3 h-3" />
                             Reset
@@ -438,32 +382,34 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
                             return (
                               <div 
                                 key={item.id}
-                                className="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3"
+                                className="p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB] flex items-center justify-between gap-3"
                               >
-                                <div className="min-w-0">
-                                  <span className="font-bold text-xs text-gray-900 block truncate">{item.name}</span>
-                                  <span className="text-[11px] text-gray-500">
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-semibold text-xs text-[#111827] block truncate">{item.name}</span>
+                                  <span className="text-[11px] font-mono tabular-nums text-[#4B5563]">
                                     Rp {item.unitPrice.toLocaleString('id-ID')} / {item.unitLabel}
                                   </span>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                   <button
                                     type="button"
                                     onClick={() => updateAddon(item.id, -1, item.step, item.min, item.max)}
                                     disabled={count <= item.min}
-                                    className="w-7 h-7 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 disabled:opacity-30 active:scale-95"
+                                    aria-label={`Kurangi ${item.name}`}
+                                    className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#FCFCFD] border border-[#D1D5DB] flex items-center justify-center text-[#111827] hover:bg-[#F1F3F5] disabled:opacity-30 transition-colors cursor-pointer"
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
-                                  <span className="w-8 text-center font-black text-xs text-gray-900">
+                                  <span className="w-8 text-center font-mono tabular-nums font-semibold text-xs text-[#111827]">
                                     {count}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => updateAddon(item.id, 1, item.step, item.min, item.max)}
                                     disabled={count >= item.max}
-                                    className="w-7 h-7 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 disabled:opacity-30 active:scale-95"
+                                    aria-label={`Tambah ${item.name}`}
+                                    className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#FCFCFD] border border-[#D1D5DB] flex items-center justify-center text-[#111827] hover:bg-[#F1F3F5] disabled:opacity-30 transition-colors cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>
@@ -476,31 +422,31 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
                     </div>
 
                     {/* Right: Summary Card */}
-                    <div className="w-full lg:w-80 bg-slate-900 text-white rounded-3xl p-6 flex flex-col justify-between shrink-0 shadow-xl">
+                    <div className="w-full lg:w-80 bg-[#1E3A8A] text-white rounded-2xl p-5 sm:p-6 flex flex-col justify-between shrink-0">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-blue-400">
-                          Estimasi Biaya Transparan
+                        <span className="text-xs font-medium text-blue-200">
+                          Estimasi biaya transparan
                         </span>
-                        <h4 className="font-black text-lg text-white mt-1 mb-4">Ringkasan Simulasi</h4>
+                        <h4 className="font-display font-bold text-lg text-white mt-1 mb-4">Ringkasan Simulasi</h4>
 
-                        <div className="space-y-3 text-xs border-b border-slate-800 pb-4">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400 truncate max-w-[150px]">{selectedFacility?.title}</span>
-                            <span className="font-bold">Rp {packagePriceNumber.toLocaleString('id-ID')}</span>
+                        <div className="space-y-3 text-xs border-b border-white/15 pb-4">
+                          <div className="flex justify-between gap-3">
+                            <span className="text-blue-100 min-w-0 flex-1 truncate">{selectedFacility?.title}</span>
+                            <span className="font-mono tabular-nums font-medium shrink-0">Rp {packagePriceNumber.toLocaleString('id-ID')}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Total Fasilitas Tambahan</span>
-                            <span className="font-bold">Rp {addonsTotal.toLocaleString('id-ID')}</span>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-blue-100">Total Fasilitas Tambahan</span>
+                            <span className="font-mono tabular-nums font-medium shrink-0">Rp {addonsTotal.toLocaleString('id-ID')}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Iuran Kebersihan</span>
-                            <span className="font-bold">Rp {cleaningFee.toLocaleString('id-ID')}</span>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-blue-100">Iuran Kebersihan</span>
+                            <span className="font-mono tabular-nums font-medium shrink-0">Rp {cleaningFee.toLocaleString('id-ID')}</span>
                           </div>
                         </div>
 
                         <div className="pt-4 mb-6">
-                          <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Estimasi</span>
-                          <span className="text-2xl font-black text-emerald-400">
+                          <span className="text-xs text-blue-200 block">Total Estimasi</span>
+                          <span className="text-2xl font-mono tabular-nums font-bold text-[#FCD34D]">
                             Rp {grandTotal.toLocaleString('id-ID')}
                           </span>
                         </div>
@@ -509,7 +455,7 @@ export default function FacilitiesGrid({ onOpenBooking }: FacilitiesGridProps) {
                       <button
                         type="button"
                         onClick={() => onOpenBooking(selectedFacility?.title)}
-                        className="w-full py-3.5 rounded-2xl bg-primary hover:bg-blue-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 active:scale-95"
+                        className="w-full min-h-[44px] py-3 rounded-lg bg-white hover:bg-[#EFF6FF] text-[#1E40AF] font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <span>Lanjutkan Reservasi</span>
                         <ArrowRight className="w-4 h-4" />

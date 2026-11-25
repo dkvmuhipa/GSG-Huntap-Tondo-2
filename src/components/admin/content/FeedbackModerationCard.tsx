@@ -46,20 +46,20 @@ export default function FeedbackModerationCard() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-gray-900 leading-tight">Moderasi Ulasan & Testimoni Penyewa</h3>
+              <h3 className="font-semibold text-[#171717] leading-tight">Moderasi Ulasan & Testimoni Penyewa</h3>
               {pendingCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 animate-pulse">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono tabular-nums font-medium bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]">
                   {pendingCount} Menunggu
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-[#737373] mt-0.5">
               Setujui ulasan positif warga untuk ditampilkan pada carousel testimoni di halaman depan website.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-1 bg-[#F4F4F5] p-1 rounded-lg border border-[#E4E4E7] self-start sm:self-auto">
           {[
             { id: 'all', label: `Semua (${feedbacks.length})` },
             { id: 'pending', label: `Menunggu (${pendingCount})` },
@@ -70,10 +70,10 @@ export default function FeedbackModerationCard() {
               key={tab.id}
               type="button"
               onClick={() => setFilter(tab.id as any)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium font-mono tabular-nums transition-colors cursor-pointer ${
                 filter === tab.id
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-white text-[#171717] shadow-xs border border-[#E4E4E7]'
+                  : 'text-[#525252] hover:text-[#171717]'
               }`}
             >
               {tab.label}
@@ -83,10 +83,10 @@ export default function FeedbackModerationCard() {
       </div>
 
       {filteredList.length === 0 ? (
-        <div className="text-center py-10 bg-slate-50/60 rounded-2xl border border-dashed border-slate-200">
-          <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-xs font-bold text-slate-500">Belum ada ulasan warga pada kategori filter ini.</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+        <div className="text-center py-10 bg-[#FAFAFA] rounded-xl border border-dashed border-[#E4E4E7]">
+          <MessageSquare className="w-7 h-7 text-[#A1A1AA] mx-auto mb-2" strokeWidth={1.5} />
+          <p className="text-xs font-medium text-[#525252]">Belum ada ulasan warga pada kategori filter ini.</p>
+          <p className="text-[11px] text-[#737373] mt-0.5">
             Saat ini halaman publik menampilkan 3 testimoni arsip standar hingga ada ulasan warga yang disetujui.
           </p>
         </div>
@@ -95,29 +95,29 @@ export default function FeedbackModerationCard() {
           {filteredList.map((item) => (
             <div
               key={item.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between gap-4 ${
+              className={`p-4 rounded-xl border transition-colors flex flex-col justify-between gap-4 ${
                 item.status === 'pending'
-                  ? 'bg-amber-50/40 border-amber-200/80'
+                  ? 'bg-[#FFFBEB]/60 border-[#FDE68A]'
                   : item.status === 'approved'
-                  ? 'bg-emerald-50/30 border-emerald-200/70'
-                  : 'bg-slate-50 border-slate-200/70 opacity-75'
+                  ? 'bg-[#F0FDF4]/50 border-[#BBF7D0]'
+                  : 'bg-[#FAFAFA] border-[#E4E4E7] opacity-80'
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <h4 className="font-black text-slate-900 text-xs">{item.name}</h4>
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      {item.eventType || 'Acara Warga'} • {item.eventDate || '-'}
+                    <h4 className="font-semibold text-[#171717] text-xs">{item.name}</h4>
+                    <span className="text-[11px] font-mono tabular-nums text-[#737373]">
+                      {item.eventType || 'Acara Warga'} · {item.eventDate || '-'}
                     </span>
                   </div>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-medium border shrink-0 ${
                       item.status === 'approved'
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
                         : item.status === 'pending'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-200 text-slate-600'
+                        ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]'
+                        : 'bg-[#F4F4F5] text-[#525252] border-[#E4E4E7]'
                     }`}
                   >
                     {item.status === 'approved' ? 'Tampil Publik' : item.status === 'pending' ? 'Menunggu' : 'Disembunyikan'}
@@ -129,24 +129,24 @@ export default function FeedbackModerationCard() {
                     <Star
                       key={idx}
                       className={`w-3.5 h-3.5 ${
-                        idx < (item.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                        idx < (item.rating || 5) ? 'text-amber-500 fill-amber-500' : 'text-[#D4D4D8]'
                       }`}
                     />
                   ))}
                 </div>
 
-                <p className="text-xs text-slate-700 leading-relaxed italic bg-white/80 p-3 rounded-xl border border-slate-100">
+                <p className="text-xs text-[#525252] leading-relaxed bg-white p-3 rounded-lg border border-[#E4E4E7]">
                   "{item.comment}"
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/50">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E4E4E7]">
                 {item.status !== 'approved' && (
                   <button
                     type="button"
                     disabled={processingId === item.id}
                     onClick={() => handleStatusChange(item.id, 'approved')}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <Check className="w-3.5 h-3.5" />
                     Setujui Tampil
@@ -157,7 +157,7 @@ export default function FeedbackModerationCard() {
                     type="button"
                     disabled={processingId === item.id}
                     onClick={() => handleStatusChange(item.id, 'rejected')}
-                    className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#171717] border border-[#E4E4E7] text-xs font-medium flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     <EyeOff className="w-3.5 h-3.5" />
                     Sembunyikan
@@ -167,7 +167,7 @@ export default function FeedbackModerationCard() {
                   type="button"
                   disabled={processingId === item.id}
                   onClick={() => handleDelete(item.id)}
-                  className="p-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-all disabled:opacity-50"
+                  className="p-1.5 rounded-lg bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#DC2626] border border-[#FECACA] transition-colors disabled:opacity-50 cursor-pointer"
                   title="Hapus Ulasan"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

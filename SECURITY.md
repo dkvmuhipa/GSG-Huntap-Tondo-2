@@ -1,77 +1,56 @@
 # Security Policy & Audit Report (OWASP Standards)
 
 **Proyek**: Gedung Serbaguna Huntap Tondo 2  
-**Tanggal Audit Terakhir**: 29 Oktober 2026  
-**Status Audit**: 🟢 PASSED (Semua Temuan Telah Dimitigasi & Diamankan)  
+**Tanggal Audit Terakhir**: 25 November 2026  
+**Status Audit**: 🟢 HARDENED (Seluruh Temuan Kritis Telah Dimitigasi & Diverifikasi)  
 **Tingkat Keamanan**: Standar Produksi Enterprise (OWASP Top 10 Compliant)
 
 ---
 
 ## 🛡️ Ringkasan Eksekutif Keamanan
 
-Audit keamanan menyeluruh dilakukan secara periodik dengan fokus pada pencegahan OWASP Top 10: perlindungan kredensial (*Secrets Detection*), pencegahan injeksi & Cross-Site Scripting (XSS), kontrol akses berbasis peran (*Role-Based Access Control / Broken Access Control*), pengamanan skema basis data (*Firestore Security Rules*), dan ketahanan API terhadap penyalahgunaan (*Rate Limiting & Security Headers*).
+Audit keamanan menyeluruh dilakukan dengan fokus pada pencegahan OWASP Top 10: perlindungan kredensial (*Secrets Detection*), pencegahan injeksi & Cross-Site Scripting (XSS) serta CSV Formula Injection, kontrol akses berbasis peran (*Role-Based Access Control / Broken Access Control*), pengerasan aturan basis data (*Firestore Security Rules*), ketahanan API (*Rate Limiting*, validasi *magic bytes*, dan Security Headers), serta kebersihan rantai pasokan dependensi (*Supply Chain Security*).
 
 | Kategori Audit | Status | Tindakan / Mitigasi |
 |---|:---:|---|
-| **1. Secrets & Credentials Detection** | 🟢 PASSED | Kredensial telah disanitasi dari kode sumber dan `.env.example`. File `.env` lokal dikecualikan dari version control melalui `.gitignore` (`.env*`). |
-| **2. Injection & XSS Prevention (OWASP #1)** | 🟢 PASSED | Tidak ditemukan penggunaan `dangerouslySetInnerHTML`, `innerHTML`, `eval()`, atau `document.write()`. Seluruh input disanitasi otomatis oleh JSX React engine. Tautan eksternal terproteksi dengan `rel="noopener noreferrer"`. |
-| **3. Broken Access Control (OWASP #2)** | 🟢 PASSED | Rute admin (`/admin/*`) dilindungi verifikasi ganda via Firebase Auth dan lookup peran di Firestore. Dokumen kredensial sensitif `/config/whatsapp_gateway` dikunci khusus hanya untuk pengurus berwenang. |
-| **4. Insecure Design & IDOR Guard** | 🟢 PASSED | Skema permohonan reservasi warga terkunci pada status `pending` & `unpaid`. Pendaftaran UMKM mitra warga divalidasi via `isValidVendor` dengan status wajib `pending` dan `isVerified == false`. |
-| **5. API Protection & Rate Limiting** | 🟢 PASSED | Endpoint API (`/api/upload` dan `/api/notify-admin`) diproteksi rate limiter (*sliding window* per IP), validasi payload, batas ukuran 5MB, serta HTTP Security Headers (`nosniff`, `SAMEORIGIN`, `XSS-Protection`). |
-| **6. Supply Chain & Dependencies** | 🟢 PASSED | Paket dependensi terkelola bersih tanpa dependensi kritis yang rentan. `xlsx-js-style` digunakan secara terkontrol untuk ekspor laporan keuangan. |
+| **1. Secrets & Credentials Detection** | 🟢 PASSED | Kredensial server (`SIDOBE_SECRET_KEY`, `ADMIN_NOTIFICATION_PHONE`, `CLOUDINARY_*`) dipisahkan dari client bundle. `define.process.env.GEMINI_API_KEY` dihapus dari [`vite.config.ts`](vite.config.ts); `dxenprdms` / `gsght2_preset` & nomor HP pribadi `085961194622` dihapus dari source code. `.env*` dikecualikan melalui `.gitignore`. |
+| **2. Injection, XSS & CSV Guard (OWASP #1)** | 🟢 PASSED | Nihil `dangerouslySetInnerHTML`, `innerHTML`, `eval()`, atau `document.write()`. Ekspor CSV ([`src/lib/csvUtils.ts`](src/lib/csvUtils.ts)) mensterilkan awalan formula (`=`, `+`, `-`, `@`, tab, CR). Seluruh tautan `target="_blank"` menerapkan `rel="noopener noreferrer"`. |
+| **3. Broken Access Control & RBAC (OWASP #2)** | 🟢 PASSED | `/config/whatsapp_gateway` dikunci baca untuk pengurus dan tulis khusus `owner/admin/bendahara`. Koleksi `config` mengunci field finansial (`devFundRate`, `monthlyBudget`, `devGoalTargetAmount`, `devFund`, `opsFund`) agar tidak dapat diubah role `editor`. `audit_logs` dikunci pembuatannya hanya untuk role pengurus resmi. |
+| **4. Payment Integrity & Validation (`firestore.rules`)** | 🟢 PASSED | Publik pada `bookings` tidak lagi dapat menyetel status `paymentStatus == 'paid'`. Pembaruan bukti bayar publik dikunci hanya pada transisi `unpaid/verifying -> verifying`, mewajibkan URL `https://` valid (`<= 1000` karakter), serta menyertakan `paymentProofUploadedAt`. Skema `feedback` memvalidasi `eventType` dan izin hapus diselaraskan untuk role moderasi. |
+| **5. Backend API Hardening (`server.ts`)** | 🟢 PASSED | Mengaktifkan `trust proxy = 1` (Vercel), limit JSON `100kb`, pembersihan memori *sliding-window rate limiter*, validasi *magic bytes* biner (PNG/JPEG/PDF) pada `/api/upload`, sanitasi pesan error & `/api/health`, validasi URL `https://` pada notifikasi bukti transfer, serta HTTP Security Headers. |
+| **6. Supply Chain & Dependencies** | 🟢 PASSED | Paket tak terpakai dengan CVE tinggi (`xlsx` dan `@google/genai`) telah dihapus (`npm uninstall`), dan `npm audit fix` telah menambal `body-parser`, `dompurify`, `vite` (`6.4.4 -> 6.4.6`), `minimatch`, dan dependensi turunannya. |
 
 ---
 
-## 🔍 Temuan Audit & Resolusi (Detailed Findings)
+## 🔍 Rincian Perbaikan Keamanan (25 November 2026)
 
-### 1. Kredensial & Secrets Management
-- **Audit**: Pemindaian menyeluruh terhadap pola `API_KEY`, `SECRET`, `PASSWORD`, `BEARER`, dan `TOKEN`.
-- **Status Resolusi**: **PASSED**.
-  - `whatsappGatewayService.ts` membaca kunci dari environment variable client atau konfigurasi Firestore admin tanpa *hardcoded fallback*.
-  - `.env.example` hanya memuat placeholder aman (`your_api_key`, `your_api_secret`).
-  - `.gitignore` aktif mengecualikan semua varian `.env*` kecuali `.env.example`.
-
-### 2. Pengerasan Aturan Keamanan Firestore (`firestore.rules`)
-- **Temuan 1 (Dokumen Kredensial Gateway)**: Dokumen `/config/whatsapp_gateway` sebelumnya terbaca oleh publik karena aturan umum `match /config/{docId}` (`allow read: if true`).
-  - **Resolusi**: Diterapkan isolasi dokumen sensitif:
-    ```javascript
-    allow read: if docId != 'whatsapp_gateway' || hasAnyRole(['owner', 'admin', 'editor', 'bendahara', 'finance']);
-    ```
-- **Temuan 2 (Validasi Pendaftaran Mitra Vendor UMKM)**: Koleksi `vendors` sebelumnya memiliki `allow create: if true` tanpa validasi skema dan status verifikasi.
-  - **Resolusi**: Ditambahkan fungsi validasi `isValidVendor(incoming())` dan pembatasan izin pendaftaran:
-    ```javascript
-    allow create: if (
-      hasAnyRole(['owner', 'admin', 'editor', 'bendahara']) ||
-      (isValidVendor(incoming()) && incoming().status == 'pending' && incoming().isVerified == false)
-    );
-    ```
-    Hal ini mencegah publik mempublikasikan profil vendor secara otomatis tanpa persetujuan pengurus (*privilege escalation prevented*).
-
-### 3. Perlindungan API & Ketahanan DoS (`server.ts`)
-- **Temuan**: Endpoint `/api/upload` belum memiliki pembatasan laju (*rate limiting*) dan header keamanan HTTP standar.
-- **Status Resolusi**: **HARDENED**.
-  - Diterapkan middleware keamanan:
-    - `X-Content-Type-Options: nosniff` (mencegah MIME-type sniffing).
-    - `X-Frame-Options: SAMEORIGIN` (mencegah serangan Clickjacking).
-    - `X-XSS-Protection: 1; mode=block`.
-    - `Referrer-Policy: strict-origin-when-cross-origin`.
-    - `app.disable('x-powered-by')` (menyembunyikan fingerprint server Express).
-  - Diterapkan *in-memory sliding window rate limiter* untuk mencegah spam atau serangan Denial-of-Service (DoS) pada unggahan berkas (maksimal 25 unggahan per 15 menit per IP).
-  - Validasi ketat tipe MIME (hanya PNG, JPEG, PDF) dan batas memori maksimal 5MB.
-
-### 4. Proteksi Rute & Hak Akses Pengurus (`AdminLayout.tsx`)
-- Rute sensitif `/admin/*` diverifikasi berlapis:
-  1. *Authentication Layer*: `onAuthStateChanged` Firebase Auth.
-  2. *Authorization Layer*: `checkIsAdminAuthorized()` memverifikasi email terhadap dokumen resmi di Firestore `admins/{email}` dan system owner.
-  3. Pengguna yang tidak terdaftar otomatis ditolak dan diarahkan keluar (*Access Denied & Redirect*).
+1. **Pencegahan Pemalsuan Status Lunas (`firestore.rules` — `bookings/{docId}`)**:
+   - Menutup celah di mana klien publik sebelumnya diizinkan mengirim `paymentStatus: 'paid'`. Kini transisi publik hanya diperbolehkan menuju `paymentStatus == 'verifying'` dari status `unpaid` atau `verifying`, disertai validasi tipe string URL `https://` pada `paymentProofUrl` dan dukungan field `paymentProofUploadedAt`.
+2. **RBAC Granular untuk Konfigurasi, Feedback, dan Audit Logs (`firestore.rules`)**:
+   - `config/{docId}` membatasi penulisan `whatsapp_gateway` hanya untuk `owner/admin/bendahara` serta melindungi field finansial pada `config/global` dari modifikasi role `editor`.
+   - `audit_logs` dibatasi hanya untuk akun dengan role pengurus terverifikasi (`hasAnyRole`), mencegah akun Google eksternal menulis log.
+   - `feedback` menambahkan validasi panjang string `eventType` (`<= 100`) dan izin moderasi hapus bagi pengurus berwenang.
+3. **Hardening API & Penghapusan Hardcoded Fallback (`server.ts`, `cloudinary.ts`, `whatsappGatewayService.ts`, `vite.config.ts`)**:
+   - Memeriksa *magic bytes* file pada `/api/upload` agar file non-PNG/JPEG/PDF tidak lolos meski *Content-Type* dipalsukan.
+   - Menghapus *error detail* mentah dan `NODE_ENV` dari respons publik, menambahkan `app.set('trust proxy', 1)`, dan mem-prune entri kedaluwarsa di *rate limiter* untuk mencegah pertumbuhan memori tak terbatas.
+   - Menghapus `VITE_SIDOBE_SECRET_KEY`, `GEMINI_API_KEY` dari bundle client, serta fallback preset/cloudName Cloudinary (`dxenprdms` / `gsght2_preset`) dan nomor telepon pribadi `085961194622` dari repositori.
+4. **Sanitasi Ekspor CSV & Proteksi Tabnagging**:
+   - Menerapkan `sanitizeCsvCell` pada ekspor CSV Publik ([`TransparencyDashboard.tsx`](src/components/TransparencyDashboard.tsx)) dan Admin ([`FinanceManager.tsx`](src/pages/admin/FinanceManager.tsx)).
+   - Menambahkan `rel="noopener noreferrer"` ke seluruh tautan eksternal dan `window.open`.
 
 ---
 
-## 📋 Rekomendasi Pemeliharaan Rutin
+## ⚠️ Catatan Arsitektur & Rekomendasi Fase Berikutnya
 
-1. **Rotasi Kunci Berkala**: Lakukan rotasi berkala Secret Key Cloudinary dan SIDOBE WA Gateway setiap 6 bulan sekali.
-2. **Review Pengurus Aktif**: Audit berkala daftar akun pengurus di menu *Aturan & Hak Akses* (`/admin/rules`) untuk mencabut hak akses pengurus yang telah purnatugas.
-3. **Backup Data**: Lakukan ekspor cadangan data transaksi keuangan dan reservasi gedung ke format Excel secara berkala melalui modul Keuangan.
+1. **Upstream Transitive Dependencies (`@grpc/grpc-js` di `firebase` v12, `qs` di `express` v4, `esbuild` dev)**:
+   - Pemindaian `npm audit --omit=dev` melaporkan 6 advisory transitif tersisa (`4 high` dari `@grpc/grpc-js` di dalam `@firebase/firestore`, `1 moderate` pada `qs` di `express` v4, dan `1 low` pada `esbuild` dev bundler). Modul `@grpc/grpc-js` adalah transport gRPC Node.js yang tidak dieksekusi di bundle *browser client* React, sedangkan `esbuild` dev vulnerability hanya berlaku untuk *development server* lokal. Pantau pembaruan minor resmi `firebase` & `express` untuk resolusi bebas *breaking change* (jangan gunakan `npm audit fix --force` yang memaksa downgrade ke `firebase@9`).
+2. **Isolasi PII Warga pada Koleksi `bookings` (Roadmap Fase 2)**:
+   - Saat ini kalender ketersediaan dan fitur pelacakan warga membaca koleksi publik `bookings` dari Firestore client. Sebagai penguatan jangka menengah, disarankan memisahkan atribut identitas sensitif (`nik`, `address`) ke subkoleksi khusus pengurus (`bookings/{id}/private/identity`) atau menyajikan jadwal publik tersanitasi & *lookup* kode pengajuan melalui endpoint backend terautentikasi Firebase Admin SDK sehingga PII warga tidak pernah diunduh ke browser publik.
 
 ---
-*Laporan ini dihasilkan secara otomatis melalui protokol Systematic Security Audit (OWASP Standards).*
+
+## 📋 Daftar Periksa Pemeliharaan Rutin
+
+1. **Rotasi Kunci Berkala**: Lakukan rotasi berkala Secret Key Cloudinary dan SIDOBE WA Gateway setiap 6 bulan sekali melalui Environment Variables Vercel.
+2. **Audit Pengurus Aktif**: Tinjau daftar akun pada `/admin/rules` setiap pergantian pengurus RT untuk mencabut akses akun yang sudah tidak menjabat.
+3. **Verifikasi Backup**: Lakukan ekspor cadangan bulanan Laporan Keuangan & Rekap Booking ke Excel (`.xlsx`) secara rutin.

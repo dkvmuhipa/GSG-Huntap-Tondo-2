@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircle, ChevronDown, MessageCircle } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { formatWaNumber } from './ContactSection';
 
 const faqs = [
   {
@@ -31,53 +33,55 @@ const faqs = [
 
 export default function FAQSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const config = useAppStore(state => state.config);
+  const adminWaNumber = formatWaNumber(config?.contactPhone);
 
   return (
-    <section id="faq" className="py-24 bg-gray-50">
+    <section id="faq" className="py-12 sm:py-16 lg:py-20 bg-[#FCFCFD] border-b border-[#E5E7EB] scroll-mt-28">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/10 mb-4">
-            <HelpCircle className="w-4 h-4" />
-            Pusat Bantuan
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF] mb-2">
+            <HelpCircle className="w-4 h-4" strokeWidth={1.75} />
+            <span>Pusat bantuan</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
-            Tanya <span className="text-primary italic">Jawab</span>
+          <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] tracking-tight mb-3">
+            Tanya Jawab Seputar Sewa
           </h2>
-          <p className="text-gray-500 font-medium">
+          <p className="text-[#4B5563] text-sm sm:text-base">
             Beberapa hal yang paling sering ditanyakan oleh calon penyewa gedung.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {faqs.map((faq, idx) => (
             <div 
               key={idx}
-              className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-md"
+              className="bg-[#FCFCFD] rounded-2xl border border-[#E5E7EB] overflow-hidden transition-colors hover:border-[#1E40AF]/30"
             >
               <button 
                 onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
-                className="w-full px-8 py-6 text-left flex items-center justify-between gap-4 group"
+                className="w-full min-h-[44px] px-4 sm:px-6 py-4 sm:py-5 text-left flex items-center justify-between gap-4 group cursor-pointer"
               >
-                <span className="font-bold text-gray-900 text-lg leading-tight group-hover:text-primary transition-colors">
+                <span className="font-semibold text-[#111827] text-sm sm:text-base leading-snug group-hover:text-[#1E40AF] transition-colors">
                   {faq.question}
                 </span>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${openIdx === idx ? 'bg-primary text-white rotate-180' : 'bg-gray-50 text-gray-400 group-hover:bg-primary/10'}`}>
-                  <ChevronDown className="w-5 h-5" />
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors shrink-0 ${openIdx === idx ? 'bg-[#1E40AF] text-white' : 'bg-[#F1F3F5] text-[#4B5563]'}`}>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${openIdx === idx ? 'rotate-180' : ''}`} />
                 </div>
               </button>
               
               <AnimatePresence>
                 {openIdx === idx && (
                   <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <div className="px-8 pb-8 pt-2">
-                      <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                        <p className="text-gray-600 leading-relaxed font-medium italic">
-                          "{faq.answer}"
+                    <div className="px-4 sm:px-6 pb-5 sm:pb-6 pt-1">
+                      <div className="p-4 sm:p-5 bg-[#F8F9FA] rounded-xl border border-[#E5E7EB]">
+                        <p className="text-[#4B5563] text-sm leading-relaxed">
+                          {faq.answer}
                         </p>
                       </div>
                     </div>
@@ -88,23 +92,23 @@ export default function FAQSection() {
           ))}
         </div>
 
-        <div className="mt-16 p-8 bg-white rounded-[2.5rem] border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
-              <MessageCircle className="w-8 h-8" />
+        <div className="mt-10 sm:mt-12 p-5 sm:p-8 bg-[#FCFCFD] rounded-2xl border border-[#E5E7EB] flex flex-col md:flex-row items-start md:items-center justify-between gap-5 sm:gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] rounded-xl flex items-center justify-center shrink-0">
+              <MessageCircle className="w-6 h-6" strokeWidth={1.75} />
             </div>
             <div className="text-left">
-              <h4 className="text-xl font-black text-gray-900">Masih belum menemukan jawaban?</h4>
-              <p className="text-gray-500 text-sm font-medium">Tim admin kami siap membantu Anda secara langsung via WhatsApp.</p>
+              <h4 className="text-base sm:text-lg font-semibold text-[#111827]">Masih belum menemukan jawaban?</h4>
+              <p className="text-[#4B5563] text-xs sm:text-sm">Tim pengurus siap membantu Anda secara langsung via WhatsApp.</p>
             </div>
           </div>
           <a 
-            href="https://wa.me/6281234567890"
+            href={`https://wa.me/${adminWaNumber}`}
             target="_blank"
-            rel="noreferrer"
-            className="w-full md:w-auto px-10 py-4 bg-primary text-white rounded-2xl font-black text-sm text-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+            rel="noopener noreferrer"
+            className="w-full md:w-auto min-h-[44px] inline-flex items-center justify-center px-6 py-3 bg-[#1E40AF] hover:bg-[#1D3A8A] text-white rounded-lg font-medium text-xs text-center transition-colors shrink-0"
           >
-            HUBUNGI ADMIN
+            Hubungi Pengurus
           </a>
         </div>
       </div>

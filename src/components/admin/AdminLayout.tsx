@@ -3,13 +3,10 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import { 
   User, 
-  Bell, 
   LogOut, 
   AlertTriangle, 
   Menu, 
-  X, 
   Home, 
-  Calendar, 
   Wallet, 
   LayoutDashboard, 
   CalendarCheck,
@@ -18,6 +15,7 @@ import {
   Settings,
   ExternalLink
 } from 'lucide-react';
+import AdminNotificationBell from './AdminNotificationBell';
 import { auth, logout, db, checkIsAdminAuthorized } from '../../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
@@ -97,22 +95,22 @@ export default function AdminLayout() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-      <p className="text-primary font-bold">Memuat Sistem Keamanan...</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] flex-col gap-3">
+      <div className="w-8 h-8 border-2 border-[#1E40AF]/25 border-t-[#1E40AF] rounded-full animate-spin" />
+      <p className="text-[#525252] text-xs font-medium">Memuat sistem keamanan...</p>
     </div>
   );
 
   if (error || (!user && !loading)) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100 max-w-sm w-full text-center">
-        <div className={`w-16 h-16 ${error?.includes('Akses Ditolak') ? 'bg-orange-50 text-orange-500' : 'bg-red-50 text-red-500'} rounded-2xl flex items-center justify-center mx-auto mb-6`}>
-          {error?.includes('Akses Ditolak') ? <AlertTriangle className="w-8 h-8" /> : <LogOut className="w-8 h-8" />}
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-4">
+      <div className="bg-white p-8 rounded-2xl border border-[#E4E4E7] max-w-sm w-full text-center">
+        <div className={`w-12 h-12 ${error?.includes('Akses Ditolak') ? 'bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]' : 'bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]'} rounded-xl flex items-center justify-center mx-auto mb-5`}>
+          {error?.includes('Akses Ditolak') ? <AlertTriangle className="w-6 h-6" /> : <LogOut className="w-6 h-6" />}
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-[#171717] mb-2">
           {error?.includes('Akses Ditolak') ? 'Akses Dibatasi' : 'Sesi Berakhir'}
         </h3>
-        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+        <p className="text-[#525252] text-sm mb-6 leading-relaxed">
           {error || "Sesi anda telah berakhir atau anda tidak memiliki akses ke area ini."}
         </p>
         <button 
@@ -124,7 +122,7 @@ export default function AdminLayout() {
             }
             navigate('/login', { replace: true });
           }}
-          className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-blue-800 transition-all"
+          className="w-full bg-[#1E40AF] text-white py-3 rounded-lg font-medium text-xs hover:bg-[#1D3A8A] transition-colors cursor-pointer"
         >
           Keluar & Kembali ke Login
         </button>
@@ -133,7 +131,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#FAFAFA] flex flex-col md:flex-row">
       {/* Sidebar - Desktop Only */}
       <div className="hidden md:block">
         <AdminSidebar 
@@ -144,91 +142,88 @@ export default function AdminLayout() {
       
       <div className="flex-1 flex flex-col min-w-0 md:ml-64">
         {/* Top Header */}
-        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+        <header className="h-16 bg-white border-b border-[#E4E4E7] flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
           <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="md:hidden p-2 -ml-1 text-gray-600 hover:text-primary rounded-xl hover:bg-gray-100 transition-colors shrink-0"
+              className="md:hidden p-2 -ml-1 text-[#525252] hover:text-[#171717] rounded-lg hover:bg-[#F4F4F5] transition-colors shrink-0"
               aria-label="Buka Menu Admin"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" strokeWidth={1.75} />
             </button>
-            <h1 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight line-clamp-1">Admin Dashboard</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-[#171717] tracking-tight line-clamp-1">Admin Dashboard</h1>
           </div>
           
-          <div className="flex items-center gap-3 md:gap-6">
-            <button className="hidden sm:block relative p-2 text-gray-400 hover:text-primary transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-            </button>
+          <div className="flex items-center gap-3 md:gap-5">
+            <AdminNotificationBell userRole={userRole} />
             
-            <div className="hidden sm:block h-8 w-px bg-gray-100" />
+            <div className="hidden sm:block h-6 w-px bg-[#E4E4E7]" />
             
             {/* Account Profile Trigger & Dropdown */}
             <div className="relative" ref={profileMenuRef}>
               <button 
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 rounded-2xl hover:bg-gray-50 transition-all group outline-none"
+                className="flex items-center gap-2 md:gap-2.5 p-1.5 rounded-lg hover:bg-[#F4F4F5] transition-colors group outline-none cursor-pointer"
                 aria-expanded={isProfileMenuOpen}
                 aria-haspopup="true"
               >
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs md:text-sm font-bold text-gray-900 line-clamp-1">{adminProfile?.displayName || user?.displayName || 'Admin'}</p>
-                  <p className="text-[9px] uppercase font-black tracking-wider text-primary">
+                  <p className="text-xs font-semibold text-[#171717] line-clamp-1">{adminProfile?.displayName || user?.displayName || 'Admin'}</p>
+                  <p className="text-[11px] font-medium text-[#1E40AF] capitalize">
                     {userRole || 'admin'}
                   </p>
                 </div>
-                <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+                <div className="w-8 h-8 md:w-9 md:h-9 bg-[#EFF6FF] rounded-full border border-[#BFDBFE] flex items-center justify-center text-[#1E40AF] shrink-0 overflow-hidden">
                   {user?.photoURL ? (
                     <img src={user.photoURL} alt="User" className="w-full h-full object-cover rounded-full" />
                   ) : (
-                    <User className="w-5 h-5" />
+                    <User className="w-4 h-4" />
                   )}
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform hidden sm:block ${isProfileMenuOpen ? 'rotate-180 text-primary' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-[#737373] transition-transform hidden sm:block ${isProfileMenuOpen ? 'rotate-180 text-[#1E40AF]' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}
               <AnimatePresence>
                 {isProfileMenuOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-[#E4E4E7] p-3 z-50 overflow-hidden"
                   >
                     {/* User Identity Card */}
-                    <div className="flex items-start gap-3 p-3 bg-gray-50/70 rounded-2xl mb-3">
-                      <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center text-primary font-black shrink-0 overflow-hidden">
+                    <div className="flex items-start gap-3 p-3 bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg mb-2.5">
+                      <div className="w-10 h-10 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg flex items-center justify-center text-[#1E40AF] font-semibold shrink-0 overflow-hidden">
                         {user?.photoURL ? (
                           <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-5 h-5 text-primary" />
+                          <User className="w-5 h-5 text-[#1E40AF]" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-gray-900 truncate">
+                        <p className="text-sm font-semibold text-[#171717] truncate">
                           {adminProfile?.displayName || user?.displayName || 'Admin'}
                         </p>
-                        <p className="text-xs text-gray-500 truncate font-medium">
+                        <p className="text-xs text-[#737373] truncate">
                           {user?.email}
                         </p>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider">
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E40AF] text-[11px] font-medium capitalize">
                           {userRole || 'admin'}
                         </span>
                       </div>
                     </div>
 
                     {/* Navigation Shortcuts */}
-                    <div className="space-y-1 border-t border-gray-100 pt-2 mb-2">
+                    <div className="space-y-0.5 border-t border-[#E4E4E7] pt-2 mb-2">
                       <Link
                         to="/admin"
                         onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#171717] hover:bg-[#F4F4F5] hover:text-[#1E40AF] transition-colors"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-gray-400" />
+                        <LayoutDashboard className="w-4 h-4 text-[#737373]" />
                         Ringkasan Dashboard
                       </Link>
 
@@ -236,9 +231,9 @@ export default function AdminLayout() {
                         <Link
                           to="/admin/rules"
                           onClick={() => setIsProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#171717] hover:bg-[#F4F4F5] hover:text-[#1E40AF] transition-colors"
                         >
-                          <Shield className="w-4 h-4 text-gray-400" />
+                          <Shield className="w-4 h-4 text-[#737373]" />
                           Hak Akses & Akun Admin
                         </Link>
                       )}
@@ -246,9 +241,9 @@ export default function AdminLayout() {
                       <Link
                         to="/admin/settings"
                         onClick={() => setIsProfileMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#171717] hover:bg-[#F4F4F5] hover:text-[#1E40AF] transition-colors"
                       >
-                        <Settings className="w-4 h-4 text-gray-400" />
+                        <Settings className="w-4 h-4 text-[#737373]" />
                         Pengaturan Gedung
                       </Link>
 
@@ -301,13 +296,13 @@ export default function AdminLayout() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileDrawerOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60"
             />
             <motion.div
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="relative z-10 w-72 max-w-[85vw] h-full"
             >
               <AdminSidebar 
@@ -327,7 +322,8 @@ export default function AdminLayout() {
         <motion.nav 
           initial={{ y: 100 }}
           animate={{ y: 0 }}
-          className="bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pt-3 pb-8 flex items-center justify-around pointer-events-auto"
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-white border-t border-[#E4E4E7] pt-3 pb-8 flex items-center justify-around pointer-events-auto"
         >
           <MobileAdminNav userRole={userRole} onLogout={() => setIsLogoutModalOpen(true)} />
         </motion.nav>
@@ -372,19 +368,19 @@ function MobileAdminNav({ userRole, onLogout }: { userRole: string | null, onLog
           <button
             key={item.name}
             onClick={() => item.path === 'logout' ? onLogout() : navigate(item.path)}
-            className={`flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl transition-all duration-300 relative ${
-              isActive ? 'text-primary' : 'text-gray-400'
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors relative cursor-pointer ${
+              isActive ? 'text-[#1E40AF]' : 'text-[#737373]'
             }`}
           >
             {isActive && (
               <motion.div
                 layoutId="activeTabAdmin"
-                className="absolute inset-0 bg-primary/5 rounded-xl -z-10"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                className="absolute inset-0 bg-[#EFF6FF] rounded-lg -z-10"
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               />
             )}
-            <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
-            <span className={`text-[10px] font-bold uppercase tracking-tight ${isActive ? 'text-primary' : 'text-gray-400'}`}>
+            <Icon className="w-5 h-5" strokeWidth={1.75} />
+            <span className={`text-[11px] font-medium ${isActive ? 'text-[#1E40AF]' : 'text-[#737373]'}`}>
               {item.name}
             </span>
           </button>

@@ -12,6 +12,7 @@ import {
   Clock,
   Eye 
 } from 'lucide-react';
+import { formatWhatsAppPhoneNumber } from '../../../lib/whatsapp';
 
 interface BookingTableProps {
   filteredBookings: any[];
@@ -43,25 +44,25 @@ export default function BookingTable({
     switch (status) {
       case 'approved':
         return (
-          <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
+          <span className="inline-flex items-center gap-1.5 bg-[#F0FDF4] text-[#15803D] px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#BBF7D0]">
             <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-100">
+          <span className="inline-flex items-center gap-1.5 bg-[#FEF2F2] text-[#B91C1C] px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#FECACA]">
             <XCircle className="w-3.5 h-3.5" /> Ditolak
           </span>
         );
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-blue-100">
+          <span className="inline-flex items-center gap-1.5 bg-[#EFF6FF] text-[#1E40AF] px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#BFDBFE]">
             <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100">
+          <span className="inline-flex items-center gap-1.5 bg-[#FFFBEB] text-[#B45309] px-2.5 py-1 rounded-full text-[11px] font-semibold border border-[#FDE68A]">
             <Clock className="w-3.5 h-3.5" /> Pending
           </span>
         );
@@ -74,110 +75,110 @@ export default function BookingTable({
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-16">No</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Penyewa & WhatsApp</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu & Acara</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Keuangan</th>
-              <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Aksi</th>
+            <tr className="bg-[#FAFAFA] border-b border-[#E4E4E7]">
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373] text-center w-16">No</th>
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373]">Penyewa & WhatsApp</th>
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373]">Waktu & Acara</th>
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373] text-center">Status</th>
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373] text-center">Keuangan</th>
+              <th className="px-6 py-3.5 text-[11px] font-semibold text-[#737373] text-right">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[#E4E4E7]">
             {filteredBookings.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-24 text-center italic text-gray-300 font-bold">
-                  Data booking tidak ditemukan...
+                <td colSpan={6} className="py-20 text-center text-[#737373] text-sm font-medium">
+                  Data pemesanan tidak ditemukan.
                 </td>
               </tr>
             ) : (
               filteredBookings.map((booking, idx) => (
                 <tr 
                   key={booking.id} 
-                  className="hover:bg-gray-50/50 transition-colors group"
+                  className="hover:bg-[#FAFAFA] transition-colors group"
                 >
-                  <td className="px-6 py-6 text-center font-black text-gray-300 text-sm">{idx + 1}</td>
-                  <td className="px-6 py-6">
-                    <p className="font-black text-gray-900 leading-none">{booking.customerName}</p>
+                  <td className="px-6 py-5 text-center font-mono tabular-nums font-medium text-[#737373] text-xs">{idx + 1}</td>
+                  <td className="px-6 py-5">
+                    <p className="font-semibold text-[#171717] leading-tight">{booking.customerName}</p>
                     <button 
                       type="button"
                       onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')}
-                      className="text-[10px] font-black text-green-600 bg-green-50 hover:bg-green-100 transition-colors px-2 py-0.5 rounded-md mt-2 inline-flex items-center gap-1 uppercase tracking-tighter"
+                      className="text-[11px] font-mono tabular-nums font-medium text-[#15803D] bg-[#F0FDF4] hover:bg-[#DCFCE7] transition-colors px-2 py-0.5 rounded-md mt-1.5 inline-flex items-center gap-1 border border-[#BBF7D0]"
                       title="Kirim Pesan WhatsApp Cepat"
                     >
                       <MessageCircle className="w-3 h-3" /> {booking.phone}
                     </button>
                   </td>
-                  <td className="px-6 py-6">
-                    <p className="font-black text-gray-900 leading-none">{booking.purpose}</p>
-                    <p className="text-[10px] font-bold text-gray-400 mt-2">
+                  <td className="px-6 py-5">
+                    <p className="font-semibold text-[#171717] leading-tight">{booking.purpose}</p>
+                    <p className="text-[11px] font-mono tabular-nums text-[#737373] mt-1.5">
                       {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </p>
                   </td>
-                  <td className="px-6 py-6 text-center">
+                  <td className="px-6 py-5 text-center">
                     {getStatusBadge(booking.status)}
                   </td>
-                  <td className="px-6 py-6">
-                    <div className="flex flex-col items-center justify-center gap-1">
-                      <span className="text-xs font-black text-primary">
+                  <td className="px-6 py-5">
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <span className="text-xs font-mono tabular-nums font-semibold text-[#171717]">
                         Rp {Number(booking.amount || 0).toLocaleString('id-ID')}
                       </span>
                       <button 
                         onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black transition-all border shadow-sm active:scale-95 ${
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors border ${
                           booking.paymentStatus === 'paid' 
-                            ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
+                            ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] hover:bg-[#DCFCE7]' 
                             : booking.paymentStatus === 'verifying'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 animate-pulse'
-                              : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                              ? 'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE] hover:bg-[#DBEAFE]'
+                              : 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A] hover:bg-[#FEF3C7]'
                         }`}
                         title={booking.paymentStatus === 'verifying' ? 'Klik untuk verifikasi & tandai lunas' : undefined}
                       >
                         {booking.paymentStatus === 'paid' 
-                          ? 'LUNAS (SINKRON)' 
+                          ? 'Lunas (Sinkron)' 
                           : booking.paymentStatus === 'verifying' 
-                            ? 'VERIFIKASI BUKTI 🔔' 
-                            : 'TAGIH PEMBAYARAN'}
+                            ? 'Verifikasi Bukti' 
+                            : 'Tagih Pembayaran'}
                       </button>
                     </div>
                   </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-6 py-5">
+                    <div className="flex items-center justify-end gap-1.5">
                       {booking.paymentProofUrl && (
                         <a 
                           href={booking.paymentProofUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                          className="p-2.5 bg-[#EFF6FF] text-[#1E40AF] rounded-lg border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors"
                           title="Lihat Struk/Bukti Transfer Pembayaran Warga"
                         >
                           <Eye className="w-4 h-4" />
                         </a>
                       )}
                       <button 
-                        onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')} 
-                        className="p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors" 
+                        onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/${formatWhatsAppPhoneNumber(booking.phone)}`, '_blank', 'noopener,noreferrer')} 
+                        className="p-2.5 bg-[#F0FDF4] text-[#15803D] rounded-lg border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors" 
                         title="Pesan Cepat WhatsApp (Template Siap Kirim)"
                       >
                         <MessageCircle className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => setSelectedBookingForLayoutReview(booking)} 
-                        className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors" 
+                        className="p-2.5 bg-[#F4F4F5] text-[#171717] rounded-lg border border-[#E4E4E7] hover:bg-[#E4E4E7] transition-colors" 
                         title="Tinjau Denah Gedung"
                       >
                         <LayoutGrid className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => onPreviewContract ? onPreviewContract(booking) : generateContract(booking)} 
-                        className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors" 
+                        className="p-2.5 bg-[#EFF6FF] text-[#1E40AF] rounded-lg border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors" 
                         title="Pratinjau & Cetak Perjanjian Sewa"
                       >
                         <FileText className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => onPreviewReceipt ? onPreviewReceipt(booking) : generateReceipt(booking)} 
-                        className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors" 
+                        className="p-2.5 bg-[#F0FDF4] text-[#15803D] rounded-lg border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors" 
                         title="Pratinjau & Cetak Kuitansi Pembayaran"
                       >
                         <Receipt className="w-4 h-4" />
@@ -186,13 +187,13 @@ export default function BookingTable({
                         <>
                           <button 
                             onClick={() => handleStatusChange(booking.id, 'approved')} 
-                            className="px-3 py-2 bg-green-500 text-white rounded-xl text-xs font-black hover:bg-green-600 transition-colors"
+                            className="px-3 py-2 bg-[#16A34A] text-white rounded-lg text-xs font-medium hover:bg-[#15803D] transition-colors"
                           >
                             Setujui
                           </button>
                           <button 
                             onClick={() => handleStatusChange(booking.id, 'rejected')} 
-                            className="px-3 py-2 bg-red-500 text-white rounded-xl text-xs font-black hover:bg-red-600 transition-colors"
+                            className="px-3 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-medium hover:bg-[#B91C1C] transition-colors"
                           >
                             Tolak
                           </button>
@@ -200,7 +201,7 @@ export default function BookingTable({
                       )}
                       <button 
                         onClick={() => handleDelete(booking.id)} 
-                        className="p-3 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-500 rounded-xl transition-all" 
+                        className="p-2.5 bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA] hover:bg-[#FEE2E2] rounded-lg transition-colors" 
                         title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -217,8 +218,8 @@ export default function BookingTable({
       {/* Mobile View Cards */}
       <div className="lg:hidden grid gap-4 p-4">
         {filteredBookings.length === 0 ? (
-          <div className="py-12 text-center italic text-gray-300 font-bold">
-            Data booking tidak ditemukan...
+          <div className="py-12 text-center text-[#737373] text-sm font-medium">
+            Data pemesanan tidak ditemukan.
           </div>
         ) : (
           filteredBookings.map((booking) => (
@@ -226,90 +227,90 @@ export default function BookingTable({
               key={booking.id} 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
-              className="bg-white border border-gray-100 rounded-[2rem] p-6 space-y-4 shadow-sm"
+              className="bg-white border border-[#E4E4E7] rounded-xl p-5 space-y-4 shadow-xs"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-3">
                 <div>
-                  <h4 className="font-black text-gray-950 text-base">{booking.customerName}</h4>
-                  <p className="text-xs font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-md inline-block mt-1 uppercase tracking-tighter">
+                  <h4 className="font-semibold text-[#171717] text-base">{booking.customerName}</h4>
+                  <p className="text-xs font-mono tabular-nums font-medium text-[#1E40AF] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-md inline-block mt-1">
                     {new Date(booking.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
                 {getStatusBadge(booking.status)}
               </div>
 
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-2">
+              <div className="bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-3.5 space-y-2">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm font-bold text-gray-700">{booking.purpose}</p>
+                  <FileText className="w-4 h-4 text-[#737373]" />
+                  <p className="text-sm font-medium text-[#525252]">{booking.purpose}</p>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-gray-400" />
-                    <p className="text-sm font-black text-primary">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
+                    <Zap className="w-4 h-4 text-[#737373]" />
+                    <p className="text-sm font-mono tabular-nums font-semibold text-[#171717]">Rp {Number(booking.amount || 0).toLocaleString('id-ID')}</p>
                   </div>
                   <button 
                     onClick={() => handlePaymentStatusChange(booking.id, booking.paymentStatus === 'paid' ? 'unpaid' : 'paid')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border shadow-sm active:scale-95 ${
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors border ${
                       booking.paymentStatus === 'paid' 
-                        ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' 
+                        ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] hover:bg-[#DCFCE7]' 
                         : booking.paymentStatus === 'verifying'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 animate-pulse'
-                          : 'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
+                          ? 'bg-[#EFF6FF] text-[#1E40AF] border-[#BFDBFE] hover:bg-[#DBEAFE]'
+                          : 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A] hover:bg-[#FEF3C7]'
                     }`}
                   >
                     {booking.paymentStatus === 'paid' 
-                      ? 'LUNAS (SINKRON)' 
+                      ? 'Lunas (Sinkron)' 
                       : booking.paymentStatus === 'verifying' 
-                        ? 'VERIFIKASI BUKTI 🔔' 
-                        : 'TAGIH PEMBAYARAN'}
+                        ? 'Verifikasi Bukti' 
+                        : 'Tagih Pembayaran'}
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-[#E4E4E7]">
                 {booking.paymentProofUrl && (
                   <a 
                     href={booking.paymentProofUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-700 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-200 hover:bg-blue-100 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-[#EFF6FF] text-[#1E40AF] py-2.5 rounded-lg font-medium text-xs border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" /> Bukti Struk
                   </a>
                 )}
                 <button 
                   onClick={() => setSelectedBookingForLayoutReview(booking)} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-indigo-100"
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#F4F4F5] text-[#171717] py-2.5 rounded-lg font-medium text-xs border border-[#E4E4E7] hover:bg-[#E4E4E7]/60 transition-colors"
                 >
                   <LayoutGrid className="w-4 h-4" /> Denah
                 </button>
                 <button 
                   type="button"
-                  onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/62${booking.phone.startsWith('0') ? booking.phone.slice(1) : booking.phone}`, '_blank')} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-green-50 text-green-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-green-100 hover:bg-green-100 transition-colors"
+                  onClick={() => onOpenWhatsApp ? onOpenWhatsApp(booking) : window.open(`https://wa.me/${formatWhatsAppPhoneNumber(booking.phone)}`, '_blank', 'noopener,noreferrer')} 
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#F0FDF4] text-[#15803D] py-2.5 rounded-lg font-medium text-xs border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" /> WhatsApp
                 </button>
                 <button 
                   onClick={() => onPreviewContract ? onPreviewContract(booking) : generateContract(booking)} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-blue-100" 
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#EFF6FF] text-[#1E40AF] py-2.5 rounded-lg font-medium text-xs border border-[#BFDBFE] hover:bg-[#DBEAFE] transition-colors" 
                   title="Pratinjau & Cetak Perjanjian Sewa"
                 >
                   <FileText className="w-4 h-4" /> Kontrak
                 </button>
                 <button 
                   onClick={() => onPreviewReceipt ? onPreviewReceipt(booking) : generateReceipt(booking)} 
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-emerald-100" 
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#F0FDF4] text-[#15803D] py-2.5 rounded-lg font-medium text-xs border border-[#BBF7D0] hover:bg-[#DCFCE7] transition-colors" 
                   title="Pratinjau & Cetak Kuitansi Pembayaran"
                 >
                   <Receipt className="w-4 h-4" /> Kuitansi
                 </button>
                 <button 
                   onClick={() => handleDelete(booking.id)} 
-                  className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-400 rounded-xl border border-red-100"
+                  className="w-10 h-10 flex items-center justify-center bg-[#FEF2F2] text-[#DC2626] rounded-lg border border-[#FECACA] hover:bg-[#FEE2E2] transition-colors"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
@@ -317,13 +318,13 @@ export default function BookingTable({
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button 
                     onClick={() => handleStatusChange(booking.id, 'approved')} 
-                    className="bg-green-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-green-200"
+                    className="bg-[#16A34A] hover:bg-[#15803D] text-white font-medium text-xs py-2.5 rounded-lg transition-colors"
                   >
                     Setujui
                   </button>
                   <button 
                     onClick={() => handleStatusChange(booking.id, 'rejected')} 
-                    className="bg-red-500 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl shadow-lg shadow-red-200"
+                    className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium text-xs py-2.5 rounded-lg transition-colors"
                   >
                     Tolak
                   </button>

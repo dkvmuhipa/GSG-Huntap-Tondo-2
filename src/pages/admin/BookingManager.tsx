@@ -26,7 +26,8 @@ import {
   X,
   LayoutGrid,
   Warehouse,
-  Sparkles
+  Sparkles,
+  Printer
 } from 'lucide-react';
 import { 
   updateBookingStatus, 
@@ -54,7 +55,11 @@ import BookingCalendar from '../../components/admin/booking/BookingCalendar';
 import BookingFormModal from '../../components/admin/booking/BookingFormModal';
 import LayoutReviewModal from '../../components/admin/booking/LayoutReviewModal';
 import WhatsAppActionModal from '../../components/admin/booking/WhatsAppActionModal';
+import BookingActionAlerts from '../../components/admin/booking/BookingActionAlerts';
 import PdfPreviewModal from '../../components/ui/PdfPreviewModal';
+import { buildMonthlySchedulePosterDoc } from '../../services/schedulePosterPdfService';
+import { getLocalDateISO, getLocalMonthKey, parseLocalDate } from '../../lib/dateUtils';
+import { formatWhatsAppPhoneNumber } from '../../lib/whatsapp';
 
 export default function BookingManager() {
   const { userRole, adminProfile } = useOutletContext<{ userRole: string, adminProfile: any }>();
@@ -79,7 +84,22 @@ export default function BookingManager() {
     title: '',
     loadPdf: async () => ({ doc: new jsPDF(), filename: '' })
   });
+  const [actionBanner, setActionBanner] = useState<{ success: boolean; message: string } | null>(null);
   const inventoryList = useAppStore(state => state.inventory);
+
+  const handleActionNotifyResult = (success: boolean, message: string) => {
+    setActionBanner({ success, message });
+    setTimeout(() => setActionBanner(null), 5000);
+  };
+
+  const handlePreviewMonthlyPoster = () => {
+    const monthLabel = currentMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    setPdfPreviewModal({
+      isOpen: true,
+      title: `Poster Jadwal Gedung (A4) - ${monthLabel}`,
+      loadPdf: () => buildMonthlySchedulePosterDoc(currentMonth, bookings, config),
+    });
+  };
 
   const handlePreviewContract = (booking: any) => {
     setPdfPreviewModal({
@@ -127,15 +147,16 @@ export default function BookingManager() {
     endTime: '17:00',
     guests: '',
     amount: '',
-    notes: '',
-    autoFinance: true
+    notes: ''
   });
 
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
       const matchesSearch = b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            b.purpose.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'verifying' ? b.paymentStatus === 'verifying' : b.status === statusFilter);
       return matchesSearch && matchesStatus;
     });
   }, [bookings, searchTerm, statusFilter]);
@@ -168,7 +189,7 @@ export default function BookingManager() {
         if (!result.success && result.conflictBooking) {
           setConfirmConfig({
             isOpen: true,
-            title: '⚠️ Bentrok Jadwal Sewa Terdeteksi',
+            title: 'Bentrok Jadwal Sewa Terdeteksi',
             message: `Pemesanan ini TIDAK DAPAT disetujui karena tanggal ${result.conflictBooking.startDate} sudah disetujui sebelumnya untuk acara "${result.conflictBooking.purpose}" (${result.conflictBooking.customerName}).\n\nSistem secara otomatis mencegah double-booking. Silakan tolak atau atur jadwal pemesanan ulang.`,
             onConfirm: () => {},
             type: 'danger',
@@ -206,9 +227,6 @@ export default function BookingManager() {
     if (!booking) return;
 
     try {
-      if (newStatus === 'paid') {
-        notifyCitizenOnPayment({ ...booking, paymentStatus: 'paid' }, config);
-      }
       if (newStatus === 'paid' && !booking.financeAdded) {
         setConfirmConfig({
           isOpen: true,
@@ -220,6 +238,7 @@ export default function BookingManager() {
               displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
               role: userRole
             });
+            notifyCitizenOnPayment({ ...booking, paymentStatus: 'paid' }, config);
             await logAdminActivity({
               action: 'PAYMENT_SYNCED_FINANCE',
               description: `Mencatat pembayaran sewa Rp ${Number(booking.amount).toLocaleString('id-ID')} (${booking.customerName}) ke pembukuan kas`,
@@ -235,6 +254,9 @@ export default function BookingManager() {
         });
       } else {
         await updateBookingStatus(id, { paymentStatus: newStatus });
+        if (newStatus === 'paid') {
+          notifyCitizenOnPayment({ ...booking, paymentStatus: 'paid' }, config);
+        }
         await logAdminActivity({
           action: 'PAYMENT_STATUS_UPDATED',
           description: `Mengubah status bayar menjadi "${newStatus.toUpperCase()}" untuk pemesan ${booking.customerName}`,
@@ -285,10 +307,21 @@ export default function BookingManager() {
     
     const saveBooking = async () => {
       try {
-        await addBooking({
+        const createdId = await addBooking({
           ...formData,
           amount: Number(formData.amount),
           status: 'approved'
+        });
+
+        await logAdminActivity({
+          action: 'BOOKING_CREATED_MANUAL',
+          description: `Menambahkan jadwal booking manual: ${formData.purpose} (${formData.customerName}) pada ${formData.startDate}`,
+          targetId: createdId || undefined,
+          actorInfo: {
+            email: auth.currentUser?.email || null,
+            displayName: adminProfile?.displayName || auth.currentUser?.displayName || undefined,
+            role: userRole
+          }
         });
 
         setIsAddModalOpen(false);
@@ -307,8 +340,7 @@ export default function BookingManager() {
           endTime: '17:00',
           guests: '',
           amount: '',
-          notes: '',
-          autoFinance: true
+          notes: ''
         });
       } catch (error) {
         console.error(error);
@@ -330,19 +362,21 @@ export default function BookingManager() {
   };
 
   const sendWA = (booking: any, type: 'approve' | 'remind' | 'reject') => {
+    const formattedPhone = formatWhatsAppPhoneNumber(booking.phone);
+    if (!formattedPhone) return;
     let msg = '';
-    const phone = booking.phone.replace(/[^0-9]/g, '');
-    
+    const dateFormatted = parseLocalDate(booking.startDate).toLocaleDateString('id-ID');
+
     if (type === 'approve') {
-      msg = `Halo ${booking.customerName}, pengajuan booking Gedung Serbaguna Huntap Tondo 2 untuk acara "${booking.purpose}" pada tanggal ${new Date(booking.startDate).toLocaleDateString('id-ID')} telah DISETUJUI. Silakan lakukan pembayaran.`;
+      msg = `Halo ${booking.customerName}, pengajuan booking Gedung Serbaguna Huntap Tondo 2 untuk acara "${booking.purpose}" pada tanggal ${dateFormatted} telah DISETUJUI. Silakan lakukan pembayaran.`;
     } else if (type === 'remind') {
-      msg = `Halo ${booking.customerName}, ini pengingat pembayaran sewa Gedung Serbaguna untuk acara "${booking.purpose}" pada ${new Date(booking.startDate).toLocaleDateString('id-ID')}. Mohon segera dikonfirmasi.`;
+      msg = `Halo ${booking.customerName}, ini pengingat pembayaran sewa Gedung Serbaguna untuk acara "${booking.purpose}" pada ${dateFormatted}. Mohon segera dikonfirmasi.`;
     } else if (type === 'reject') {
       msg = `Mohon maaf ${booking.customerName}, pengajuan booking Gedung Serbaguna Huntap Tondo 2 pada tanggal tsb Belum Bisa disetujui karena ada agenda lain.`;
     }
 
-    const url = `https://wa.me/62${phone.startsWith('0') ? phone.slice(1) : phone}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const exportPDF = async () => {
@@ -526,7 +560,7 @@ export default function BookingManager() {
     doc.setFont('helvetica', 'normal');
     doc.text(currentRole || 'Administrator', leftSigX, sigY + 36, { align: 'center' });
 
-    doc.save(`Laporan_Booking_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Laporan_Booking_${getLocalDateISO()}.pdf`);
   };
 
   const daysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -543,8 +577,8 @@ export default function BookingManager() {
     for (let i = 1; i <= total; i++) {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const dayBookings = bookings.filter(b => {
-        const bStart = new Date(b.startDate).toISOString().split('T')[0];
-        const bEnd = new Date(b.endDate || b.startDate).toISOString().split('T')[0];
+        const bStart = getLocalDateISO(parseLocalDate(b.startDate));
+        const bEnd = getLocalDateISO(parseLocalDate(b.endDate || b.startDate));
         return dateStr >= bStart && dateStr <= bEnd && (b.status === 'approved' || b.status === 'completed');
       });
       days.push({ day: i, bookings: dayBookings });
@@ -555,13 +589,13 @@ export default function BookingManager() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black leading-none uppercase tracking-widest">DISETUJUI</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] text-[11px] font-medium">Disetujui</span>;
       case 'rejected':
-        return <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-[10px] font-black leading-none uppercase tracking-widest">DITOLAK</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA] text-[11px] font-medium">Ditolak</span>;
       case 'completed':
-        return <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black leading-none uppercase tracking-widest">SELESAI</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] text-[11px] font-medium">Selesai</span>;
       default:
-        return <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-black leading-none uppercase tracking-widest">PENDING</span>;
+        return <span className="px-2.5 py-0.5 rounded-full bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] text-[11px] font-medium">Pending</span>;
     }
   };
 
@@ -569,74 +603,113 @@ export default function BookingManager() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Kelola Booking Gedung</h2>
-          <p className="text-gray-500 font-medium mt-1">Sistem kontrol jadwal & keuangan penyewaan.</p>
+          <h2 className="text-2xl font-semibold text-[#171717] tracking-tight">Kelola Booking Gedung</h2>
+          <p className="text-[#737373] text-sm mt-0.5">Sistem kontrol jadwal dan status pembayaran penyewaan.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button 
             type="button"
             onClick={() => exportBookingsToExcel(filteredBookings, statusFilter === 'all' ? 'Semua Status' : statusFilter.toUpperCase())}
-            className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-5 py-3 rounded-2xl font-bold shadow-sm hover:bg-emerald-100 hover:border-emerald-300 transition-all flex-1 md:flex-none active:scale-95"
+            className="flex items-center justify-center gap-2 bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0] px-4 py-2.5 rounded-lg font-medium text-xs hover:bg-[#DCFCE7] transition-colors flex-1 md:flex-none cursor-pointer"
             title="Unduh Rekap Data Booking ke Microsoft Excel (.xlsx)"
           >
-            <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+            <FileSpreadsheet className="w-4 h-4 text-[#16A34A]" />
             <span>Ekspor Excel</span>
           </button>
-          <button onClick={exportPDF} className="flex items-center justify-center gap-2 bg-white text-gray-700 px-6 py-3 rounded-2xl font-bold border border-gray-200 shadow-sm hover:bg-gray-50 transition-all flex-1 md:flex-none">
-            <Download className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={handlePreviewMonthlyPoster}
+            className="flex items-center justify-center gap-2 bg-white text-[#171717] border border-[#E4E4E7] px-4 py-2.5 rounded-lg font-medium text-xs hover:bg-[#F4F4F5] transition-colors flex-1 md:flex-none cursor-pointer"
+            title="Pratinjau & Cetak Poster Jadwal Bulanan A4 untuk Papan Pengumuman"
+          >
+            <Printer className="w-4 h-4 text-[#1E40AF]" />
+            <span>Poster Jadwal A4</span>
+          </button>
+          <button onClick={exportPDF} className="flex items-center justify-center gap-2 bg-white text-[#171717] px-4 py-2.5 rounded-lg font-medium text-xs border border-[#E4E4E7] hover:bg-[#F4F4F5] transition-colors flex-1 md:flex-none cursor-pointer">
+            <Download className="w-4 h-4 text-[#525252]" />
             Laporan
           </button>
-          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex-1 md:flex-none">
-            <Plus className="w-5 h-5" />
+          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center gap-2 bg-[#1E40AF] hover:bg-[#1D3A8A] text-white px-4 py-2.5 rounded-lg font-medium text-xs transition-colors flex-1 md:flex-none cursor-pointer">
+            <Plus className="w-4 h-4" />
             Booking Baru
           </button>
         </div>
       </div>
 
+      <BookingActionAlerts
+        bookings={bookings}
+        config={config}
+        onFilterVerifying={() => {
+          setActiveTab('list');
+          setStatusFilter('verifying');
+        }}
+        onNotifyResult={handleActionNotifyResult}
+      />
+
+      {actionBanner && (
+        <div
+          className={`px-4 py-3 rounded-xl border text-xs font-medium flex items-center justify-between gap-3 ${
+            actionBanner.success
+              ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#15803D]'
+              : 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
+          }`}
+        >
+          <span>{actionBanner.message}</span>
+          <button
+            type="button"
+            onClick={() => setActionBanner(null)}
+            className="p-1 rounded-md hover:bg-black/5 cursor-pointer"
+            aria-label="Tutup notifikasi"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-yellow-50 text-yellow-600 rounded-xl flex items-center justify-center mb-3">
-            <Clock className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-xl border border-[#E4E4E7]">
+          <div className="w-9 h-9 bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] rounded-lg flex items-center justify-center mb-3">
+            <Clock className="w-4 h-4" />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Antrean</p>
-          <h4 className="text-2xl font-black text-gray-900 mt-1">{bookings.filter(b => b.status === 'pending').length}</h4>
+          <p className="text-xs font-medium text-[#737373]">Antrean</p>
+          <h4 className="text-2xl font-mono tabular-nums font-semibold text-[#171717] mt-1">{bookings.filter(b => b.status === 'pending').length}</h4>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mb-3">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-xl border border-[#E4E4E7]">
+          <div className="w-9 h-9 bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] rounded-lg flex items-center justify-center mb-3">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Disetujui</p>
-          <h4 className="text-2xl font-black text-gray-900 mt-1">{bookings.filter(b => b.status === 'approved').length}</h4>
+          <p className="text-xs font-medium text-[#737373]">Disetujui</p>
+          <h4 className="text-2xl font-mono tabular-nums font-semibold text-[#171717] mt-1">{bookings.filter(b => b.status === 'approved').length}</h4>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3">
-            <CalendarIcon className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-xl border border-[#E4E4E7]">
+          <div className="w-9 h-9 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] rounded-lg flex items-center justify-center mb-3">
+            <CalendarIcon className="w-4 h-4" />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Bulan Ini</p>
-          <h4 className="text-2xl font-black text-gray-900 mt-1">{bookings.filter(b => new Date(b.startDate).getMonth() === new Date().getMonth()).length}</h4>
+          <p className="text-xs font-medium text-[#737373]">Bulan Ini</p>
+          <h4 className="text-2xl font-mono tabular-nums font-semibold text-[#171717] mt-1">{bookings.filter(b => typeof b.startDate === 'string' && b.startDate.startsWith(getLocalMonthKey())).length}</h4>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-3">
-            <Zap className="w-5 h-5" />
+        <div className="bg-white p-5 rounded-xl border border-[#E4E4E7]">
+          <div className="w-9 h-9 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] rounded-lg flex items-center justify-center mb-3">
+            <Zap className="w-4 h-4" />
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tagihan Aktif</p>
-          <h4 className="text-2xl font-black text-gray-900 mt-1">Rp {bookings.filter(b => b.paymentStatus === 'unpaid').reduce((acc, b) => acc + Number(b.amount || 0), 0).toLocaleString('id-ID')}</h4>
+          <p className="text-xs font-medium text-[#737373]">Tagihan Aktif</p>
+          <h4 className="text-xl sm:text-2xl font-mono tabular-nums font-semibold text-[#171717] mt-1">Rp {bookings.filter(b => b.paymentStatus === 'unpaid').reduce((acc, b) => acc + Number(b.amount || 0), 0).toLocaleString('id-ID')}</h4>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white rounded-xl border border-[#E4E4E7] overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#E4E4E7] bg-[#FAFAFA]">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex bg-white p-1 rounded-2xl border border-gray-200">
+            <div className="flex bg-[#F4F4F5] p-1 rounded-lg border border-[#E4E4E7]">
               <button 
                 onClick={() => setActiveTab('list')}
-                className={`px-6 py-2 rounded-xl text-sm font-black transition-all ${activeTab === 'list' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${activeTab === 'list' ? 'bg-white text-[#171717] shadow-xs border border-[#E4E4E7]' : 'text-[#525252] hover:text-[#171717]'}`}
               >
                 Daftar & Kontrol
               </button>
               <button 
                 onClick={() => setActiveTab('calendar')}
-                className={`px-6 py-2 rounded-xl text-sm font-black transition-all ${activeTab === 'calendar' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${activeTab === 'calendar' ? 'bg-white text-[#171717] shadow-xs border border-[#E4E4E7]' : 'text-[#525252] hover:text-[#171717]'}`}
               >
                 Kalender
               </button>
@@ -645,36 +718,37 @@ export default function BookingManager() {
             {activeTab === 'list' && (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary transition-colors" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#737373] group-focus-within:text-[#1E40AF] transition-colors" />
                   <input 
                     type="text" 
                     placeholder="Cari nama/acara..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-bold"
+                    className="pl-10 pr-4 py-2 bg-white border border-[#E4E4E7] rounded-lg text-xs font-medium text-[#171717] focus:outline-none focus:border-[#1E40AF] transition-colors"
                   />
                 </div>
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 font-black text-gray-700 appearance-none min-w-[140px]"
+                  className="px-3.5 py-2 bg-white border border-[#E4E4E7] rounded-lg text-xs font-medium text-[#171717] focus:outline-none focus:border-[#1E40AF] appearance-none min-w-[140px]"
                 >
                   <option value="all">Semua Status</option>
                   <option value="pending">Pending</option>
-                  <option value="approved">Setuju</option>
+                  <option value="verifying">Verifikasi Bukti</option>
+                  <option value="approved">Disetujui</option>
                   <option value="completed">Selesai</option>
-                  <option value="rejected">Tolak</option>
+                  <option value="rejected">Ditolak</option>
                 </select>
               </div>
             )}
 
             {activeTab === 'calendar' && (
-              <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-gray-200">
-                <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
-                <span className="font-black text-gray-900 uppercase tracking-widest text-center min-w-[140px] truncate">
+              <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-lg border border-[#E4E4E7]">
+                <button onClick={prevMonth} className="p-1 hover:bg-[#F4F4F5] rounded-md transition-colors cursor-pointer"><ChevronLeft className="w-4 h-4 text-[#525252]" /></button>
+                <span className="font-semibold text-xs text-[#171717] text-center min-w-[130px] truncate">
                   {currentMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                 </span>
-                <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded-lg"><ChevronRight className="w-5 h-5" /></button>
+                <button onClick={nextMonth} className="p-1 hover:bg-[#F4F4F5] rounded-md transition-colors cursor-pointer"><ChevronRight className="w-4 h-4 text-[#525252]" /></button>
               </div>
             )}
           </div>
@@ -748,27 +822,27 @@ export default function BookingManager() {
       <AnimatePresence>
         {selectedBookingForLayoutReview && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBookingForLayoutReview(null)} className="absolute inset-0 bg-gray-900/60 backdrop-blur-md" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh] z-10">
-              <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBookingForLayoutReview(null)} className="absolute inset-0 bg-black/60" />
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative bg-white w-full max-w-xl rounded-2xl border border-[#E4E4E7] overflow-hidden overflow-y-auto max-h-[90vh] z-10">
+              <div className="p-6 border-b border-[#E4E4E7] flex items-center justify-between bg-[#FAFAFA]">
                 <div className="flex items-center gap-3">
-                  <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                    <LayoutGrid className="w-5 h-5" />
+                  <span className="w-9 h-9 bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE] rounded-lg flex items-center justify-center">
+                    <LayoutGrid className="w-4 h-4" />
                   </span>
                   <div>
-                    <h3 className="text-xl font-black text-gray-900">Denah Ruang & Alat Dipesan</h3>
-                    <p className="text-xs text-gray-500 font-bold mt-1">Pemohon: {selectedBookingForLayoutReview.customerName}</p>
-                    <p className="text-[10px] text-primary font-black uppercase mt-0.5 tracking-wider">
+                    <h3 className="text-lg font-semibold text-[#171717]">Denah Ruang & Alat Dipesan</h3>
+                    <p className="text-xs text-[#525252] mt-0.5">Pemohon: {selectedBookingForLayoutReview.customerName}</p>
+                    <p className="text-[11px] text-[#1E40AF] font-medium mt-0.5">
                       Penyelenggara: {selectedBookingForLayoutReview.organizerName || selectedBookingForLayoutReview.organization || selectedBookingForLayoutReview.customerName} ({selectedBookingForLayoutReview.organizerType || 'Perorangan'})
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedBookingForLayoutReview(null)} className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all rounded-2xl"><XCircle className="w-6 h-6" /></button>
+                <button onClick={() => setSelectedBookingForLayoutReview(null)} className="p-2 hover:bg-[#FEE2E2] text-[#737373] hover:text-[#DC2626] transition-colors rounded-lg cursor-pointer"><XCircle className="w-5 h-5" /></button>
               </div>
 
-              <div className="p-8 space-y-6">
+              <div className="p-6 space-y-5">
                 <div>
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1 block mb-3">Tata Letak Rencana Visual</span>
+                  <span className="text-xs font-medium text-[#737373] pl-0.5 block mb-2.5">Tata letak rencana visual</span>
                   <HallLayoutCanvas
                     layoutData={{
                       template: selectedBookingForLayoutReview.layoutDraft?.template || 'wedding',
@@ -782,24 +856,24 @@ export default function BookingManager() {
                   />
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 border-b border-gray-50 pb-2">
-                    <Warehouse className="w-4 h-4 text-gray-400" />
-                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Detail Inventaris Untuk Acara Ini</h4>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 border-b border-[#E4E4E7] pb-2">
+                    <Warehouse className="w-4 h-4 text-[#737373]" />
+                    <h4 className="text-xs font-semibold text-[#525252]">Detail inventaris untuk acara ini</h4>
                   </div>
 
-                  <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100/50 space-y-2.5">
+                  <div className="bg-[#FAFAFA] p-4 rounded-xl border border-[#E4E4E7] space-y-2.5">
                     {/* Render active selections */}
                     {Object.entries(selectedBookingForLayoutReview.selectedInventory || {}).filter(([_, qty]) => Number(qty) > 0).length === 0 ? (
-                      <p className="text-xs text-gray-400 font-bold italic py-2 text-center">Tidak memesan alat tambahan.</p>
+                      <p className="text-xs text-[#737373] py-2 text-center">Tidak memesan alat tambahan.</p>
                     ) : (
                       Object.entries(selectedBookingForLayoutReview.selectedInventory || {}).map(([id, qty]) => {
                         const invDoc = inventoryList.find(i => i.id === id);
                         const cleanName = invDoc ? invDoc.name : (id === 'inv-kursi' ? 'Kursi Lipat Chitose' : id === 'inv-meja' ? 'Meja Bulat Banquet' : id);
                         return (
-                          <div key={id} className="flex justify-between items-center text-xs text-gray-700 font-bold border-b border-gray-150/50 pb-2 last:border-none last:pb-0">
-                            <span className="text-gray-900">• {cleanName}</span>
-                            <span className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-primary font-mono font-black">{qty as number} Unit</span>
+                          <div key={id} className="flex justify-between items-center text-xs text-[#525252] border-b border-[#E4E4E7] pb-2 last:border-none last:pb-0">
+                            <span className="text-[#171717] font-medium">{cleanName}</span>
+                            <span className="px-2.5 py-0.5 bg-white border border-[#E4E4E7] rounded-md text-[#1E40AF] font-mono tabular-nums font-semibold">{qty as number} Unit</span>
                           </div>
                         );
                       })
@@ -814,16 +888,16 @@ export default function BookingManager() {
                         await handleStatusChange(selectedBookingForLayoutReview.id, 'approved');
                         setSelectedBookingForLayoutReview(null);
                       }} 
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl shadow-xl shadow-green-100 flex items-center justify-center gap-2"
+                      className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white font-medium text-xs py-3 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
                     >
-                      <Check className="w-4 h-4" /> SETUJUI BOOKING
+                      <Check className="w-4 h-4" /> Setujui Booking
                     </button>
                   )}
                   <button 
                     onClick={() => setSelectedBookingForLayoutReview(null)} 
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs uppercase tracking-widest py-4 rounded-2xl"
+                    className="flex-1 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#171717] border border-[#E4E4E7] font-medium text-xs py-3 rounded-lg transition-colors cursor-pointer"
                   >
-                    TUTUP TINJAUAN
+                    Tutup Tinjauan
                   </button>
                 </div>
               </div>

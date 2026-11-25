@@ -1,17 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { 
-  Building2, 
-  Calendar, 
-  Search, 
-  Sparkles, 
-  MapPin, 
-  Users, 
-  CheckCircle2, 
-  ArrowRight, 
-  ShieldCheck,
-  Clock
-} from 'lucide-react';
+import { Calendar, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 interface HeroProps {
@@ -21,183 +10,119 @@ interface HeroProps {
 export default function Hero({ onOpenBooking }: HeroProps) {
   const config = useAppStore(state => state.config);
 
-  const badgeLocation = config?.heroBadgeLocation || 'Kawasan Huntap Tondo 2 • Palu';
-  const badgeCategory = config?.heroBadgeCategory || 'Balai Warga Terpadu';
-  const title = config?.heroTitle || 'Ruang Mulia Warga,';
-  const subtitle = config?.heroSubtitle || 'Panggung Cerita & Tradisi Kita.';
-  const tagline = config?.heroTagline || 'Dari akad nikah khidmat, resepsi adat, hingga musyawarah mufakat warga. Fasilitas aula representatif berkapasitas hingga 500+ tamu yang dikelola secara mandiri, transparan, dan terbuka untuk umum.';
-  const imageUrl = config?.heroImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200';
-  const imageCaption = config?.heroImageCaption || 'Tata Lampu, Panggung Resepsi, & Akustik Terpadu';
-  const statCapacity = config?.heroStatCapacity || '500+';
-  const statAudio = config?.heroStatAudio || '10.000 W';
+  const badgeLocation = config?.heroBadgeLocation || 'Kawasan Huntap Tondo 2, Palu';
+  const badgeCategory = config?.heroBadgeCategory || 'Balai warga RT 02';
+  const title = config?.heroTitle || 'Ruang warga terpadu,';
+  const subtitle = config?.heroSubtitle || 'tercatat rapi dan terbuka.';
+  const tagline =
+    config?.heroTagline ||
+    'Dari akad nikah, resepsi adat, hingga musyawarah warga. Aula serbaguna berkapasitas hingga 300 tamu yang dikelola secara mandiri, transparan, dan terbuka untuk umum.';
+  const imageUrl = config?.heroImageUrl || '/hero-gsg-tondo2.webp';
+  const imageCaption = config?.heroImageCaption || 'Aula utama dengan tata suara 5.000 W dan ruang duduk fleksibel';
+  const statCapacity = config?.heroStatCapacity || '300';
+  const statAudio = config?.heroStatAudio || '5.000 W';
   const statTransparency = config?.heroStatTransparency || '100%';
-  const statusTitle = config?.heroStatusTitle || 'Gedung Siap Digunakan';
-  const statusSubtitle = config?.heroStatusSubtitle || 'Reservasi Online Terbuka';
-  const partnerTitle = config?.heroPartnerTitle || 'Pengurus RT 02 Huntap 2';
-  const partnerSubtitle = config?.heroPartnerSubtitle || 'Laporan Kas Terbuka & Sah';
+
   return (
-    <section className="relative pt-32 sm:pt-40 pb-20 overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-slate-50/30">
-      {/* Architectural Ambient Glow */}
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 -z-10 w-[800px] h-[400px] bg-gradient-to-tr from-blue-200/30 via-primary/10 to-emerald-100/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-0 right-0 -z-10 w-96 h-96 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-          
-          {/* LEFT COLUMN: CIVIC THESIS & CALL TO ACTION (7 Cols) */}
+    <section className="relative pt-28 sm:pt-36 lg:pt-40 pb-12 sm:pb-20 bg-[#F8F9FA] border-b border-[#E5E7EB]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 items-center">
+          {/* LEFT COLUMN: CIVIC THESIS & TWO ACTIONS */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="lg:col-span-7 text-center lg:text-left"
+            transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6 text-left min-w-0"
           >
-            {/* Context Badge: Grounded in Huntap Tondo 2, Palu */}
-            <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/80 shadow-xs mb-6">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-800">
-                {badgeLocation}
-              </span>
-              <span className="text-slate-300 font-bold">•</span>
-              <span className="text-[11px] font-bold text-primary">
-                {badgeCategory}
-              </span>
-            </div>
+            <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] text-xs font-semibold text-[#1E40AF] mb-4">
+              {badgeLocation} · {badgeCategory}
+            </p>
 
-            {/* Editorial Title Interplay */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] text-slate-950 tracking-tight mb-6">
+            <h1 className="font-display text-[clamp(2rem,7.2vw,3.75rem)] font-extrabold leading-[1.08] sm:leading-[1.04] tracking-tight text-[#1E293B] mb-4 sm:mb-5">
               {title}{' '}
-              <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-primary to-indigo-600 italic font-serif">
-                {subtitle}
-              </span>
+              <span className="block text-[#1E40AF]">{subtitle.replace(/\.$/, '')}</span>
             </h1>
 
-            {/* Authentic Subheadline */}
-            <p className="text-base sm:text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            <p className="text-sm sm:text-base lg:text-lg text-[#4B5563] mb-6 sm:mb-8 max-w-[34rem] leading-relaxed font-normal">
               {tagline}
             </p>
 
-            {/* Interactive Primary & Secondary Actions */}
-            <div className="flex flex-col sm:flex-row gap-3.5 justify-center lg:justify-start mb-10">
-              <motion.button 
+            {/* Primary & Secondary Action Row + Quiet Inline Link */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+              <button
+                type="button"
                 onClick={onOpenBooking}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center justify-center gap-2.5 bg-primary hover:bg-blue-800 text-white px-7 py-4 rounded-2xl font-black text-sm shadow-xl shadow-primary/25 transition-all cursor-pointer group"
+                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 bg-[#1E40AF] hover:bg-[#1D3A8A] active:scale-[0.98] text-white px-6 py-3 rounded-[10px] font-medium text-sm transition-[background-color,transform] duration-150 cursor-pointer"
               >
-                <Calendar className="w-4 h-4" />
-                <span>Ajukan Sewa Gedung</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </motion.button>
-              
-              <a 
-                href="#jadwal"
-                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-xs active:scale-95"
-              >
-                <span>Lihat Agenda & Ketersediaan</span>
-              </a>
+                <Calendar className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                <span>Ajukan sewa gedung</span>
+                <ArrowRight className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+              </button>
 
-              <a 
-                href="/#lacak"
-                className="inline-flex items-center justify-center gap-2 bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 px-5 py-4 rounded-2xl font-bold text-sm transition-all active:scale-95"
+              <a
+                href="#jadwal"
+                className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center bg-[#F1F3F5] hover:bg-[#E5E7EB] active:scale-[0.98] text-[#111827] border border-[#E5E7EB] px-5 py-3 rounded-[10px] font-medium text-sm transition-[background-color,transform] duration-150 cursor-pointer"
               >
-                <Search className="w-4 h-4 text-slate-500" />
-                <span>Lacak Sewa</span>
+                Cek jadwal &amp; lacak
               </a>
             </div>
 
-            {/* Key Civic Highlights */}
-            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-slate-200/80 max-w-lg mx-auto lg:mx-0 text-left">
-              <div>
-                <span className="text-xl sm:text-2xl font-black text-slate-950 block leading-tight">{statCapacity}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Kapasitas Tamu</span>
+            <div className="mb-8 sm:mb-10">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('activate-tracking-tab'))}
+                className="min-h-[36px] inline-flex items-center text-xs font-medium text-[#1E40AF] hover:underline cursor-pointer text-left"
+              >
+                Sudah punya kode booking? Lacak pas reservasi →
+              </button>
+            </div>
+
+            {/* Civic Specification Strip */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4 pt-5 sm:pt-6 border-t border-[#E5E7EB] max-w-md text-left">
+              <div className="min-w-0">
+                <span className="font-mono tabular-nums text-lg sm:text-2xl font-bold text-[#1E293B] block leading-tight">
+                  {statCapacity}
+                </span>
+                <span className="text-[11px] sm:text-xs text-[#6B7280] mt-1 block">Kapasitas tamu</span>
               </div>
-              <div className="border-l border-slate-200 pl-3">
-                <span className="text-xl sm:text-2xl font-black text-primary block leading-tight">{statAudio}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Audio & Panggung</span>
+              <div className="min-w-0 border-l border-[#E5E7EB] pl-2.5 sm:pl-4">
+                <span className="font-mono tabular-nums text-lg sm:text-2xl font-bold text-[#1E293B] block leading-tight">
+                  {statAudio}
+                </span>
+                <span className="text-[11px] sm:text-xs text-[#6B7280] mt-1 block">Tata suara</span>
               </div>
-              <div className="border-l border-slate-200 pl-3">
-                <span className="text-xl sm:text-2xl font-black text-emerald-600 block leading-tight">{statTransparency}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Transparansi Kas</span>
+              <div className="min-w-0 border-l border-[#E5E7EB] pl-2.5 sm:pl-4">
+                <span className="font-mono tabular-nums text-lg sm:text-2xl font-bold text-[#1E40AF] block leading-tight">
+                  {statTransparency}
+                </span>
+                <span className="text-[11px] sm:text-xs text-[#6B7280] mt-1 block">Kas terbuka</span>
               </div>
             </div>
           </motion.div>
 
-          {/* RIGHT COLUMN: ARCHITECTURAL SHOWCASE FRAME (5 Cols) */}
+          {/* RIGHT COLUMN: SINGLE CLEAN ARCHITECTURAL VISUAL */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.9, delay: 0.15 }}
-            className="lg:col-span-5 relative"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-6 min-w-0"
           >
-            {/* Visual Frame */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-900/10 border-4 sm:border-8 border-white bg-slate-900 group">
-              <div className="aspect-[4/3] sm:aspect-[5/4] overflow-hidden">
-                <img 
-                  src={imageUrl} 
-                  alt="Interior Gedung Serbaguna Huntap Tondo 2" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            <figure className="rounded-2xl overflow-hidden bg-[#FCFCFD] border border-[#E5E7EB] shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              <div className="aspect-[16/10] w-full overflow-hidden bg-[#F1F3F5]">
+                <img
+                  src={imageUrl}
+                  alt="Interior Gedung Serbaguna Huntap Tondo 2, Palu"
+                  fetchPriority="high"
+                  className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
               </div>
-
-              {/* Gradient Vignette Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent pointer-events-none" />
-
-              {/* Bottom Frame Caption */}
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 text-white text-left">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="px-2.5 py-0.5 rounded-full bg-primary/80 backdrop-blur-md text-white font-mono text-[9px] font-black uppercase tracking-wider">
-                    AULA UTAMA
-                  </span>
-                  <span className="text-[11px] text-slate-300 font-medium">
-                    Tata Ruang Acara Fleksibel
-                  </span>
-                </div>
-                <h3 className="text-base sm:text-lg font-black text-white leading-snug">
-                  {imageCaption}
-                </h3>
-              </div>
-            </div>
-
-            {/* FLOATING CARD 1: LIVE STATUS BEACON */}
-            <motion.div 
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="absolute -top-4 -left-4 sm:-top-5 sm:-left-6 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 text-left max-w-xs"
-            >
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Status Hari Ini</span>
-                <p className="text-xs font-black text-slate-900 leading-tight">{statusTitle}</p>
-                <span className="text-[10px] text-emerald-600 font-bold">{statusSubtitle}</span>
-              </div>
-            </motion.div>
-
-            {/* FLOATING CARD 2: CIVIC TRUST CERTIFICATE */}
-            <motion.div 
-              initial={{ y: 15, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.55 }}
-              className="absolute -bottom-5 -right-4 sm:-bottom-6 sm:-right-6 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 text-left"
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-primary flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Kemitraan Komunitas</span>
-                <p className="text-xs font-black text-slate-900 leading-tight">{partnerTitle}</p>
-                <span className="text-[10px] text-slate-500 font-medium">{partnerSubtitle}</span>
-              </div>
-            </motion.div>
+              <figcaption className="px-4 sm:px-5 py-3 bg-[#FCFCFD] border-t border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 text-xs">
+                <span className="text-[#4B5563] line-clamp-2 sm:truncate">{imageCaption}</span>
+                <span className="font-mono text-[#6B7280] shrink-0">Aula utama</span>
+              </figcaption>
+            </figure>
           </motion.div>
-
         </div>
       </div>
     </section>

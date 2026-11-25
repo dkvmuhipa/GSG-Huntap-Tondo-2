@@ -36,6 +36,7 @@ async function startServer() {
 
   // Security Headers Middleware
   app.disable('x-powered-by');
+  app.set('trust proxy', 1);
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -43,6 +44,16 @@ async function startServer() {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     next();
   });
+
+  const pruneExpiredEntries = (map: Map<string, { count: number; resetTime: number }>, now: number) => {
+    if (map.size > 500) {
+      for (const [key, val] of map.entries()) {
+        if (now > val.resetTime) {
+          map.delete(key);
+        }
+      }
+    }
+  };
 
   // Upload Rate Limiter (sliding window per IP: max 25 uploads per 15 minutes)
   const uploadRateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -52,6 +63,7 @@ async function startServer() {
   const rateLimitUpload = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
+    pruneExpiredEntries(uploadRateLimitMap, now);
     const entry = uploadRateLimitMap.get(ip);
 
     if (!entry || now > entry.resetTime) {
@@ -78,6 +90,7 @@ async function startServer() {
   const rateLimitNotify = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
+    pruneExpiredEntries(notifyRateLimitMap, now);
     const entry = notifyRateLimitMap.get(ip);
 
     if (!entry || now > entry.resetTime) {
@@ -96,14 +109,29 @@ async function startServer() {
     next();
   };
 
-  app.use(express.json());
+  const hasValidUploadMagicBytes = (buf: Buffer, mimeType: string): boolean => {
+    if (!buf || buf.length < 4) return false;
+    if (mimeType === 'image/png') {
+      return buf.length >= 8 &&
+        buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 &&
+        buf[4] === 0x0D && buf[5] === 0x0A && buf[6] === 0x1A && buf[7] === 0x0A;
+    }
+    if (mimeType === 'image/jpeg') {
+      return buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+    }
+    if (mimeType === 'application/pdf') {
+      return buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46;
+    }
+    return false;
+  };
+
+  app.use(express.json({ limit: '100kb' }));
 
   // Health check
   app.get('/api/health', (req, res) => {
     const isCloudinaryConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY));
     res.json({ 
       status: 'ok', 
-      env: process.env.NODE_ENV,
       vercel: !!process.env.VERCEL,
       cloudinaryConfigured: isCloudinaryConfigured
     });
@@ -123,10 +151,15 @@ async function startServer() {
       next();
     });
   }, async (req, res) => {
-    console.log('Received upload request:', req.file?.originalname);
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      if (!hasValidUploadMagicBytes(req.file.buffer, req.file.mimetype)) {
+        return res.status(400).json({
+          error: 'Isi berkas tidak valid. Pastikan file benar-benar PNG, JPEG, atau PDF asli.'
+        });
       }
 
       const isConfigured = !!(process.env.CLOUDINARY_URL || (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET));
@@ -171,8 +204,7 @@ async function startServer() {
     } catch (error: any) {
       console.error('Upload Error:', error);
       res.status(500).json({ 
-        error: 'Gagal mengupload file ke Cloudinary.',
-        message: error.message 
+        error: 'Gagal mengupload file ke Cloudinary.'
       });
     }
   });
@@ -185,13 +217,17 @@ async function startServer() {
         return res.status(400).json({ error: 'Data notifikasi tidak lengkap.' });
       }
 
-      const adminPhone = (process.env.ADMIN_NOTIFICATION_PHONE || '085961194622').trim();
-      const secretKey = (process.env.SIDOBE_SECRET_KEY || process.env.VITE_SIDOBE_SECRET_KEY || '').trim();
+      if (type === 'payment_proof' && (typeof paymentProofUrl !== 'string' || !/^https:\/\//i.test(paymentProofUrl))) {
+        return res.status(400).json({ error: 'Tautan bukti pembayaran tidak valid.' });
+      }
 
-      if (!secretKey) {
+      const adminPhone = (process.env.ADMIN_NOTIFICATION_PHONE || '').trim();
+      const secretKey = (process.env.SIDOBE_SECRET_KEY || '').trim();
+
+      if (!secretKey || !adminPhone) {
         return res.status(200).json({ 
           success: false, 
-          message: 'SIDOBE_SECRET_KEY belum dikonfigurasi di server environment.' 
+          message: 'Server WhatsApp Gateway belum dikonfigurasi.' 
         });
       }
 

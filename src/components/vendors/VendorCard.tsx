@@ -33,36 +33,35 @@ export default function VendorCard({ vendor, onSelect }: VendorCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="bg-white rounded-3xl border border-gray-100/90 shadow-sm hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col overflow-hidden group"
+      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      className="bg-[#FCFCFD] rounded-2xl border border-[#E5E7EB] hover:border-[#1E40AF]/40 transition-colors flex flex-col overflow-hidden group"
     >
       {/* Image & Top Badges */}
-      <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-gray-100">
+      <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-[#F1F3F5]">
         <img 
           src={vendor.imageUrl || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80'} 
           alt={vendor.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/80 via-[#111827]/10 to-transparent pointer-events-none" />
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
-          <span className="px-3 py-1 rounded-full bg-white/95 backdrop-blur-md text-[10px] font-black uppercase tracking-wider text-primary shadow-md border border-white/60">
+          <span className="px-2.5 py-1 rounded-md bg-[#FCFCFD]/95 text-[11px] font-semibold text-[#1E40AF] border border-[#E5E7EB]">
             {categoryMeta?.label || vendor.category}
           </span>
 
           {vendor.isHuntapResident ? (
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/95 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-md flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-md bg-[#16A34A] text-white text-[11px] font-medium flex items-center gap-1">
               <Home className="w-3 h-3 shrink-0" />
               <span>Warga Huntap</span>
             </span>
           ) : vendor.featured ? (
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/95 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider shadow-md flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-md bg-[#B45309] text-white text-[11px] font-medium flex items-center gap-1">
               <Sparkles className="w-3 h-3 shrink-0" />
               <span>Mitra Unggulan</span>
             </span>
@@ -72,52 +71,52 @@ export default function VendorCard({ vendor, onSelect }: VendorCardProps) {
         {/* Price Tag Floating on Bottom of Image */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between text-white pointer-events-none">
           <div>
-            <span className="text-[10px] text-gray-200 uppercase font-semibold tracking-wider block">Mulai dari</span>
+            <span className="text-[11px] text-[#E5E7EB] block">Mulai dari</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-black tracking-tight drop-shadow-sm">
+              <span className="text-base font-mono tabular-nums font-semibold tracking-tight">
                 Rp {vendor.startingPrice.toLocaleString('id-ID')}
               </span>
-              <span className="text-[11px] text-gray-300 font-medium">/ {vendor.priceUnit}</span>
+              <span className="text-[11px] text-[#CBD5E1]">/ {vendor.priceUnit}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20">
+          <div className="flex items-center gap-1 bg-[#111827]/75 px-2 py-1 rounded-md border border-white/15">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-black text-white">{vendor.rating.toFixed(1)}</span>
-            <span className="text-[10px] text-gray-300 font-medium">({vendor.reviewCount})</span>
+            <span className="text-xs font-mono tabular-nums font-semibold text-white">{vendor.rating.toFixed(1)}</span>
+            <span className="text-[10px] font-mono tabular-nums text-[#CBD5E1]">({vendor.reviewCount})</span>
           </div>
         </div>
       </div>
 
       {/* Card Body */}
-      <div className="p-5 flex-1 flex flex-col justify-between">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
           {/* Vendor Name & Verification */}
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <h3 
               onClick={() => onSelect(vendor)}
-              className="text-base font-black text-gray-900 group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
+              className="text-base font-semibold text-[#111827] group-hover:text-[#1E40AF] transition-colors cursor-pointer line-clamp-1"
               title={vendor.name}
             >
               {vendor.name}
             </h3>
             {vendor.isVerified && (
               <span title="Mitra Terverifikasi Pengelola GSG">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-[#1E40AF] shrink-0 mt-0.5" />
               </span>
             )}
           </div>
 
           {/* Owner & Location */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <div className="flex items-center gap-1.5 text-xs text-[#4B5563] mb-3">
+            <MapPin className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
             <span className="truncate">
               {vendor.huntapBlock ? `Huntap Tondo 2 (${vendor.huntapBlock})` : vendor.address}
             </span>
           </div>
 
           {/* Short Description */}
-          <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed mb-4">
+          <p className="text-xs text-[#4B5563] line-clamp-2 leading-relaxed mb-4">
             {vendor.description}
           </p>
 
@@ -127,13 +126,13 @@ export default function VendorCard({ vendor, onSelect }: VendorCardProps) {
               {vendor.services.slice(0, 3).map((service, idx) => (
                 <span 
                   key={idx}
-                  className="px-2 py-0.5 rounded-lg bg-gray-50 text-[10px] font-bold text-gray-600 border border-gray-100"
+                  className="px-2 py-0.5 rounded-md bg-[#F8F9FA] text-[11px] font-medium text-[#4B5563] border border-[#E5E7EB]"
                 >
                   {service}
                 </span>
               ))}
               {vendor.services.length > 3 && (
-                <span className="px-1.5 py-0.5 rounded-lg bg-gray-50 text-[9px] font-bold text-gray-400">
+                <span className="px-1.5 py-0.5 rounded-md bg-[#F8F9FA] text-[10px] font-mono text-[#6B7280]">
                   +{vendor.services.length - 3} lainnya
                 </span>
               )}
@@ -142,24 +141,24 @@ export default function VendorCard({ vendor, onSelect }: VendorCardProps) {
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-3 border-t border-gray-50 flex items-center gap-2">
+        <div className="pt-3 border-t border-[#E5E7EB] flex items-center gap-2">
           <button
             type="button"
             onClick={() => onSelect(vendor)}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 min-h-[44px] py-2.5 px-3 rounded-lg bg-[#F8F9FA] hover:bg-[#F1F3F5] border border-[#E5E7EB] text-[#111827] text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Detail & Galeri</span>
-            <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+            <ArrowRight className="w-3.5 h-3.5 text-[#6B7280]" />
           </button>
 
           <a
             href={getWaLink()}
             target="_blank"
             rel="noopener noreferrer"
-            className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5"
+            className="min-h-[44px] py-2.5 px-3.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shrink-0"
             title={`Hubungi ${vendor.name} via WhatsApp`}
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className="w-3.5 h-3.5" />
             <span>Chat WA</span>
           </a>
         </div>

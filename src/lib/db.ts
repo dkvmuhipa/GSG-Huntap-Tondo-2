@@ -17,6 +17,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { getLocalDateISO } from './dateUtils';
 
 export enum OperationType {
   CREATE = 'create',
@@ -277,8 +278,7 @@ export const checkCurrentAvailability = (bookings: any[], config: any, facilityI
     return { isBusy: true, currentBooking: { purpose: config.manualStatusNote || 'Pemeliharaan Gedung' }, statusType: 'manual' };
   }
 
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = getLocalDateISO();
 
   // 2. Find confirmed bookings for today
   const activeBooking = bookings.find(b => {

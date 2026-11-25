@@ -4,6 +4,7 @@ import { terbilang } from './contractService';
 import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../lib/qrcode';
 import { getTransparentPNG } from '../lib/cloudinary';
 import { auth } from '../lib/firebase';
+import { getLocalDateISO } from '../lib/dateUtils';
 
 export const displayCategory = (cat: string): string => {
   const map: Record<string, string> = {
@@ -933,6 +934,6 @@ export const buildFinanceReportDoc = async (
   }
 
   const suffix = sortedTransactions.length === 0 ? '_Nihil' : '';
-  const filename = `Laporan_Keuangan_${periodLabel}${suffix}_${new Date().toISOString().split('T')[0]}.pdf`;
+  const filename = `Laporan_Keuangan_${periodLabel}${suffix}_${getLocalDateISO()}.pdf`;
   return { doc, filename };
 };

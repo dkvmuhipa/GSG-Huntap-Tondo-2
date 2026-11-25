@@ -7,10 +7,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie
+  ResponsiveContainer
 } from 'recharts';
 
 interface FinanceChartsProps {
@@ -19,97 +16,104 @@ interface FinanceChartsProps {
   COLORS: string[];
 }
 
-export default function FinanceCharts({ chartData, categoryData, COLORS }: FinanceChartsProps) {
+export default function FinanceCharts({ chartData, categoryData }: FinanceChartsProps) {
+  const maxCatValue = Math.max(...categoryData.map((c) => Number(c.value || 0)), 1);
+  const totalCatValue = categoryData.reduce((acc, c) => acc + Number(c.value || 0), 0) || 1;
+
   return (
     <div className="grid lg:grid-cols-3 gap-6" id="finance-charts-section">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-2 min-w-0 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="lg:col-span-2 min-w-0 bg-white p-6 rounded-xl border border-[#E4E4E7]"
       >
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
           <div>
-            <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs">Arus Kas Bulanan</h3>
-            <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-tighter">Income vs Expense (6 Bulan Terakhir)</p>
+            <h3 className="font-semibold text-[#171717] text-sm">Arus Kas Bulanan</h3>
+            <p className="text-xs text-[#737373] mt-0.5">Pemasukan vs Pengeluaran (6 bulan terakhir)</p>
           </div>
-          <div className="flex gap-3 text-[8px] font-black uppercase tracking-widest">
+          <div className="flex gap-4 text-xs text-[#525252]">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-primary" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#1E40AF]" />
               <span>Masuk</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-400" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#D4D4D8]" />
               <span>Keluar</span>
             </div>
           </div>
         </div>
-        <div className="h-[250px] w-full min-w-0">
+        <div className="h-[260px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4E7" />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                tick={{ fontSize: 11, fontWeight: 500, fill: '#737373' }}
                 dy={10}
               />
               <YAxis hide />
               <Tooltip 
-                cursor={{ fill: '#f8fafc' }}
-                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                formatter={(value: number) => [`Rp ${value.toLocaleString()}`, '']}
+                cursor={{ fill: '#FAFAFA' }}
+                contentStyle={{ borderRadius: '0.75rem', border: '1px solid #E4E4E7', backgroundColor: '#FFFFFF', padding: '10px', fontSize: '12px' }}
+                formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, '']}
               />
-              <Bar dataKey="income" fill="#1E40AF" radius={[4, 4, 0, 0]} barSize={32} />
-              <Bar dataKey="expense" fill="#F87171" radius={[4, 4, 0, 0]} barSize={32} />
+              <Bar dataKey="income" name="Masuk" fill="#1E40AF" radius={[4, 4, 0, 0]} barSize={28} />
+              <Bar dataKey="expense" name="Keluar" fill="#D4D4D8" radius={[4, 4, 0, 0]} barSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </motion.div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm min-w-0"
+        transition={{ delay: 0.06, duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-white p-6 rounded-xl border border-[#E4E4E7] min-w-0 flex flex-col justify-between"
       >
-        <h3 className="font-black text-gray-900 uppercase tracking-widest text-xs mb-8">Alokasi Biaya Keluar</h3>
-        <div className="h-[200px] w-full min-w-0 relative">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
-            <PieChart>
-              <Pie
-                data={categoryData.length > 0 ? categoryData : [{ name: 'EMPTY', value: 1 }]}
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-                {categoryData.length === 0 && <Cell key="empty-cell" fill="#f1f5f9" />}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[10px] font-black text-gray-400 uppercase leading-none">Total</span>
-            <span className="text-lg font-black text-gray-900">Cat.</span>
-          </div>
-        </div>
-        <div className="mt-6 space-y-2">
-          {categoryData.slice(0, 3).map((cat, i) => (
-            <div key={cat.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                <span className="text-[10px] font-bold text-gray-500 uppercase">{cat.name}</span>
-              </div>
-              <span className="text-[10px] font-black text-gray-900">Rp {cat.value.toLocaleString()}</span>
+        <div>
+          <h3 className="font-semibold text-[#171717] text-sm mb-1">Alokasi Biaya Keluar</h3>
+          <p className="text-xs text-[#737373] mb-6">Peringkat kategori pengeluaran operasional.</p>
+          {categoryData.length === 0 ? (
+            <p className="text-xs text-[#737373] text-center py-12">Belum ada pengeluaran pada periode ini.</p>
+          ) : (
+            <div className="space-y-4">
+              {categoryData.slice(0, 5).map((cat, i) => {
+                const pctWidth = Math.max(6, Math.round((Number(cat.value || 0) / maxCatValue) * 100));
+                const sharePct = Math.round((Number(cat.value || 0) / totalCatValue) * 100);
+                return (
+                  <div key={cat.name} className="space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="font-medium text-[#171717] truncate">{cat.name}</span>
+                      <span className="font-mono tabular-nums font-semibold text-[#171717] shrink-0">
+                        Rp {Number(cat.value || 0).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-[#F4F4F5] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${i === 0 ? 'bg-[#1E40AF]' : 'bg-[#A1A1AA]'}`}
+                          style={{ width: `${pctWidth}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono tabular-nums text-[#737373] w-9 text-right">
+                        {sharePct}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-          {categoryData.length === 0 && (
-            <p className="text-[10px] text-gray-400 text-center italic">Belum ada pengeluaran</p>
           )}
+        </div>
+        <div className="mt-6 pt-4 border-t border-[#E4E4E7] flex items-center justify-between text-xs text-[#737373]">
+          <span>Total tercatat</span>
+          <span className="font-mono tabular-nums font-semibold text-[#171717]">
+            Rp {categoryData.reduce((s, c) => s + Number(c.value || 0), 0).toLocaleString('id-ID')}
+          </span>
         </div>
       </motion.div>
     </div>

@@ -4,11 +4,13 @@ import { Phone, Mail, Clock, MapPin, Target } from 'lucide-react';
 interface ContactAndGoalSettingsCardProps {
   config: any;
   setConfig: React.Dispatch<React.SetStateAction<any>>;
+  canEditFinancials?: boolean;
 }
 
 export default function ContactAndGoalSettingsCard({
   config,
-  setConfig
+  setConfig,
+  canEditFinancials = true
 }: ContactAndGoalSettingsCardProps) {
   return (
     <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -132,10 +134,14 @@ export default function ContactAndGoalSettingsCard({
               <input
                 type="number"
                 value={config?.devGoalTargetAmount ?? 15000000}
-                onChange={(e) => setConfig({ ...config, devGoalTargetAmount: Number(e.target.value) })}
+                onChange={(e) => canEditFinancials && setConfig({ ...config, devGoalTargetAmount: Number(e.target.value) })}
+                readOnly={!canEditFinancials}
                 placeholder="15000000"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-primary outline-none transition-all"
+                className={`w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-primary outline-none transition-all ${!canEditFinancials ? 'opacity-60 cursor-not-allowed' : ''}`}
               />
+              {!canEditFinancials && (
+                <p className="text-[10px] text-red-400 font-bold mt-1">Hanya Owner/Admin/Bendahara yang dapat mengubah nominal target</p>
+              )}
             </div>
 
             <div>

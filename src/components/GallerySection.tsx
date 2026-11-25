@@ -86,22 +86,22 @@ export default function GallerySection() {
   }, [selectedImageIndex, filteredImages.length]);
 
   return (
-    <section id="galeri" className="py-24 bg-white overflow-hidden scroll-mt-20">
+    <section id="galeri" className="py-12 sm:py-16 lg:py-20 bg-[#FCFCFD] overflow-hidden scroll-mt-28 border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/10 mb-4">
-            <ImageIcon className="w-4 h-4" />
-            Dokumentasi & Galeri
+        <div className="text-center mb-8 sm:mb-12">
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF] mb-2">
+            <ImageIcon className="w-4 h-4" strokeWidth={1.75} />
+            <span>Dokumentasi & galeri</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-4">
-            Lihat Rekam Jejak <span className="text-primary italic">Gedung Serbaguna Huntap Tondo 2</span>
+          <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] tracking-tight mb-3">
+            Rekam Jejak Gedung Serbaguna Huntap Tondo 2
           </h2>
-          <p className="text-gray-500 max-w-2xl mx-auto font-medium">
-            Koleksi foto fasilitas, kegiatan warga, dan berbagai acara yang telah sukses dilaksanakan di gedung kami.
+          <p className="text-[#4B5563] max-w-2xl mx-auto text-sm sm:text-base">
+            Koleksi foto fasilitas, kegiatan warga, dan berbagai acara yang telah terlaksana di aula bersama.
           </p>
 
           {/* Interactive Category Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6 sm:mt-8">
             {categories.map((cat) => {
               const count = cat === 'Semua' ? images.length : images.filter((i) => i.category === cat).length;
               const isActive = activeCategory === cat;
@@ -110,17 +110,17 @@ export default function GallerySection() {
                   key={cat}
                   type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2 cursor-pointer border ${
                     isActive
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-105'
-                      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600'
+                      ? 'bg-[#1E40AF] text-white border-[#1E40AF]'
+                      : 'bg-[#F8F9FA] hover:bg-[#F1F3F5] text-[#4B5563] border-[#E5E7EB]'
                   }`}
                 >
                   {cat === 'Semua' && <Layers className="w-3.5 h-3.5" />}
                   <span>{cat}</span>
                   <span
-                    className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                    className={`px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-[#F1F3F5] text-[#4B5563]'
                     }`}
                   >
                     {count}
@@ -131,7 +131,7 @@ export default function GallerySection() {
           </div>
         </div>
 
-        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <AnimatePresence mode="popLayout">
             {filteredImages.map((img, idx) => {
               const isLoaded = Boolean(loadedUrls[img.url]);
@@ -140,18 +140,18 @@ export default function GallerySection() {
                 <motion.div 
                   layout
                   key={`${img.url}-${idx}`}
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.94 }}
-                  transition={{ duration: 0.25 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   onClick={() => setSelectedImageIndex(idx)}
-                  className="group relative rounded-[2.5rem] overflow-hidden aspect-[4/3] bg-slate-100 border border-gray-100 shadow-sm cursor-pointer"
+                  className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#F1F3F5] border border-[#E5E7EB] cursor-pointer"
                 >
-                  {/* Skeleton Shimmer Loading Placeholder */}
+                  {/* Loading Placeholder */}
                   {!isLoaded && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-pulse flex flex-col items-center justify-center gap-2 text-slate-400">
-                      <ImageIcon className="w-8 h-8 opacity-40 animate-pulse" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">Memuat Foto...</span>
+                    <div className="absolute inset-0 bg-[#F1F3F5] flex flex-col items-center justify-center gap-2 text-[#6B7280]">
+                      <ImageIcon className="w-7 h-7 opacity-50" strokeWidth={1.5} />
+                      <span className="text-xs font-medium">Memuat foto...</span>
                     </div>
                   )}
 
@@ -161,23 +161,23 @@ export default function GallerySection() {
                     loading="lazy"
                     decoding="async"
                     onLoad={() => setLoadedUrls((prev) => ({ ...prev, [img.url]: true }))}
-                    className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${
+                    className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03] ${
                       isLoaded ? 'opacity-100' : 'opacity-0'
                     }`}
                     referrerPolicy="no-referrer"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/85 via-gray-900/20 to-transparent opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-7">
-                    <span className="text-[10px] font-black text-white bg-primary/80 backdrop-blur-md px-3 py-1 rounded-full w-fit mb-2 uppercase tracking-widest border border-white/20">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/85 via-[#111827]/20 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-4 sm:p-6">
+                    <span className="text-[11px] font-medium text-white bg-[#1E40AF] px-2.5 py-0.5 rounded-md w-fit mb-2">
                       {img.category}
                     </span>
-                    <h4 className="text-lg sm:text-xl font-bold text-white leading-tight">
+                    <h4 className="text-base sm:text-lg font-semibold text-white leading-tight">
                       {img.title}
                     </h4>
                   </div>
 
-                  <div className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center transform translate-y-2 group-hover:translate-y-0 text-white hover:bg-white/30">
-                    <Maximize2 className="w-5 h-5" />
+                  <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 rounded-lg bg-[#0F172A]/65 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center text-white border border-white/15">
+                    <Maximize2 className="w-4 h-4" />
                   </div>
                 </motion.div>
               );
@@ -185,9 +185,9 @@ export default function GallerySection() {
           </AnimatePresence>
         </motion.div>
 
-        <div className="mt-16 text-center">
-          <p className="text-sm text-gray-400 italic">
-            * Dokumentasi diperbarui secara berkala oleh pengurus Gedung Serbaguna Huntap Tondo 2.
+        <div className="mt-10 sm:mt-12 text-center">
+          <p className="text-xs text-[#6B7280]">
+            Dokumentasi diperbarui secara berkala oleh pengurus Gedung Serbaguna Huntap Tondo 2.
           </p>
         </div>
       </div>
@@ -195,23 +195,23 @@ export default function GallerySection() {
       {/* Lightbox Modal */}
       <AnimatePresence>
         {selectedImageIndex !== null && filteredImages[selectedImageIndex] && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-8">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedImageIndex(null)}
-              className="fixed inset-0 bg-slate-950/85 backdrop-blur-md"
+              className="fixed inset-0 bg-[#0F172A]/85"
             />
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative max-w-4xl w-full bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 z-10 flex flex-col"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="relative max-w-4xl w-full max-h-[90dvh] bg-[#0F172A] rounded-2xl overflow-hidden border border-white/15 z-10 flex flex-col"
             >
-              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full bg-black/60 overflow-hidden flex items-center justify-center">
+              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full bg-black overflow-hidden flex items-center justify-center">
                 <img 
                   src={filteredImages[selectedImageIndex].url}
                   alt={filteredImages[selectedImageIndex].title}
@@ -226,10 +226,10 @@ export default function GallerySection() {
                     e.stopPropagation();
                     setSelectedImageIndex((selectedImageIndex - 1 + filteredImages.length) % filteredImages.length);
                   }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 text-white flex items-center justify-center transition-all backdrop-blur-md"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#0F172A]/75 hover:bg-[#0F172A] text-white flex items-center justify-center transition-colors border border-white/15 cursor-pointer"
                   aria-label="Foto Sebelumnya"
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   type="button"
@@ -237,34 +237,34 @@ export default function GallerySection() {
                     e.stopPropagation();
                     setSelectedImageIndex((selectedImageIndex + 1) % filteredImages.length);
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 text-white flex items-center justify-center transition-all backdrop-blur-md"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#0F172A]/75 hover:bg-[#0F172A] text-white flex items-center justify-center transition-colors border border-white/15 cursor-pointer"
                   aria-label="Foto Berikutnya"
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
 
                 {/* Close Button */}
                 <button
                   type="button"
                   onClick={() => setSelectedImageIndex(null)}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-all backdrop-blur-md"
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 w-11 h-11 rounded-full bg-[#0F172A]/75 hover:bg-[#0F172A] text-white flex items-center justify-center transition-colors border border-white/15 cursor-pointer"
                   aria-label="Tutup"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Bottom Caption */}
-              <div className="p-6 bg-slate-900 border-t border-white/10 flex items-center justify-between gap-4">
+              <div className="p-4 sm:p-5 bg-[#0F172A] border-t border-white/10 flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider">
+                  <span className="text-xs font-medium text-[#93C5FD]">
                     {filteredImages[selectedImageIndex].category}
                   </span>
-                  <h3 className="text-lg font-bold text-white mt-0.5">
+                  <h3 className="text-base sm:text-lg font-semibold text-white mt-0.5">
                     {filteredImages[selectedImageIndex].title}
                   </h3>
                 </div>
-                <span className="text-xs font-mono font-bold text-slate-400">
+                <span className="text-xs font-mono tabular-nums font-medium text-[#94A3B8] shrink-0">
                   {selectedImageIndex + 1} / {filteredImages.length}
                 </span>
               </div>

@@ -35,8 +35,12 @@ import {
   Building2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAppStore } from '../store/useAppStore';
+import { formatWaNumber } from '../components/ContactSection';
 
 export default function RulesProcedures() {
+  const config = useAppStore(state => state.config);
+  const adminWaNumber = formatWaNumber(config?.contactPhone);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -94,7 +98,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
 
   const getPublicWALink = () => {
     const text = encodeURIComponent(getPublicWAMessage());
-    return `https://wa.me/6281234567890?text=${text}`;
+    return `https://wa.me/${adminWaNumber}?text=${text}`;
   };
 
   // Quick Steps Workflow
@@ -719,7 +723,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
                   <a
                     href={getPublicWALink()}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <MessageSquare className="w-4 h-4" />
@@ -743,9 +747,9 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
                 <p className="text-white/70 text-sm font-semibold">Tanyakan langsung pada tim dinas pengurus Huntap Tondo 2 untuk solusi terbaik acara Anda.</p>
               </div>
               <a 
-                href="https://wa.me/6281234567890" 
+                href={`https://wa.me/${adminWaNumber}`} 
                 target="_blank" 
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="bg-white text-indigo-950 px-8 py-4 rounded-2xl font-black hover:scale-[1.03] active:scale-95 transition-all text-sm whitespace-nowrap shadow-xl inline-flex items-center gap-2 tracking-tight"
               >
                 HUBUNGI WHATSAPP
@@ -808,7 +812,7 @@ Mohon informasi mengenai ketersediaan jadwal pada tanggal tersebut serta langkah
                 <a
                   href={`${window.location.origin}/rules`}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   onClick={() => setShowPrintModal(false)}
                   className="flex items-center justify-between p-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white rounded-2xl transition-all shadow-md shadow-indigo-600/10 group font-bold text-sm cursor-pointer"
                 >

@@ -23,20 +23,19 @@ import {
   Tag,
   Warehouse,
   Flame,
-  Copy,
   Check,
   Store,
   CreditCard,
-  ShieldCheck, Download, Ticket, Search,
+  ShieldCheck
 } from 'lucide-react';
 import { addBooking } from '../../lib/db';
 import { useAppStore } from '../../store/useAppStore';
 import HallLayoutCanvas, { HallLayoutData, LayoutTemplate, StagePosition } from './HallLayoutCanvas';
 import { notifyAdminNewBooking } from '../../services/whatsappGatewayService';
 import { formatWaNumber } from '../ContactSection';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { generateVerificationQRDataURL, getDocumentVerificationUrl } from '../../lib/qrcode';
+import { getLocalDateISO } from '../../lib/dateUtils';
+import { downloadBookingETicketPdf } from '../../services/eTicketPdfService';
+import BookingSuccessView from './BookingSuccessView';
 
 // Fallback Inventory items with standard pricing if Firestore behaves empty
 const DEFAULT_INVENTORY = [
@@ -390,7 +389,7 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
 
   const getWALink = () => {
     const text = encodeURIComponent(generateWAMessage());
-    const waTarget = formatWaNumber(config?.contactPhone || '+62 812-3456-7890');
+    const waTarget = formatWaNumber(config?.contactPhone || '+62 822-9157-8809');
     return `https://wa.me/${waTarget}?text=${text}`;
   };
 
@@ -426,85 +425,27 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
   const handleDownloadETicket = async () => {
     setIsGeneratingPdf(true);
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const margin = 15;
-
-      doc.setFillColor(30, 64, 175);
-      doc.rect(0, 0, pageWidth, 42, 'F');
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.text('BUKTI PENGAJUAN SEWA GEDUNG (E-TICKET)', margin, 18);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(226, 232, 240);
-      doc.text('GEDUNG SERBAGUNA HUNTAP TONDO 2 - KOTA PALU', margin, 25);
-      doc.setFontSize(8);
-      doc.text(`Dicetak: ${new Date().toLocaleString('id-ID')}`, margin, 33);
-
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(pageWidth - margin - 52, 10, 52, 22, 3, 3, 'F');
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('KODE REFERENSI', pageWidth - margin - 26, 16, { align: 'center' });
-      doc.setTextColor(30, 64, 175);
-      doc.setFontSize(11);
-      doc.text(`#${bookingRefCode}`, pageWidth - margin - 26, 26, { align: 'center' });
-
-      autoTable(doc, {
-        startY: 52,
-        margin: { left: margin, right: margin },
-        head: [['Informasi Permohonan Sewa', 'Detail Tercatat']],
-        body: [
-          ['Kode Pengajuan', `#${bookingRefCode}`],
-          ['Nama Pemohon', formData.customerName || '-'],
-          ['Kategori / Instansi', `${formData.organizerType} - ${formData.organizerName || formData.customerName}`],
-          ['Nomor WhatsApp (Pelacakan)', formData.phone || '-'],
-          ['Paket Fasilitas', formData.packageName || '-'],
-          ['Tujuan Kegiatan', formData.purpose || '-'],
-          ['Tanggal & Waktu Acara', `${formData.startDate} (${formData.startTime} - ${formData.endTime} WITA)`],
-          ['Estimasi Tamu & Denah', `${formData.guests || '-'} Orang | Denah ${layout.template.toUpperCase()} (${layout.chairQuantity} Kursi, ${layout.tableQuantity} Meja)`],
-          ['Status Saat Ini', 'PENDING (Menunggu Verifikasi & Pembayaran DP)'],
-          ['Total Estimasi Biaya', `Rp ${calculatedBills.grandTotal.toLocaleString('id-ID')}`],
-          ['Minimal Uang Muka (DP 30%)', `Rp ${Math.ceil(calculatedBills.grandTotal * 0.3).toLocaleString('id-ID')}`]
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 10 },
-        bodyStyles: { fontSize: 9.5, cellPadding: 3.5 },
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 65, fillColor: [248, 250, 252] },
-          1: { cellWidth: 'auto' }
-        }
+      await downloadBookingETicketPdf({
+        bookingRefCode,
+        submittedBookingId,
+        customerName: formData.customerName,
+        organizerType: formData.organizerType,
+        organizerName: formData.organizerName,
+        phone: formData.phone,
+        packageName: formData.packageName,
+        purpose: formData.purpose,
+        startDate: formData.startDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        guests: formData.guests,
+        layout: {
+          template: layout.template,
+          tableQuantity: layout.tableQuantity,
+          chairQuantity: layout.chairQuantity,
+        },
+        grandTotal: calculatedBills.grandTotal,
+        contactPhone: config?.contactPhone,
       });
-
-      const finalY = (doc as any).lastAutoTable.finalY + 12;
-
-      if (submittedBookingId) {
-        const verifyUrl = getDocumentVerificationUrl(submittedBookingId, 'booking');
-        const qrDataUrl = await generateVerificationQRDataURL(verifyUrl);
-        doc.addImage(qrDataUrl, 'PNG', margin, finalY, 32, 32);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(15, 23, 42);
-        doc.text('Verifikasi Digital & Pelacakan Status:', margin + 37, finalY + 8);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.setTextColor(71, 85, 105);
-        doc.text(
-          '1. Scan QR Code di samping untuk memverifikasi keaslian pengajuan secara real-time.\n' +
-          '2. Anda juga dapat mengecek status & mengunggah bukti transfer melalui menu "Lacak Booking"\n' +
-          `   di website menggunakan Nomor WhatsApp (${formData.phone}).\n` +
-          `3. Konfirmasi WA Admin Resmi: ${config?.contactPhone || '+62 812-3456-7890'}`,
-          margin + 37,
-          finalY + 14
-        );
-      }
-
-      doc.save(`ETicket_${bookingRefCode}_${formData.customerName.replace(/\s+/g, '_')}.pdf`);
     } catch (e) {
       console.error('Failed to generate E-Ticket PDF:', e);
     } finally {
@@ -518,12 +459,6 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('activate-tracking-tab', { detail: { phone: trackedPhone } }));
     }, 120);
-  };
-
-  const deprecatedNoop = () => {
-    navigator.clipboard.writeText(generateWAMessage());
-    setCopiedMsg(true);
-    setTimeout(() => setCopiedMsg(false), 2000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -611,109 +546,20 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
             className="relative bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden max-h-[95vh] sm:max-h-[min(900px,90vh)] flex flex-col transition-all border border-slate-100"
           >
             {isSuccess ? (
-              <div className="p-6 sm:p-10 text-center flex-1 flex flex-col justify-between overflow-y-auto max-h-[90vh]">
-                <div>
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-sm shadow-emerald-500/10">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">Permohonan Berhasil Dikirim!</h3>
-                  
-                  {/* Kode Referensi Booking Badge */}
-                  <div className="inline-flex items-center gap-2.5 bg-blue-50 border border-blue-200 px-4 py-2 rounded-2xl mb-4">
-                    <Ticket className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-bold text-slate-600">Kode Pengajuan:</span>
-                    <span className="text-sm font-black text-primary tracking-wider">#{bookingRefCode}</span>
-                    <button
-                      type="button"
-                      onClick={copyBookingCode}
-                      className="ml-1 p-1 rounded-lg bg-white hover:bg-blue-100 text-primary transition-colors border border-blue-100"
-                      title="Salin Kode Booking"
-                    >
-                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* Quick Actions: E-Ticket PDF, Google Calendar, Lacak Status */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5 text-left">
-                    <button
-                      type="button"
-                      onClick={handleDownloadETicket}
-                      disabled={isGeneratingPdf}
-                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] uppercase tracking-wider shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-60"
-                    >
-                      <Download className="w-4 h-4 shrink-0" />
-                      <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Unduh E-Ticket PDF'}</span>
-                    </button>
-                    <a
-                      href={getGoogleCalendarUrl()}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                      <CalendarIcon className="w-4 h-4 shrink-0" />
-                      <span>Simpan Kalender</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleGoToTracker}
-                      className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                      <Search className="w-4 h-4 shrink-0" />
-                      <span>Lacak Boarding Pass</span>
-                    </button>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto mb-6 leading-relaxed">
-                    Data Anda telah tercatat rapi di sistem kami. <strong className="text-slate-900">Sangat Direkomendasikan:</strong> Kirim salinan rincian pengajuan ini langsung ke WhatsApp Admin agar diverifikasi lebih cepat.
-                  </p>
-
-                  {/* Copyable Template Box */}
-                  <div className="text-left bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-800 relative group mb-6 shadow-inner">
-                    <button
-                      onClick={copyWAMessage}
-                      type="button"
-                      className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white p-2 rounded-xl text-xs flex items-center gap-1.5 transition-all font-bold backdrop-blur-sm"
-                      title="Salin Template"
-                    >
-                      {copiedMsg ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Tersalin!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Salin</span>
-                        </>
-                      )}
-                    </button>
-                    <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider block mb-2">Template Pesan Konfirmasi WhatsApp</span>
-                    <pre className="text-[11px] sm:text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto scrollbar-none select-all pr-2">
-                      {generateWAMessage()}
-                    </pre>
-                  </div>
-                </div>
-
-                {/* Direct Action Buttons */}
-                <div className="space-y-2.5 pt-4 border-t border-slate-100">
-                  <a
-                    href={getWALink()}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                    Kirim Konfirmasi ke WhatsApp Admin
-                  </a>
-
-                  <button
-                    onClick={handleResetAndClose}
-                    type="button"
-                    className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-700 font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
-                  >
-                    Tutup & Selesai
-                  </button>
-                </div>
-              </div>
+              <BookingSuccessView
+                bookingRefCode={bookingRefCode}
+                copiedCode={copiedCode}
+                onCopyBookingCode={copyBookingCode}
+                isGeneratingPdf={isGeneratingPdf}
+                onDownloadETicket={handleDownloadETicket}
+                googleCalendarUrl={getGoogleCalendarUrl()}
+                onGoToTracker={handleGoToTracker}
+                waMessage={generateWAMessage()}
+                copiedMsg={copiedMsg}
+                onCopyWAMessage={copyWAMessage}
+                waLink={getWALink()}
+                onResetAndClose={handleResetAndClose}
+              />
             ) : (
               <>
                 {/* Modern Stepper Header */}
@@ -963,7 +809,7 @@ Mohon informasi selanjutnya terkait prosedur verifikasi dan rincian transfer pem
                               type="date" 
                               value={formData.startDate}
                               onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                              min={new Date().toISOString().split('T')[0]}
+                              min={getLocalDateISO()}
                               className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl text-slate-800 font-semibold text-sm transition-all focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-slate-300"
                             />
                             <p className="text-[10px] text-slate-400 pl-1">Pilih tanggal hari H pelaksanaan.</p>

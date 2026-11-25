@@ -113,7 +113,7 @@ export function generateHMinus1ReminderMessage(booking: any, config?: any): stri
     ? new Date(booking.startDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     : 'Besok';
   const contactName = config?.reportBendaharaName || 'Pengurus GSG Huntap Tondo 2';
-  const contactPhone = config?.contactPhone || '0859-6119-4622';
+  const contactPhone = config?.contactPhone || '+62 822-9157-8809';
   const isPaid = booking.paymentStatus === 'paid';
   const totalAmount = Number(booking.amount || 0).toLocaleString('id-ID');
 

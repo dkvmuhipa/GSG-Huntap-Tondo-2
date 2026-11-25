@@ -22,6 +22,7 @@ import { db, handleFirestoreError, OperationType, auth } from '../../lib/firebas
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useAppStore } from '../../store/useAppStore';
+import { getLocalDateISO } from '../../lib/dateUtils';
 
 interface InventoryItem {
   id: string;
@@ -117,7 +118,7 @@ export default function InventoryManager() {
           await addDoc(collection(db, logPath), {
             itemName: data.name,
             action: 'Update Stok/Kondisi',
-            date: new Date().toISOString().split('T')[0],
+            date: getLocalDateISO(),
             performedBy: 'Admin',
             notes: `Update kuantitas: Baik(${data.goodQuantity}), Rusak(${data.brokenQuantity})`
           });
@@ -135,7 +136,7 @@ export default function InventoryManager() {
           await addDoc(collection(db, logPath), {
             itemName: data.name,
             action: 'Item Baru Terdaftar',
-            date: new Date().toISOString().split('T')[0],
+            date: getLocalDateISO(),
             performedBy: 'Admin',
             notes: `Pendaftaran aset baru ke dalam sistem.`
           });

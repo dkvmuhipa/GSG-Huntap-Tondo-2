@@ -24,9 +24,9 @@ export interface WhatsAppGatewayConfig {
 export const DEFAULT_WA_GATEWAY_CONFIG: WhatsAppGatewayConfig = {
   enabled: true,
   provider: 'sidobe',
-  apiKey: (import.meta as any).env?.VITE_SIDOBE_SECRET_KEY || '',
-  senderNumber: '6285961194622',
-  adminNotificationPhone: '085961194622',
+  apiKey: '',
+  senderNumber: '',
+  adminNotificationPhone: '',
   autoNotifyAdminOnNewBooking: true,
   autoNotifyCitizenOnBookingApproval: true,
   autoNotifyCitizenOnPaymentReceipt: true,
@@ -114,7 +114,7 @@ export async function sendAutomatedWhatsAppMessage(
   try {
     // 0. SIDOBE WA API Provider (https://api.sidobe.com/wa/v1/send-message)
     if (config.provider === 'sidobe') {
-      const secretKey = (config.apiKey || (import.meta as any).env?.VITE_SIDOBE_SECRET_KEY || '').trim();
+      const secretKey = (config.apiKey || '').trim();
       if (!secretKey) {
         return { success: false, message: 'Secret Key SIDOBE WA API belum diisi.' };
       }

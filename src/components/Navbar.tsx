@@ -1,21 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Building2, 
-  MessageCircle, 
-  Menu, 
-  X, 
-  Shield, 
-  CalendarCheck, 
-  Search, 
-  PieChart, 
-  Image as ImageIcon, 
-  Store, 
+import {
+  Building2,
+  Menu,
+  X,
+  CalendarCheck,
+  Search,
+  PieChart,
+  Image as ImageIcon,
+  Store,
   FileText,
   ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  Sparkles
+  ChevronRight
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -33,57 +29,63 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 12);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsMoreOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMoreOpen(false);
+        setIsOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
-  // Close dropdown and drawer when location changes
   useEffect(() => {
     setIsMoreOpen(false);
     setIsOpen(false);
   }, [location]);
 
-  // 4 Core Primary Nav Links
   const primaryNavLinks = [
     { name: 'Jadwal', href: '/#jadwal', icon: CalendarCheck },
-    { name: 'Fasilitas & Biaya', href: '/#fasilitas', icon: Building2 },
-    { name: 'Lacak Sewa', href: '/#lacak', icon: Search },
-    { name: 'Transparansi', href: '/#transparansi', icon: PieChart },
+    { name: 'Fasilitas & tarif', href: '/#fasilitas', icon: Building2 },
+    { name: 'Lacak sewa', href: '/#lacak', icon: Search },
+    { name: 'Transparansi kas', href: '/#transparansi', icon: PieChart },
   ];
 
-  // Secondary items tucked neatly inside "Lainnya" Dropdown
   const moreNavLinks = [
-    { 
-      name: 'Galeri Foto Gedung', 
-      href: '/#galeri', 
+    {
+      name: 'Galeri gedung',
+      href: '/#galeri',
       icon: ImageIcon,
-      desc: 'Dokumentasi fasilitas & rekam jejak acara' 
+      desc: 'Dokumentasi fasilitas dan kegiatan warga'
     },
-    { 
-      name: 'Mitra Vendor UMKM', 
-      href: '/#mitra-vendor', 
+    {
+      name: 'Mitra UMKM warga',
+      href: '/#mitra-vendor',
       icon: Store,
-      desc: 'Katering, dekorasi, & sound system warga' 
+      desc: 'Katering, dekorasi, dan tata suara lokal'
     },
-    { 
-      name: 'Aturan & SOP Sewa', 
-      href: '/rules', 
+    {
+      name: 'Aturan & prosedur',
+      href: '/rules',
       icon: FileText,
-      desc: 'Syarat, ketentuan, & tata tertib gedung' 
+      desc: 'Syarat sewa dan tata tertib gedung'
     },
   ];
 
@@ -118,31 +120,32 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
   const isAnyMoreLinkActive = moreNavLinks.some(link => isLinkActive(link.href));
 
   return (
-    <nav className={`w-full transition-all duration-300 ${
-      scrolled 
-        ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-md shadow-slate-900/5' 
-        : 'bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-xs'
-    }`}>
+    <nav
+      className={`w-full transition-colors duration-150 ${
+        scrolled
+          ? 'bg-[#FCFCFD]/95 backdrop-blur-sm border-b border-[#E5E7EB] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+          : 'bg-[#FCFCFD] border-b border-[#E5E7EB]'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 sm:h-20 gap-4">
-          
-          {/* Logo (Shrink-0, Crisp & Never Truncated) */}
-          <Link to="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-primary/25 group-hover:scale-105 transition-transform">
-              <Building2 className="text-white w-5 h-5 sm:w-6 sm:h-6" />
+        <div className="flex justify-between items-center h-16 gap-3 sm:gap-4">
+          {/* Quiet Brand Wordmark + Flat Mark */}
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 min-w-0 group">
+            <div className="w-8 h-8 bg-[#1E40AF] rounded-lg flex items-center justify-center shrink-0">
+              <Building2 className="text-white w-4 h-4" strokeWidth={1.5} />
             </div>
-            <div className="flex flex-col shrink-0 text-left">
-              <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-primary transition-colors whitespace-nowrap leading-tight">
-                GEDUNG SERBAGUNA
+            <div className="flex flex-col min-w-0 text-left">
+              <span className="text-[15px] sm:text-base font-bold tracking-tight text-[#1E293B] truncate leading-none">
+                GSG Huntap Tondo 2
               </span>
-              <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase whitespace-nowrap">
-                Huntap Tondo 2
+              <span className="text-[11px] sm:text-xs font-normal text-[#6B7280] truncate mt-1 leading-none">
+                RT 02, Kota Palu
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links: 4 Core Items + 1 Sleek Dropdown */}
-          <div className="hidden md:flex items-center gap-1 lg:gap-2 text-xs lg:text-sm font-bold text-slate-600">
+          {/* Desktop Navigation Links */}
+          <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-[#4B5563]">
             {primaryNavLinks.map((link) => {
               const active = isLinkActive(link.href);
 
@@ -151,10 +154,10 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
                   key={link.name}
                   to={link.href}
                   onClick={() => handleNavClick(link.href)}
-                  className={`px-3 py-2 rounded-xl transition-all whitespace-nowrap ${
-                    active 
-                      ? 'text-primary bg-primary/10 font-black' 
-                      : 'hover:text-primary hover:bg-slate-50'
+                  className={`px-3 py-1.5 rounded-lg transition-colors duration-150 whitespace-nowrap ${
+                    active
+                      ? 'text-[#1E40AF] bg-[#EFF6FF]'
+                      : 'hover:text-[#1E40AF] hover:bg-[#F1F5F9]'
                   }`}
                 >
                   {link.name}
@@ -167,80 +170,65 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
               <button
                 type="button"
                 onClick={() => setIsMoreOpen(!isMoreOpen)}
-                className={`px-3 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg transition-colors duration-150 inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   isMoreOpen || isAnyMoreLinkActive
-                    ? 'text-primary bg-primary/10 font-black'
-                    : 'hover:text-primary hover:bg-slate-50'
+                    ? 'text-[#1E40AF] bg-[#EFF6FF]'
+                    : 'hover:text-[#1E40AF] hover:bg-[#F1F5F9]'
                 }`}
                 aria-expanded={isMoreOpen}
               >
                 <span>Lainnya</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMoreOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-4 h-4 text-[#6B7280] transition-transform duration-150 ${isMoreOpen ? 'rotate-180' : ''}`}
+                  strokeWidth={1.5}
+                />
               </button>
 
               <AnimatePresence>
                 {isMoreOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute left-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl border border-slate-100 p-2.5 z-50 overflow-hidden"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute left-0 mt-2 w-72 bg-[#FCFCFD] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-[#E5E7EB] p-2 z-50"
                   >
                     <div className="space-y-1">
                       {moreNavLinks.map((item) => {
                         const IconComponent = item.icon;
-                        const isInternalRoute = !item.href.includes('#');
-
-                        const itemBody = (
-                          <div className="flex items-start gap-3 p-2.5 rounded-2xl hover:bg-slate-50 transition-colors group cursor-pointer text-left">
-                            <div className="w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-primary/10 text-slate-500 group-hover:text-primary flex items-center justify-center shrink-0 transition-colors mt-0.5">
-                              <IconComponent className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-black text-slate-800 group-hover:text-primary transition-colors leading-tight">
-                                {item.name}
-                              </p>
-                              <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5 truncate">
-                                {item.desc}
-                              </p>
-                            </div>
-                          </div>
-                        );
-
                         return (
-                          <Link 
-                            key={item.name} 
+                          <Link
+                            key={item.name}
                             to={item.href}
                             onClick={() => {
                               setIsMoreOpen(false);
                               handleNavClick(item.href);
                             }}
+                            className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F1F3F5] transition-colors duration-150 group text-left"
                           >
-                            {itemBody}
+                            <div className="w-8 h-8 rounded-lg bg-[#F1F3F5] text-[#4B5563] group-hover:text-[#111827] flex items-center justify-center shrink-0">
+                              <IconComponent className="w-4 h-4" strokeWidth={1.5} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#111827] leading-tight">
+                                {item.name}
+                              </p>
+                              <p className="text-xs text-[#6B7280] mt-0.5 truncate">
+                                {item.desc}
+                              </p>
+                            </div>
                           </Link>
                         );
                       })}
                     </div>
-
-                    {/* Divider and Admin Portal Shortcut */}
-                    <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="xl:hidden mt-2 pt-2 border-t border-[#E5E7EB]">
                       <Link
                         to="/login"
                         onClick={() => setIsMoreOpen(false)}
-                        className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-blue-50/80 transition-colors group text-left"
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-[#4B5563] hover:text-[#111827] hover:bg-[#F1F3F5] transition-colors"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-blue-50 text-primary flex items-center justify-center shrink-0">
-                          <Shield className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-slate-800 group-hover:text-primary transition-colors leading-tight">
-                            Portal Pengurus
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate">
-                            Login Admin, Bendahara & RT 02
-                          </p>
-                        </div>
+                        <span>Portal pengurus</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-[#6B7280]" />
                       </Link>
                     </div>
                   </motion.div>
@@ -249,101 +237,96 @@ export default function Navbar({ onOpenBooking }: NavbarProps) {
             </div>
           </div>
 
-          {/* Right Action: Clean Single Primary CTA Button */}
-          <div className="flex items-center gap-3 shrink-0">
-            <motion.button
-              onClick={onOpenBooking}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="hidden sm:inline-flex bg-primary hover:bg-blue-800 text-white px-5 sm:px-6 py-2.5 rounded-2xl text-xs sm:text-sm font-black shadow-lg shadow-primary/25 transition-all items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
+          {/* Right Action: Quiet Admin Text Link + Single Primary Button */}
+          <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
+            <Link
+              to="/login"
+              className="hidden xl:inline-block text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors whitespace-nowrap"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Booking Sekarang</span>
-            </motion.button>
+              Portal pengurus
+            </Link>
 
-            {/* Mobile Hamburger Menu Toggle */}
-            <button 
-              className="md:hidden p-2 text-slate-700 hover:text-primary hover:bg-slate-100 rounded-2xl transition-colors cursor-pointer shrink-0"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label={isOpen ? "Tutup menu" : "Buka menu"}
+            <button
+              type="button"
+              onClick={onOpenBooking}
+              className="hidden sm:inline-flex h-10 px-4 rounded-lg bg-[#1E40AF] hover:bg-[#1D3A8A] active:scale-[0.98] text-white text-sm font-medium transition-[background-color,transform] duration-150 items-center justify-center cursor-pointer shrink-0 whitespace-nowrap"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              Ajukan sewa
+            </button>
+
+            <button
+              type="button"
+              className="lg:hidden min-w-[44px] min-h-[44px] inline-flex items-center justify-center gap-1.5 px-2.5 text-[#111827] hover:bg-[#F1F3F5] rounded-lg transition-colors cursor-pointer shrink-0"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
+            >
+              {isOpen ? <X className="w-5 h-5" strokeWidth={1.5} /> : <Menu className="w-5 h-5" strokeWidth={1.5} />}
+              <span className="hidden sm:inline text-xs font-medium">Menu</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile & Tablet Drawer Menu (opacity/transform only, no layout height animation) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="md:hidden overflow-hidden bg-white border-b border-slate-200/80 px-4 shadow-xl"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:hidden bg-[#FCFCFD] border-b border-[#E5E7EB] px-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)] max-h-[calc(100dvh-6rem)] overflow-y-auto"
           >
             <div className="py-4 space-y-1">
               {[...primaryNavLinks, ...moreNavLinks].map((link) => {
                 const active = isLinkActive(link.href);
-                const isExternalOrHash = link.href.includes('#');
                 const IconComponent = link.icon;
 
-                const itemContent = (
-                  <div className={`flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-                    active 
-                      ? 'bg-primary/10 text-primary font-black' 
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-primary'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        active ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="whitespace-nowrap">{link.name}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-40 shrink-0" />
-                  </div>
-                );
-
                 return (
-                  <Link 
-                    key={link.name} 
-                    to={link.href} 
+                  <Link
+                    key={link.name}
+                    to={link.href}
                     onClick={() => {
                       setIsOpen(false);
                       handleNavClick(link.href);
                     }}
-                    className="block"
+                    className={`min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-[#EFF6FF] text-[#1E40AF]'
+                        : 'text-[#4B5563] hover:bg-[#F1F5F9] hover:text-[#1E40AF]'
+                    }`}
                   >
-                    {itemContent}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-5 flex items-center justify-center text-[#6B7280] shrink-0">
+                        <IconComponent className="w-4 h-4" strokeWidth={1.5} />
+                      </span>
+                      <span className="truncate">{link.name}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#6B7280] shrink-0" strokeWidth={1.5} />
                   </Link>
                 );
               })}
 
-              {/* Mobile Actions Footer */}
-              <div className="pt-3 pb-2 space-y-2.5 border-t border-slate-100 mt-2">
+              <div className="pt-3 pb-2 space-y-2 border-t border-[#E5E7EB] mt-2">
                 <PWAInstallButton variant="compact" />
 
                 <button
+                  type="button"
                   onClick={() => {
                     onOpenBooking();
                     setIsOpen(false);
                   }}
-                  className="w-full bg-primary hover:bg-blue-800 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                  className="w-full min-h-[44px] bg-[#1E40AF] hover:bg-[#1D3A8A] active:scale-[0.98] text-white rounded-lg font-medium flex items-center justify-center text-sm transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Booking Gedung Sekarang</span>
+                  Ajukan sewa gedung
                 </button>
 
                 <Link
                   to="/login"
                   onClick={() => setIsOpen(false)}
-                  className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                  className="w-full min-h-[44px] rounded-lg bg-[#F1F3F5] hover:bg-[#E5E7EB] text-[#111827] font-medium text-sm flex items-center justify-center transition-colors"
                 >
-                  <Shield className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Masuk Portal Pengurus & Admin</span>
+                  Portal pengurus
                 </Link>
               </div>
             </div>

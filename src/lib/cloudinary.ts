@@ -58,10 +58,8 @@ export async function compressImage(file: File, maxWidth = 1600, maxHeight = 160
               
               // Only use compressed file if it actually reduces size
               if (compressedFile.size < file.size) {
-                console.log(`[Compression] Succeeded: ${(file.size / 1024 / 1024).toFixed(2)}MB -> ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
                 resolve(compressedFile);
               } else {
-                console.log(`[Compression] Ignored: Compressed was larger or equal. Original used: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
                 resolve(file);
               }
             } else {
@@ -87,17 +85,19 @@ export async function uploadToCloudinary(file: File): Promise<{ url: string; pub
   let processedFile = file;
   if (file.type.startsWith('image/')) {
     try {
-      console.log(`[Upload] Processing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
       processedFile = await compressImage(file);
     } catch (err) {
       console.warn('[Upload] Image compression failed, uploading original', err);
     }
   }
 
-  // Direct client-side unsigned upload to Cloudinary as resilient fallback
+  // Optional development fallback when /api/upload is unavailable
   const uploadDirect = async () => {
-    const cloudName = 'dxenprdms';
-    const uploadPreset = 'gsght2_preset';
+    const cloudName = ((import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME || '').trim();
+    const uploadPreset = ((import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET || '').trim();
+    if (!cloudName || !uploadPreset) {
+      throw new Error('Layanan unggah file tidak tersedia. Silakan coba beberapa saat lagi atau hubungi pengurus.');
+    }
     const directFormData = new FormData();
     directFormData.append('file', processedFile);
     directFormData.append('upload_preset', uploadPreset);

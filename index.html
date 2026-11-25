@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta 
       name="viewport" 
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" 
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover" 
     />
-    <title>GSG Tondo 2 - Pusat Kegiatan Warga</title>
-    <meta name="description" content="Pusat Kegiatan Warga Huntap Tondo 2 yang dikelola modern, transparan, dan akuntabel." />
+    <title>GSG Huntap Tondo 2 — Portal Reservasi & Kas Warga</title>
+    <meta name="description" content="Portal reservasi jadwal, pelacakan pas sewa, dan buku kas terbuka Gedung Serbaguna Huntap Tondo 2, RT 02 Kota Palu." />
     
     <!-- Font Preconnect & Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,11 +20,11 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
-    <meta name="theme-color" content="#1e3a8a" />
+    <meta name="theme-color" content="#1e40af" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="GSG Tondo" />
+    <meta name="apple-mobile-web-app-title" content="GSG Tondo 2" />
     <meta name="format-detection" content="telephone=no" />
   </head>
   <body class="overflow-x-hidden antialiased">
@@ -38,25 +38,14 @@
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at center, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%);
-          color: #0f172a;
+          background-color: #F8F9FA;
+          color: #1E293B;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
           user-select: none;
           overflow: hidden;
         }
-        .splash-ambient-glow {
-          position: absolute;
-          width: 420px;
-          height: 420px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, rgba(59, 130, 246, 0.04) 50%, transparent 70%);
-          filter: blur(50px);
-          animation: splash-float 4s ease-in-out infinite alternate;
-          pointer-events: none;
-        }
         .splash-card {
           position: relative;
-          z-index: 10;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -64,143 +53,87 @@
           padding: 2rem;
           max-width: 360px;
         }
-        .splash-logo-wrapper {
-          position: relative;
-          margin-bottom: 1.5rem;
-        }
-        .splash-pulse-ring {
-          position: absolute;
-          inset: -12px;
-          border-radius: 36px;
-          border: 2px solid rgba(37, 99, 235, 0.2);
-          animation: splash-pulse 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
-        }
-        .splash-pulse-ring-outer {
-          position: absolute;
-          inset: -24px;
-          border-radius: 46px;
-          border: 1px solid rgba(37, 99, 235, 0.1);
-          animation: splash-pulse 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite 0.4s;
-        }
         .splash-logo-box {
-          position: relative;
-          width: 88px;
-          height: 88px;
-          border-radius: 28px;
-          background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+          width: 64px;
+          height: 64px;
+          border-radius: 14px;
+          background-color: #1E40AF;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 20px 40px -10px rgba(30, 64, 175, 0.35), 0 0 0 4px rgba(239, 246, 255, 0.8);
+          margin-bottom: 1.5rem;
+          border: 1px solid rgba(17, 24, 39, 0.08);
         }
         .splash-logo-svg {
-          width: 48px;
-          height: 48px;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+          width: 36px;
+          height: 36px;
         }
         .splash-title {
-          font-size: 1.25rem;
-          font-weight: 900;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          color: #0f172a;
-          margin: 0 0 0.35rem 0;
+          font-size: 1.125rem;
+          font-weight: 700;
+          letter-spacing: -0.01em;
+          color: #1E293B;
+          margin: 0 0 0.25rem 0;
         }
         .splash-subtitle {
-          font-size: 0.8rem;
-          font-weight: 500;
-          color: #64748b;
-          letter-spacing: 0.02em;
-          margin: 0 0 1.75rem 0;
+          font-size: 0.875rem;
+          font-weight: 400;
+          color: #4B5563;
+          margin: 0 0 1.5rem 0;
           line-height: 1.4;
         }
         .splash-progress-track {
-          width: 140px;
-          height: 4px;
+          width: 120px;
+          height: 3px;
           border-radius: 999px;
-          background: #e2e8f0;
+          background: #E5E7EB;
           overflow: hidden;
           position: relative;
-          margin-bottom: 1.25rem;
+          margin-bottom: 1rem;
         }
         .splash-progress-bar {
           position: absolute;
           top: 0;
           bottom: 0;
           left: 0;
-          width: 60%;
+          width: 48%;
           border-radius: 999px;
-          background: linear-gradient(90deg, #38bdf8, #2563eb, #1d4ed8);
-          animation: splash-shimmer 1.4s ease-in-out infinite;
+          background-color: #1E40AF;
+          animation: splash-shimmer 1.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
         }
-        .splash-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.45rem;
-          font-size: 0.68rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #475569;
-          background: #ffffff;
-          padding: 0.4rem 0.9rem;
-          border-radius: 999px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.04);
-        }
-        .splash-badge-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: #10b981;
-          box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-        }
-        @keyframes splash-pulse {
-          0% { transform: scale(0.95); opacity: 0.8; }
-          50% { transform: scale(1.06); opacity: 0.25; }
-          100% { transform: scale(1.12); opacity: 0; }
-        }
-        @keyframes splash-float {
-          0% { transform: translate(-50%, -50%) scale(0.9); }
-          100% { transform: translate(-50%, -50%) scale(1.15); }
+        .splash-meta {
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: #6B7280;
         }
         @keyframes splash-shimmer {
-          0% { transform: translateX(-150%); }
-          100% { transform: translateX(250%); }
+          0% { transform: translateX(-140%); }
+          100% { transform: translateX(240%); }
         }
       </style>
       <div id="app-splash">
-        <div class="splash-ambient-glow" style="top: 45%; left: 50%;"></div>
         <div class="splash-card">
-          <div class="splash-logo-wrapper">
-            <div class="splash-pulse-ring-outer"></div>
-            <div class="splash-pulse-ring"></div>
-            <div class="splash-logo-box">
-              <svg class="splash-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                <g transform="translate(256, 256) scale(0.92) translate(-256, -256)">
-                  <path d="M96 416V144C96 130.745 106.745 120 120 120H280C293.255 120 304 130.745 304 144V416" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M304 200H392C405.255 200 416 210.745 416 224V416" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M48 416H464" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M160 200H240" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M160 280H240" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M160 360H240" stroke="white" stroke-width="32" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                </g>
-              </svg>
-            </div>
+          <div class="splash-logo-box">
+            <svg class="splash-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+              <g transform="translate(256, 256) scale(0.92) translate(-256, -256)">
+                <path d="M96 416V144C96 130.745 106.745 120 120 120H280C293.255 120 304 130.745 304 144V416" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M304 200H392C405.255 200 416 210.745 416 224V416" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M48 416H464" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M160 200H240" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M160 280H240" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M160 360H240" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+            </svg>
           </div>
           <h1 class="splash-title">GSG Huntap Tondo 2</h1>
-          <p class="splash-subtitle">Pusat Kegiatan Warga & Reservasi Terpadu</p>
+          <p class="splash-subtitle">Pusat Kegiatan Warga, Kota Palu</p>
           <div class="splash-progress-track">
             <div class="splash-progress-bar"></div>
           </div>
-          <div class="splash-badge">
-            <span class="splash-badge-dot"></span>
-            Kota Palu, Sulawesi Tengah
-          </div>
+          <div class="splash-meta">Memuat portal warga</div>
         </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -20,14 +20,10 @@ import { auth } from '../lib/firebase';
 import { getTransparentPNG } from '../lib/cloudinary';
 import PdfPreviewModal from './ui/PdfPreviewModal';
 import { buildAnnualReportDoc } from '../services/annualReportService';
+import { getLocalDateISO, getLocalMonthKey } from '../lib/dateUtils';
+import { sanitizeCsvCell } from '../lib/csvUtils';
 
 export default function TransparencyDashboard() {
-  const getLocalMonthKey = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}`;
-  };
-
   const displayCategory = (cat: string) => {
     const map: Record<string, string> = {
       sewa: 'Sewa Gedung',
@@ -481,7 +477,7 @@ export default function TransparencyDashboard() {
       new Date(parseInt(activeMonth.split('-')[0]), parseInt(activeMonth.split('-')[1]) - 1)
         .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).replace(/\s+/g, '_');
 
-    const filename = `Laporan_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `Laporan_Transparansi_${periodLabel}_${getLocalDateISO()}.pdf`;
     return { doc, filename };
   };
 
@@ -551,11 +547,8 @@ export default function TransparencyDashboard() {
     ]);
 
     const csvContent = [
-      '\ufeff' + headers.join(','), // UTF-8 BOM for Excel
-      ...rows.map(row => row.map(cell => {
-        const val = cell === null || cell === undefined ? '' : String(cell);
-        return `"${val.replace(/"/g, '""')}"`;
-      }).join(','))
+      '\ufeff' + headers.map(sanitizeCsvCell).join(','), // UTF-8 BOM for Excel
+      ...rows.map(row => row.map(sanitizeCsvCell).join(','))
     ].join('\n');
 
     const periodLabel = activeMonth === 'all' ? 'Semua_Waktu' : 
@@ -566,7 +559,7 @@ export default function TransparencyDashboard() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Ekspor_Transparansi_${periodLabel}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Ekspor_Transparansi_${periodLabel}_${getLocalDateISO()}.csv`);
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -594,55 +587,58 @@ export default function TransparencyDashboard() {
   ];
 
   return (
-    <section id="transparansi" className="section-padding bg-surface-low">
+    <section id="transparansi" className="section-padding bg-[#F8F9FA] border-b border-[#E5E7EB] scroll-mt-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-12 text-center lg:text-left">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-5 sm:gap-6 mb-10 sm:mb-12 text-left">
           <div className="max-w-2xl">
-            <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">Financial Transparency</h2>
-            <p className="text-gray-500">
-              Setiap rupiah yang Anda bayarkan dikelola kembali untuk kepentingan warga secara transparan dan akuntabel.
+            <span className="text-xs font-medium text-[#1E40AF] block mb-2">Transparansi &amp; akuntabilitas kas</span>
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] mb-3 tracking-tight">
+              Transparansi Keuangan Warga
+            </h2>
+            <p className="text-[#4B5563] text-sm sm:text-base leading-relaxed">
+              Setiap rupiah yang Anda bayarkan tercatat terbuka dalam buku kas dan dialokasikan kembali untuk operasional serta pengembangan aset Gedung Serbaguna.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-            <div className="flex items-center gap-1 bg-white border border-gray-100 p-1 rounded-2xl shadow-sm w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <div className="flex items-center gap-1 bg-[#F1F3F5] border border-[#E5E7EB] p-1 rounded-xl w-full sm:w-auto">
               <button 
                 onClick={() => setFilterMode('monthly')}
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'monthly' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
+                className={`flex-1 sm:flex-none min-h-[40px] px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${filterMode === 'monthly' ? 'bg-[#FCFCFD] text-[#111827] shadow-xs border border-[#E5E7EB]' : 'text-[#4B5563] hover:text-[#111827]'}`}
               >
                 Bulanan
               </button>
               <button 
                 onClick={() => setFilterMode('annual')}
-                className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'annual' ? 'bg-primary text-white shadow-md' : 'text-gray-400'}`}
+                className={`flex-1 sm:flex-none min-h-[40px] px-4 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${filterMode === 'annual' ? 'bg-[#FCFCFD] text-[#111827] shadow-xs border border-[#E5E7EB]' : 'text-[#4B5563] hover:text-[#111827]'}`}
               >
                 Tahunan
               </button>
             </div>
 
-            <div className="relative group w-full sm:w-auto">
-              <div className="flex items-center gap-2 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-                <Calendar className="w-5 h-5 text-primary" />
+            <div className="relative w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 bg-[#FCFCFD] border border-[#D1D5DB] px-4 min-h-[44px] py-2 rounded-xl">
+                <Calendar className="w-4 h-4 text-[#1E40AF] shrink-0" />
                 {filterMode === 'monthly' ? (
                   <select 
                     value={activeMonth}
                     onChange={(e: any) => setActiveMonth(e.target.value)}
-                    className="w-full bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                    className="w-full bg-transparent border-none text-xs font-medium text-[#111827] outline-none cursor-pointer appearance-none pr-6"
                   >
-                    <option value="all">SEMUA BULAN</option>
+                    <option value="all">Semua bulan</option>
                     {Array.from({ length: 12 }).map((_, i) => {
                       const d = new Date();
                       d.setDate(1);
                       d.setMonth(d.getMonth() - i);
                       const val = getLocalMonthKey(d);
                       const label = d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                      return <option key={val} value={val}>{label.toUpperCase()}</option>;
+                      return <option key={val} value={val}>{label}</option>;
                     })}
                   </select>
                 ) : (
                   <select 
                     value={activeYear}
                     onChange={(e: any) => setActiveYear(e.target.value)}
-                    className="w-full bg-transparent border-none text-sm font-black text-gray-900 outline-none cursor-pointer appearance-none pr-8 uppercase tracking-widest"
+                    className="w-full bg-transparent border-none text-xs font-mono tabular-nums font-medium text-[#111827] outline-none cursor-pointer appearance-none pr-6"
                   >
                     {Array.from({ length: 5 }).map((_, i) => {
                       const year = (new Date().getFullYear() - i).toString();
@@ -650,109 +646,121 @@ export default function TransparencyDashboard() {
                     })}
                   </select>
                 )}
-                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="w-4 h-4 text-[#6B7280] pointer-events-none shrink-0" />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className={`p-10 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 flex flex-col justify-between h-[320px] ${stat.accent === 'bg-accent' ? 'bg-accent text-white' : 'bg-white'}`}
-            >
-              <div>
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${stat.accent === 'bg-accent' ? 'bg-white/20' : 'bg-blue-50'}`}>
-                  <stat.icon className={`w-7 h-7 ${stat.accent === 'bg-accent' ? 'text-white' : 'text-primary'}`} />
+        {/* Two Primary Kas Summary Cards */}
+        <div className="grid md:grid-cols-2 gap-5 sm:gap-6 mb-8 sm:mb-10">
+          {stats.map((stat, index) => {
+            const isPrimaryHero = stat.accent === 'bg-accent';
+            return (
+              <motion.div
+                key={stat.id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08, duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                viewport={{ once: true }}
+                className={`p-5 sm:p-7 rounded-2xl border flex flex-col justify-between gap-5 sm:gap-6 ${
+                  isPrimaryHero
+                    ? 'bg-[#1E40AF] border-[#1E40AF] text-white'
+                    : 'bg-[#FCFCFD] border-[#E5E7EB] text-[#1E293B]'
+                }`}
+              >
+                <div>
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 sm:mb-5 ${
+                    isPrimaryHero ? 'bg-white/15 text-white' : 'bg-[#EFF6FF] text-[#1E40AF] border border-[#BFDBFE]'
+                  }`}>
+                    <stat.icon className="w-5 h-5" strokeWidth={1.75} />
+                  </div>
+                  <h3 className={`text-sm font-medium mb-2 ${isPrimaryHero ? 'text-blue-100' : 'text-[#4B5563]'}`}>
+                    {stat.title}
+                  </h3>
+                  <div className={`text-2xl sm:text-4xl font-mono tabular-nums tracking-tight ${isPrimaryHero ? 'font-bold text-white' : 'font-semibold text-[#1E293B]'}`}>
+                    {stat.value}
+                  </div>
                 </div>
-                <h3 className={`text-xl font-bold mb-2 ${stat.accent === 'bg-accent' ? 'text-white' : 'text-gray-900'}`}>{stat.title}</h3>
-                <div className={`text-4xl font-extrabold mb-4 ${stat.accent === 'bg-accent' ? 'text-white' : 'text-primary'}`}>{stat.value}</div>
-              </div>
-              <p className={`text-sm leading-relaxed ${stat.accent === 'bg-accent' ? 'text-white/80' : 'text-gray-500'}`}>
-                {stat.description}
-              </p>
-            </motion.div>
-          ))}
+                <p className={`text-xs sm:text-sm leading-relaxed ${isPrimaryHero ? 'text-blue-100/90' : 'text-[#4B5563]'}`}>
+                  {stat.description}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Target Pembangunan & Pengadaan Fasilitas Warga (Goal Tracker) */}
         {config?.showDevGoalTracker !== false && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-[2.5rem] p-8 sm:p-10 text-white mb-12 shadow-2xl border border-white/10 relative overflow-hidden"
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-[#FCFCFD] rounded-2xl p-5 sm:p-8 border border-[#E5E7EB] border-l-4 border-l-[#1E40AF] mb-8 sm:mb-10"
           >
-            <div className="absolute -right-16 -top-16 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -left-16 -bottom-16 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 grid lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-7 space-y-4">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 text-[10px] font-black uppercase tracking-widest">
-                  <Target className="w-3.5 h-3.5" />
+            <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+              <div className="lg:col-span-7 space-y-3 min-w-0">
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF]">
+                  <Target className="w-4 h-4 shrink-0" strokeWidth={1.75} />
                   <span>{devGoalBadge}</span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white">
+                <h3 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight leading-tight text-[#111827]">
                   {devGoalTitle}
                 </h3>
-                <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">
+                <p className="text-[#4B5563] text-sm leading-relaxed max-w-2xl">
                   {devGoalDescription}
                 </p>
 
-                <div className="pt-2 flex flex-wrap items-center gap-4 text-xs">
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl">
-                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="text-slate-300">Sumber: <strong className="text-white">Alokasi Otomatis {(config?.devFundRate ?? 0.2) * 100}% Sewa Gedung</strong></span>
+                <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs">
+                  <div className="flex items-center gap-2 bg-[#F8F9FA] border border-[#E5E7EB] px-3.5 py-2 rounded-lg text-[#4B5563]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#1E40AF] shrink-0" />
+                    <span>Sumber: <strong className="text-[#111827] font-mono tabular-nums">{(config?.devFundRate ?? 0.2) * 100}%</strong> alokasi otomatis sewa gedung</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2.5 rounded-2xl">
-                    <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="text-slate-300">
+                  <div className="flex items-center gap-2 bg-[#F8F9FA] border border-[#E5E7EB] px-3.5 py-2 rounded-lg text-[#4B5563]">
+                    <TrendingUp className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                    <span>
                       {devGoalRemaining === 0 ? (
-                        <strong className="text-emerald-400">Target Tercapai 100%! Siap Eksekusi Pengadaan</strong>
+                        <strong className="text-[#15803D]">Target tercapai 100% — siap eksekusi pengadaan</strong>
                       ) : (
-                        <>Kurang <strong className="text-white">Rp {Math.floor(devGoalRemaining).toLocaleString('id-ID')}</strong> lagi menuju target</>
+                        <>Kurang <strong className="text-[#111827] font-mono tabular-nums">Rp {Math.floor(devGoalRemaining).toLocaleString('id-ID')}</strong> menuju target</>
                       )}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="lg:col-span-5 bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 sm:p-8">
+              <div className="lg:col-span-5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl p-4 sm:p-6 min-w-0">
                 <div className="flex justify-between items-end mb-4 gap-2">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-1">Dana Saving Terkumpul</p>
-                    <p className="text-2xl sm:text-3xl font-black text-white">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[#4B5563] mb-1">Dana Saving Terkumpul</p>
+                    <p className="text-xl sm:text-2xl font-mono tabular-nums font-semibold text-[#111827] truncate">
                       Rp {Math.floor(Math.max(0, totalDevFund)).toLocaleString('id-ID')}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Target Dana</p>
-                    <p className="text-sm font-bold text-slate-200">
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-[#6B7280] mb-1">Target Dana</p>
+                    <p className="text-xs sm:text-sm font-mono tabular-nums font-semibold text-[#4B5563]">
                       Rp {Math.floor(devGoalTarget).toLocaleString('id-ID')}
                     </p>
                   </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full h-4 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-white/10 mb-3">
+                <div className="w-full h-2.5 bg-[#E5E7EB] rounded-full overflow-hidden mb-3">
                   <motion.div
                     initial={{ width: 0 }}
                     whileInView={{ width: `${devGoalProgress}%` }}
                     viewport={{ once: true }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-400 to-amber-400 relative"
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    className="h-full rounded-full bg-[#1E40AF]"
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider">
-                  <span className="text-amber-300">{devGoalProgress.toFixed(1)}% TERKUMPUL</span>
-                  <span className="text-slate-400">
-                    {devGoalProgress >= 100 ? 'TERCAPAI' : devGoalProgress >= 50 ? 'TAHAP AKUMULASI AKHIR' : 'TAHAP PENGUMPULAN'}
+                <div className="flex items-center justify-between text-xs font-mono tabular-nums">
+                  <span className="font-semibold text-[#1E40AF]">{devGoalProgress.toFixed(1)}% terkumpul</span>
+                  <span className="text-[#6B7280]">
+                    {devGoalProgress >= 100 ? 'Tercapai' : devGoalProgress >= 50 ? 'Tahap akumulasi akhir' : 'Tahap pengumpulan'}
                   </span>
                 </div>
               </div>
@@ -760,99 +768,126 @@ export default function TransparencyDashboard() {
           </motion.div>
         )}
 
-        {/* Visual Insights for Public */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-12">
+        {/* Visual Insights for Public: 1 Wide Bar Chart + 1 Ranked Horizontal Breakdown List */}
+        <div className="grid lg:grid-cols-3 gap-5 sm:gap-6 mb-8 sm:mb-10">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:col-span-2 bg-[#FCFCFD] p-5 sm:p-7 rounded-2xl border border-[#E5E7EB] min-w-0"
           >
-            <div className="flex items-center justify-between mb-8">
-              <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Aktivitas Keuangan 4 Bulan Terakhir</h4>
-              <div className="flex gap-4 text-[9px] font-bold uppercase tracking-widest">
-                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-primary" />Pemasukan</span>
-                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />Pengeluaran</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5 sm:mb-6">
+              <h4 className="font-semibold text-[#111827] text-sm">Arus Kas 4 Bulan Terakhir</h4>
+              <div className="flex gap-4 text-xs text-[#4B5563]">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-xs bg-[#1E40AF]" />Pemasukan</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-xs bg-[#CBD5E1]" />Pengeluaran</span>
               </div>
             </div>
-            <div className="h-[200px] w-full min-w-0">
+            <div className="h-[220px] sm:h-[260px] w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={chartData}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 500, fill: '#6B7280' }} dy={10} />
                   <Tooltip 
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                    cursor={{ fill: 'rgba(17, 24, 39, 0.04)' }}
+                    contentStyle={{ borderRadius: '0.75rem', border: '1px solid rgba(17,24,39,0.12)', backgroundColor: '#FCFCFD', fontSize: '12px' }}
+                    formatter={(val: any) => `Rp ${Number(val || 0).toLocaleString('id-ID')}`}
                   />
-                  <Bar dataKey="income" fill="#1E40AF" radius={[4, 4, 0, 0]} barSize={24} />
-                  <Bar dataKey="expense" fill="#F87171" radius={[4, 4, 0, 0]} barSize={24} />
+                  <Bar dataKey="income" name="Pemasukan" fill="#1E40AF" radius={[4, 4, 0, 0]} barSize={26} />
+                  <Bar dataKey="expense" name="Pengeluaran" fill="#CBD5E1" radius={[4, 4, 0, 0]} barSize={26} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
 
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm"
+            transition={{ duration: 0.25, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-[#FCFCFD] p-5 sm:p-7 rounded-2xl border border-[#E5E7EB] min-w-0 flex flex-col justify-between"
           >
-            <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px] mb-6">Distribusi Pengeluaran</h4>
-            <div className="h-[150px] w-full relative min-w-0">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <PieChart>
-                  <Pie data={categoryData.length > 0 ? categoryData : [{ name: 'N/A', value: 1 }]} innerRadius={45} outerRadius={60} paddingAngle={5} dataKey="value">
-                    {categoryData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                    {categoryData.length === 0 && <Cell key="empty-cell" fill="#f1f5f9" />}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <Receipt className="w-5 h-5 text-gray-200" />
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {categoryData.slice(0, 3).map((cat, i) => (
-                <div key={cat.name} className="flex items-center justify-between">
-                  <span className="text-[9px] font-bold text-gray-400 flex items-center gap-1.5 uppercase">
-                    <span className="w-1 h-1 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    {cat.name}
-                  </span>
-                  <span className="text-[10px] font-black text-gray-900">RP {cat.value.toLocaleString()}</span>
+            <div>
+              <h4 className="font-semibold text-[#111827] text-sm mb-1">Distribusi Pengeluaran</h4>
+              <p className="text-xs text-[#6B7280] mb-6">Peringkat kategori biaya operasional.</p>
+              {categoryData.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[#6B7280]">
+                  Belum ada pengeluaran pada periode ini.
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-4">
+                  {(() => {
+                    const maxCatValue = Math.max(...categoryData.map((c) => Number(c.value || 0)), 1);
+                    const totalCatValue = categoryData.reduce((acc, c) => acc + Number(c.value || 0), 0) || 1;
+                    return categoryData.slice(0, 5).map((cat, idx) => {
+                      const pctWidth = Math.max(6, Math.round((Number(cat.value || 0) / maxCatValue) * 100));
+                      const sharePct = Math.round((Number(cat.value || 0) / totalCatValue) * 100);
+                      return (
+                        <div key={cat.name} className="space-y-1.5">
+                          <div className="flex items-baseline justify-between gap-2 text-xs">
+                            <span className="font-medium text-[#111827] truncate">{cat.name}</span>
+                            <span className="font-mono tabular-nums font-semibold text-[#111827] shrink-0">
+                              Rp {Number(cat.value || 0).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-2 bg-[#F1F3F5] rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${idx === 0 ? 'bg-[#1E40AF]' : 'bg-[#94A3B8]'}`}
+                                style={{ width: `${pctWidth}%` }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-mono tabular-nums text-[#6B7280] w-9 text-right">
+                              {sharePct}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+            <div className="mt-6 pt-4 border-t border-[#E5E7EB] flex items-center justify-between text-xs text-[#6B7280]">
+              <span>Periode aktif</span>
+              <span className="font-mono tabular-nums font-medium text-[#111827]">
+                {activeMonth === 'all' ? (filterMode === 'annual' ? activeYear : 'Semua bulan') : activeMonth}
+              </span>
             </div>
           </motion.div>
         </div>
 
-        <div className="bg-primary/5 rounded-[2rem] p-8 border border-primary/10 flex flex-col md:flex-row items-center gap-6 mb-12">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shrink-0">
-            <ShieldCheck className="text-white w-8 h-8" />
+        {/* Citizen Guarantee & Official Export Bar */}
+        <div className="bg-[#FCFCFD] rounded-2xl p-5 sm:p-7 border border-[#E5E7EB] flex flex-col lg:flex-row items-start lg:items-center gap-5 sm:gap-6 mb-8 sm:mb-10">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl flex items-center justify-center shrink-0">
+            <ShieldCheck className="text-[#1E40AF] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={1.75} />
           </div>
-          <div className="flex-1">
-            <h4 className="font-bold text-gray-900 text-lg mb-1" id="trust-guarantee">Jaminan Kepercayaan Warga</h4>
-            <p className="text-gray-600 text-sm">"Setiap sewa yang Anda bayar, <span className="font-bold text-primary">{(config?.devFundRate ?? 0.2) * 100}% dialokasikan langsung</span> untuk pemeliharaan fasilitas gedung demi aset masa depan Tondo 2. Dana operasional juga dapat dialokasikan kembali untuk pengembangan aset jika terdapat kelebihan anggaran."</p>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-[#111827] text-base sm:text-lg mb-1" id="trust-guarantee">Jaminan Kepercayaan Warga</h4>
+            <p className="text-[#4B5563] text-xs sm:text-sm leading-relaxed">
+              Setiap biaya sewa yang Anda bayarkan, <span className="font-mono tabular-nums font-semibold text-[#1E40AF]">{(config?.devFundRate ?? 0.2) * 100}%</span> dialokasikan langsung untuk pemeliharaan fasilitas gedung sebagai aset bersama warga Huntap Tondo 2.
+            </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+          <div className="flex flex-col sm:flex-row gap-2.5 w-full lg:w-auto shrink-0">
             <button 
               onClick={exportToCSV}
-              className="bg-white border border-primary/20 text-primary px-6 py-3 rounded-2xl font-bold hover:bg-white/50 transition-colors flex items-center justify-center gap-2 text-sm"
+              className="w-full sm:w-auto min-h-[44px] bg-[#F8F9FA] border border-[#D1D5DB] text-[#111827] px-4 py-2.5 rounded-lg font-medium hover:bg-[#F1F3F5] transition-colors flex items-center justify-center gap-2 text-xs cursor-pointer"
             >
               Export CSV/Excel
             </button>
             {filterMode === 'annual' && (
               <button 
                 onClick={handlePreviewAnnualReport}
-                className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-600/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+                className="w-full sm:w-auto min-h-[44px] bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1E40AF] border border-[#BFDBFE] px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-xs cursor-pointer"
                 title={`Pratinjau & Unduh Laporan Tutup Buku Tahunan ${activeYear}`}
               >
-                <Award className="w-4 h-4 text-amber-300" />
+                <Award className="w-4 h-4 text-[#D97706]" />
                 Tutup Buku {activeYear}
               </button>
             )}
             <button 
               onClick={handlePreviewReport}
-              className="bg-primary text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+              className="w-full sm:w-auto min-h-[44px] bg-[#1E40AF] hover:bg-[#1D3A8A] text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-xs cursor-pointer"
               title="Pratinjau, Cetak & Unduh Laporan PDF"
             >
               <Download className="w-4 h-4" />
@@ -862,106 +897,152 @@ export default function TransparencyDashboard() {
         </div>
 
         {/* Budget Insight for Citizens */}
-        <div className="bg-emerald-900 rounded-[2.5rem] p-10 text-white mb-12 shadow-2xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-md">
-              <div className="flex items-center gap-3 mb-6">
-                 <div className="bg-emerald-500/20 p-3 rounded-2xl backdrop-blur-sm border border-emerald-400/20">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                 </div>
-                 <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Efisiensi Anggaran</span>
+        <div className="bg-[#FCFCFD] border border-[#E5E7EB] border-l-4 border-l-[#059669] rounded-2xl p-5 sm:p-7 mb-8 sm:mb-10">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 sm:gap-8">
+            <div className="max-w-md min-w-0">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="bg-[#F0FDF4] p-2 rounded-lg border border-[#BBF7D0]">
+                  <CheckCircle2 className="w-5 h-5 text-[#16A34A]" />
+                </div>
+                <span className="text-xs font-medium text-[#15803D]">Efisiensi anggaran operasional</span>
               </div>
-              <h3 className="text-2xl font-black mb-4">Penggunaan Dana Operasional {activeMonth === 'all' ? 'Bulan Ini' : new Date(activeMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</h3>
-              <p className="text-emerald-100/60 text-sm leading-relaxed">
-                Kami berkomitmen menjaga pengeluaran operasional (listrik, air, staf) di bawah target anggaran bulanan untuk memaksimalkan saldo kas warga.
+              <h3 className="font-display text-xl sm:text-2xl font-semibold text-[#111827] mb-2">
+                Penggunaan Dana Operasional {activeMonth === 'all' ? 'Bulan Ini' : new Date(activeMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+              </h3>
+              <p className="text-[#4B5563] text-xs sm:text-sm leading-relaxed">
+                Pengurus menjaga pengeluaran operasional (listrik, air, kebersihan, staf) agar tetap di bawah pagu anggaran bulanan untuk memaksimalkan saldo kas warga.
               </p>
             </div>
             
-            <div className="w-full md:w-[400px] bg-white/5 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-sm">
-              <div className="flex justify-between items-end mb-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Status Penyerapan</p>
-                  <p className="text-3xl font-black">Rp {currentMonthOpsExpense.toLocaleString('id-ID')}</p>
+            <div className="w-full lg:w-[380px] lg:shrink-0 bg-[#F8F9FA] p-5 sm:p-6 rounded-xl border border-[#E5E7EB]">
+              <div className="flex justify-between items-end mb-4 gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[#4B5563] mb-1">Realisasi Penyerapan</p>
+                  <p className="text-xl sm:text-3xl font-mono tabular-nums font-semibold text-[#111827] truncate">Rp {currentMonthOpsExpense.toLocaleString('id-ID')}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-1">Target Anggaran</p>
-                  <p className="text-sm font-bold text-white/60">Rp {(config?.monthlyBudget || 0).toLocaleString('id-ID')}</p>
+                <div className="text-right shrink-0">
+                  <p className="text-xs text-[#6B7280] mb-1">Target Anggaran</p>
+                  <p className="text-xs sm:text-sm font-mono tabular-nums font-semibold text-[#4B5563]">Rp {(config?.monthlyBudget || 0).toLocaleString('id-ID')}</p>
                 </div>
               </div>
               
-              <div className="w-full h-3 bg-white/10 rounded-full overflow-hidden mb-4">
+              <div className="w-full h-2.5 bg-[#E5E7EB] rounded-full overflow-hidden mb-3">
                 <motion.div 
                   initial={{ width: 0 }}
                   whileInView={{ width: `${Math.min(100, budgetProgress)}%` }}
                   viewport={{ once: true }}
-                  className={`h-full ${budgetProgress > 85 ? 'bg-orange-500' : 'bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]'}`}
+                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  className={`h-full rounded-full ${budgetProgress > 100 ? 'bg-[#DC2626]' : budgetProgress > 85 ? 'bg-[#B45309]' : 'bg-[#16A34A]'}`}
                 />
               </div>
               
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                <span className={budgetProgress > 100 ? 'text-red-400' : 'text-emerald-400'}>
-                  {budgetProgress > 100 ? 'OVER BUDGET' : 'DALAM TARGET'}
+              <div className="flex justify-between text-xs font-mono tabular-nums">
+                <span className={`font-semibold ${budgetProgress > 100 ? 'text-[#B91C1C]' : 'text-[#15803D]'}`}>
+                  {budgetProgress > 100 ? 'Melebihi anggaran' : 'Dalam batas target'}
                 </span>
-                <span className="text-white/40">{Math.round(budgetProgress)}% TERPAKAI</span>
+                <span className="text-[#4B5563]">{Math.round(budgetProgress)}% terpakai</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Activity Table */}
-        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden mb-12">
-          <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between">
-            <h4 className="font-black text-gray-900 uppercase tracking-widest text-[10px]">Aktivitas Keuangan Terbaru</h4>
-            <LayoutGrid className="w-4 h-4 text-gray-300" />
+        {/* Recent Activity Table / Mobile Ledger */}
+        <div className="bg-[#FCFCFD] rounded-2xl border border-[#E5E7EB] overflow-hidden mb-4 sm:mb-8">
+          <div className="px-4 sm:px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
+            <h4 className="font-semibold text-[#111827] text-sm">Catatan Mutasi Kas Terbaru</h4>
+            <LayoutGrid className="w-4 h-4 text-[#6B7280]" />
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Mobile Stacked Ledger Cards */}
+          <div className="sm:hidden divide-y divide-[#E5E7EB]">
+            {filteredTransactions.length === 0 ? (
+              <div className="px-4 py-10 text-center text-xs text-[#6B7280]">
+                Belum ada data transaksi publik pada periode ini.
+              </div>
+            ) : (
+              filteredTransactions.slice(0, activeMonth === 'all' ? 5 : 20).map((t) => (
+                <div key={t.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-[#111827] leading-snug">{t.source}</p>
+                      <span className="text-[11px] font-mono tabular-nums text-[#6B7280] block mt-0.5">
+                        {t.date} · {displayCategory(t.category)}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0 font-mono tabular-nums">
+                      {t.type === 'reallocation' ? (
+                        <span className="text-xs font-medium text-[#B45309]">Penyesuaian</span>
+                      ) : (
+                        <span className={`text-xs font-semibold ${t.type === 'income' ? 'text-[#111827]' : 'text-[#DC2626]'}`}>
+                          {t.type === 'income' ? '+' : '-'} Rp {Math.abs(t.amount || 0).toLocaleString('id-ID')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-[10px] font-mono text-[#1E40AF] px-1.5 py-0.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded">
+                      {t.paymentMethod === 'cash' ? 'Tunai' : t.paymentMethod === 'qris' ? 'QRIS' : 'Transfer'}
+                    </span>
+                    <span className={`text-[11px] font-medium ${
+                      t.type === 'income' ? 'text-[#15803D]' : 
+                      t.type === 'reallocation' ? 'text-[#B45309]' : 'text-[#DC2626]'
+                    }`}>
+                      {t.type === 'income' ? 'Masuk' : t.type === 'reallocation' ? 'Realokasi' : 'Keluar'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop / Tablet Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-gray-50/50 text-[9px] uppercase font-bold text-gray-400 tracking-widest">
-                  <th className="px-8 py-4">Tanggal</th>
-                  <th className="px-8 py-4">Keterangan</th>
-                  <th className="px-8 py-4">Tipe</th>
-                  <th className="px-8 py-4 text-right">Nominal</th>
+                <tr className="bg-[#F8F9FA] text-xs font-medium text-[#6B7280] border-b border-[#E5E7EB]">
+                  <th className="px-6 py-3.5">Tanggal</th>
+                  <th className="px-6 py-3.5">Keterangan</th>
+                  <th className="px-6 py-3.5">Tipe</th>
+                  <th className="px-6 py-3.5 text-right">Nominal</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-[#E5E7EB]">
                 {filteredTransactions.slice(0, activeMonth === 'all' ? 5 : 20).map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-8 py-4 text-[11px] font-bold text-gray-400">{t.date}</td>
-                    <td className="px-8 py-4">
-                      <p className="text-xs font-bold text-gray-900">{t.source}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
+                  <tr key={t.id} className="hover:bg-[#F8F9FA]/80 transition-colors">
+                    <td className="px-6 py-4 text-xs font-mono tabular-nums text-[#4B5563] whitespace-nowrap">{t.date}</td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-semibold text-[#111827]">{t.source}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-[#6B7280]">
                           {displayCategory(t.category)}
                         </span>
-                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest px-1.5 py-0.5 bg-blue-50 rounded italic">
-                          {t.paymentMethod === 'cash' ? 'TUNAI' : t.paymentMethod === 'qris' ? 'QRIS' : 'TRANSFER'}
+                        <span className="text-[10px] font-mono text-[#1E40AF] px-1.5 py-0.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded">
+                          {t.paymentMethod === 'cash' ? 'Tunai' : t.paymentMethod === 'qris' ? 'QRIS' : 'Transfer'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-4">
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${
-                        t.type === 'income' ? 'text-emerald-500' : 
-                        t.type === 'reallocation' ? 'text-accent' : 'text-red-500'
+                    <td className="px-6 py-4">
+                      <span className={`text-xs font-medium ${
+                        t.type === 'income' ? 'text-[#15803D]' : 
+                        t.type === 'reallocation' ? 'text-[#B45309]' : 'text-[#DC2626]'
                       }`}>
-                        {t.type === 'income' ? 'Masuk' : t.type === 'reallocation' ? 'Reallokasi' : 'Keluar'}
+                        {t.type === 'income' ? 'Masuk' : t.type === 'reallocation' ? 'Realokasi' : 'Keluar'}
                       </span>
                     </td>
-                    <td className="px-8 py-4 text-right">
+                    <td className="px-6 py-4 text-right font-mono tabular-nums whitespace-nowrap">
                       {t.type === 'reallocation' ? (
-                        <span className="text-xs font-black text-accent italic">Adjustment</span>
+                        <span className="text-xs font-medium text-[#B45309]">Penyesuaian</span>
                       ) : (
-                        <span className={`text-xs font-black ${t.type === 'income' ? 'text-gray-900' : 'text-red-500'}`}>
+                        <span className={`text-xs font-semibold ${t.type === 'income' ? 'text-[#111827]' : 'text-[#DC2626]'}`}>
                           {t.type === 'income' ? '+' : '-'} Rp {Math.abs(t.amount || 0).toLocaleString('id-ID')}
                         </span>
                       )}
                     </td>
                   </tr>
                 ))}
-                {transactions.length === 0 && (
+                {filteredTransactions.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-8 py-10 text-center text-xs text-gray-400 italic">Belum ada data transaksi publik.</td>
+                    <td colSpan={4} className="px-6 py-10 text-center text-xs text-[#6B7280]">Belum ada data transaksi publik pada periode ini.</td>
                   </tr>
                 )}
               </tbody>

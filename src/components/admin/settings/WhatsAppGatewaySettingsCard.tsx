@@ -149,12 +149,12 @@ export default function WhatsAppGatewaySettingsCard() {
             <div className="mt-3 p-3.5 bg-emerald-50/80 border border-emerald-200/60 rounded-2xl text-[11px] text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold">Perangkat Terkoneksi: <strong>DKV INFO</strong> (6285961194622)</span>
+                <span className="font-semibold">Perangkat Terkoneksi: <strong>SIDOBE Gateway</strong>{config.senderNumber ? ` (${config.senderNumber})` : ''}</span>
               </div>
               <a 
                 href="https://sidobe.com" 
                 target="_blank" 
-                rel="noreferrer" 
+                rel="noopener noreferrer" 
                 className="text-emerald-700 font-black hover:underline inline-flex items-center gap-1"
               >
                 Buka Sidobe Console <ExternalLink className="w-3 h-3" />
@@ -168,7 +168,7 @@ export default function WhatsAppGatewaySettingsCard() {
               <a 
                 href="https://fonnte.com" 
                 target="_blank" 
-                rel="noreferrer" 
+                rel="noopener noreferrer" 
                 className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
               >
                 Daftar gratis di Fonnte.com <ExternalLink className="w-3 h-3" />

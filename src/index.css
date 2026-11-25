@@ -3,9 +3,28 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --color-primary: #1E40AF;
+  --color-primary-hover: #1D3A8A;
   --color-accent: #F59E0B;
-  --color-surface-low: #F3F4F6;
+  --color-paper: #F8F9FA;
+  --color-paper-card: #FCFCFD;
+  --color-paper-raised: #F1F3F5;
+  --color-ink: #1E293B;
+  --color-ink-secondary: #475569;
+  --color-ink-muted: #64748B;
+  --color-hairline: rgba(17, 24, 39, 0.08);
+  --color-admin-bg: #FAFAFA;
+  --color-admin-card: #FFFFFF;
+  --color-admin-raised: #F4F4F5;
+  --color-admin-sidebar: #0F0F10;
+  --color-admin-ink: #171717;
+  --color-admin-secondary: #525252;
+  --color-admin-muted: #737373;
+  --color-admin-hairline: rgba(23, 23, 23, 0.08);
+  --color-surface-low: #F8F9FA;
+  --ease-unslop: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
@@ -20,7 +39,10 @@
   }
 
   body {
-    @apply font-sans bg-white text-gray-900;
+    @apply font-sans;
+    background-color: #F8F9FA;
+    color: #1E293B;
+    -webkit-font-smoothing: antialiased;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -28,28 +50,42 @@
     min-height: 100dvh;
   }
 
-  /* Prevent iOS Safari / Android auto-zoom on form inputs */
-  input, 
-  select, 
-  textarea {
-    font-size: 16px !important;
+  :focus-visible {
+    outline: 2px solid #1E40AF;
+    outline-offset: 2px;
   }
 
-  @media (min-width: 640px) {
-    input, 
-    select, 
+  /* Prevent iOS Safari / Android auto-zoom on mobile form inputs only */
+  @media (max-width: 639px) {
+    input,
+    select,
     textarea {
-      font-size: inherit !important;
+      font-size: 16px !important;
     }
   }
 }
 
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono-ledger {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 .glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+  background-color: #FCFCFD;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .section-padding {
-  @apply py-16 md:py-24;
+  @apply py-12 sm:py-16 lg:py-20;
 }
 
 @media print {
@@ -88,7 +124,6 @@
     padding-bottom: 0.5cm !important;
   }
 
-  /* Expand max-width of container */
   .max-w-4xl {
     max-width: 100% !important;
     width: 100% !important;
@@ -97,25 +132,23 @@
     margin: 0 !important;
   }
 
-  /* Typography formatting for high-contrast B&W */
   h1, h2, h3, h4, p, span, li {
     color: #111827 !important;
   }
 
   h1 {
     font-size: 20pt !important;
-    font-weight: 800 !important;
+    font-weight: 600 !important;
     margin-bottom: 0.5rem !important;
   }
 
   h2 {
     font-size: 14pt !important;
-    font-weight: 800 !important;
+    font-weight: 600 !important;
     margin-top: 1rem !important;
     margin-bottom: 1rem !important;
   }
 
-  /* Force display headings to render gracefully on white pages */
   .text-transparent {
     color: #111827 !important;
     background-clip: unset !important;
@@ -123,9 +156,7 @@
     background-image: none !important;
   }
 
-  /* Custom section page breaking behavior */
-  section, 
-  .rounded-\[2rem\] {
+  section {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     border: none !important;
@@ -150,10 +181,9 @@
   li p {
     color: #374151 !important;
     font-size: 10.5pt !important;
-    font-weight: 500 !important;
+    font-weight: 400 !important;
   }
 
-  /* Margin page specifications */
   @page {
     margin: 1.5cm;
     size: A4 portrait;
@@ -182,4 +212,13 @@
   animation-play-state: paused;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 
+  .animate-marquee-smooth,
+  .splash-progress-bar {
+    animation: none !important;
+  }
+}

@@ -33,59 +33,59 @@ export default function HeroSettingsCard({
   };
 
   return (
-    <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+    <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-xl border border-[#E4E4E7] shadow-xs space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E4E4E7]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-primary flex items-center justify-center shrink-0">
-            <Layout className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-lg bg-[#EFF6FF] text-[#1E40AF] flex items-center justify-center shrink-0">
+            <Layout className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div>
-            <h3 className="font-bold text-gray-900 leading-tight">Pengaturan Hero Section (Banner Beranda)</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h3 className="font-semibold text-[#171717] leading-tight">Pengaturan Hero Section (Banner Beranda)</h3>
+            <p className="text-xs text-[#737373] mt-0.5">
               Sesuaikan teks sambutan, foto aula gedung, dan angka kapasitas di halaman depan website.
             </p>
           </div>
         </div>
 
-        <span className="text-[10px] font-mono font-bold px-3 py-1 rounded-full bg-blue-50 text-primary self-start sm:self-auto">
-          Halaman Depan • Paling Atas
+        <span className="text-[11px] font-mono tabular-nums font-medium px-3 py-1 rounded-full bg-[#F4F4F5] text-[#525252] border border-[#E4E4E7] self-start sm:self-auto">
+          Halaman Depan · Paling Atas
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Sisi Kiri: Teks & Narasi */}
         <div className="space-y-4">
-          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">1. Teks Judul & Slogan</h4>
+          <h4 className="text-xs font-semibold text-[#525252]">1. Teks Judul & Slogan</h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
-                Teks Lokasi (Badge)
+              <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
+                Teks Lokasi (Label Atas)
               </label>
               <input
                 type="text"
-                value={config?.heroBadgeLocation ?? 'Kawasan Huntap Tondo 2 • Palu'}
+                value={config?.heroBadgeLocation ?? 'Kawasan Huntap Tondo 2, Palu'}
                 onChange={(e) => setConfig({ ...config, heroBadgeLocation: e.target.value })}
-                placeholder="Kawasan Huntap Tondo 2 • Palu"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-800 focus:bg-white focus:border-primary outline-none transition-all"
+                placeholder="Kawasan Huntap Tondo 2, Palu"
+                className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-xs font-medium text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
-                Kategori (Badge)
+              <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
+                Kategori (Label Atas)
               </label>
               <input
                 type="text"
                 value={config?.heroBadgeCategory ?? 'Balai Warga Terpadu'}
                 onChange={(e) => setConfig({ ...config, heroBadgeCategory: e.target.value })}
                 placeholder="Balai Warga Terpadu"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-800 focus:bg-white focus:border-primary outline-none transition-all"
+                className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-xs font-medium text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
               Judul Utama Baris 1
             </label>
             <input
@@ -93,25 +93,25 @@ export default function HeroSettingsCard({
               value={config?.heroTitle ?? 'Ruang Mulia Warga,'}
               onChange={(e) => setConfig({ ...config, heroTitle: e.target.value })}
               placeholder="Ruang Mulia Warga,"
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-black text-gray-900 focus:bg-white focus:border-primary outline-none transition-all"
+              className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-xs font-semibold text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
-              Sub-Judul Aksen Baris 2 (Gradien Biru)
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
+              Sub-Judul Aksen Baris 2
             </label>
             <input
               type="text"
-              value={config?.heroSubtitle ?? 'Panggung Cerita & Tradisi Kita.'}
+              value={config?.heroSubtitle ?? 'Panggung Cerita & Tradisi Kita'}
               onChange={(e) => setConfig({ ...config, heroSubtitle: e.target.value })}
-              placeholder="Panggung Cerita & Tradisi Kita."
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 focus:bg-white focus:border-primary outline-none transition-all"
+              placeholder="Panggung Cerita & Tradisi Kita"
+              className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-xs font-semibold text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
               Deskripsi Singkat / Tagline
             </label>
             <textarea
@@ -119,23 +119,23 @@ export default function HeroSettingsCard({
               value={config?.heroTagline ?? 'Dari akad nikah khidmat, resepsi adat, hingga musyawarah akbar warga.'}
               onChange={(e) => setConfig({ ...config, heroTagline: e.target.value })}
               placeholder="Tuliskan narasi singkat gedung..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-medium text-gray-700 focus:bg-white focus:border-primary outline-none transition-all resize-none"
+              className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg p-3 text-xs font-medium text-[#525252] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors resize-none"
             />
           </div>
         </div>
 
-        {/* Sisi Kanan: Foto Utama Aula & Floating Cards */}
+        {/* Sisi Kanan: Foto Utama Aula & Statistik */}
         <div className="space-y-4">
-          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">2. Foto Utama & Statistik Showcase</h4>
+          <h4 className="text-xs font-semibold text-[#525252]">2. Foto Utama & Statistik Resmi Gedung</h4>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
               Foto Hero Utama (Cloudinary Upload / URL)
             </label>
             <div className="flex gap-3 items-center">
-              <div className="w-20 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 relative group">
+              <div className="w-20 h-14 rounded-lg overflow-hidden bg-[#F4F4F5] border border-[#E4E4E7] shrink-0 relative group">
                 <img
-                  src={config?.heroImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'}
+                  src={config?.heroImageUrl || '/hero-gsg-tondo2.webp'}
                   alt="Preview Hero"
                   className="w-full h-full object-cover"
                 />
@@ -143,7 +143,7 @@ export default function HeroSettingsCard({
 
               <div className="flex-1 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1E40AF] text-xs font-medium transition-colors">
                     {isUploadingHero ? (
                       <Loader className="w-3.5 h-3.5 animate-spin" />
                     ) : (
@@ -161,21 +161,21 @@ export default function HeroSettingsCard({
                       className="hidden"
                     />
                   </label>
-                  <span className="text-[10px] text-slate-400">atau tempel link di bawah</span>
+                  <span className="text-[11px] text-[#737373]">atau tempel link di bawah</span>
                 </div>
                 <input
                   type="url"
                   value={config?.heroImageUrl ?? ''}
                   onChange={(e) => setConfig({ ...config, heroImageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-mono text-gray-700 focus:bg-white focus:border-primary outline-none transition-all"
+                  placeholder="/hero-gsg-tondo2.webp"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3 py-1.5 text-xs font-mono text-[#525252] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
               Keterangan Caption Foto
             </label>
             <input
@@ -183,73 +183,73 @@ export default function HeroSettingsCard({
               value={config?.heroImageCaption ?? 'Tata Lampu, Panggung Resepsi, & Akustik Terpadu'}
               onChange={(e) => setConfig({ ...config, heroImageCaption: e.target.value })}
               placeholder="Tata Lampu, Panggung Resepsi..."
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-800 focus:bg-white focus:border-primary outline-none transition-all"
+              className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3.5 py-2.5 text-xs font-medium text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
             />
           </div>
 
-          {/* 3 Badge Statistik */}
+          {/* 3 Statistik Utama */}
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
-              Angka Ringkasan Fitur (3 Badge Bawah Foto)
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
+              Angka Ringkasan Fitur (3 Spesifikasi Utama)
             </label>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <span className="block text-[9px] text-slate-400 font-bold mb-1">Kapasitas Tamu</span>
+                <span className="block text-[10px] text-[#737373] font-medium mb-1">Kapasitas Tamu</span>
                 <input
                   type="text"
-                  value={config?.heroStatCapacity ?? '500+'}
+                  value={config?.heroStatCapacity ?? '300'}
                   onChange={(e) => setConfig({ ...config, heroStatCapacity: e.target.value })}
-                  placeholder="500+"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-black text-center text-gray-800 focus:bg-white focus:border-primary outline-none"
+                  placeholder="300"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-center text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
               <div>
-                <span className="block text-[9px] text-slate-400 font-bold mb-1">Audio System</span>
+                <span className="block text-[10px] text-[#737373] font-medium mb-1">Audio System</span>
                 <input
                   type="text"
-                  value={config?.heroStatAudio ?? '10.000 W'}
+                  value={config?.heroStatAudio ?? '5.000 W'}
                   onChange={(e) => setConfig({ ...config, heroStatAudio: e.target.value })}
-                  placeholder="10.000 W"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-black text-center text-gray-800 focus:bg-white focus:border-primary outline-none"
+                  placeholder="5.000 W"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-center text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
               <div>
-                <span className="block text-[9px] text-slate-400 font-bold mb-1">Transparansi</span>
+                <span className="block text-[10px] text-[#737373] font-medium mb-1">Transparansi</span>
                 <input
                   type="text"
                   value={config?.heroStatTransparency ?? '100%'}
                   onChange={(e) => setConfig({ ...config, heroStatTransparency: e.target.value })}
                   placeholder="100%"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs font-black text-center text-gray-800 focus:bg-white focus:border-primary outline-none"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-2.5 py-1.5 text-xs font-mono tabular-nums font-semibold text-center text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
-          {/* Label Floating Cards */}
+          {/* Keterangan Status & Pengelola */}
           <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">
-              Label Kartu Mengambang (Floating Cards)
+            <label className="block text-[11px] font-medium text-[#525252] mb-1.5">
+              Label Status & Pengelola Resmi
             </label>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="block text-[9px] text-slate-400 font-bold mb-1">Status Kesiapan</span>
+                <span className="block text-[10px] text-[#737373] font-medium mb-1">Status Kesiapan</span>
                 <input
                   type="text"
                   value={config?.heroStatusTitle ?? 'Gedung Siap Digunakan'}
                   onChange={(e) => setConfig({ ...config, heroStatusTitle: e.target.value })}
                   placeholder="Gedung Siap Digunakan"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-800 focus:bg-white focus:border-primary outline-none"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3 py-1.5 text-xs font-medium text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
               <div>
-                <span className="block text-[9px] text-slate-400 font-bold mb-1">Pengelola Mitra</span>
+                <span className="block text-[10px] text-[#737373] font-medium mb-1">Pengelola Mitra</span>
                 <input
                   type="text"
                   value={config?.heroPartnerTitle ?? 'Pengurus RT 02 Huntap 2'}
                   onChange={(e) => setConfig({ ...config, heroPartnerTitle: e.target.value })}
                   placeholder="Pengurus RT 02 Huntap 2"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-800 focus:bg-white focus:border-primary outline-none"
+                  className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-lg px-3 py-1.5 text-xs font-medium text-[#171717] focus:bg-white focus:border-[#1E40AF] outline-none transition-colors"
                 />
               </div>
             </div>

@@ -87,20 +87,20 @@ export default function VendorSection() {
   };
 
   return (
-    <section id="mitra-vendor" className="section-padding bg-slate-50/70 border-t border-gray-100">
+    <section id="mitra-vendor" className="section-padding scroll-mt-28 bg-[#F8F9FA] border-t border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 text-center md:text-left">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-10 text-center md:text-left">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest mb-4">
-              <Store className="w-4 h-4 text-primary" />
-              <span>Direktori UMKM & Vendor Lokal</span>
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#1E40AF] mb-2">
+              <Store className="w-4 h-4 text-[#1E40AF]" strokeWidth={1.75} />
+              <span>Direktori UMKM & vendor lokal</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1E293B] tracking-tight">
               Mitra & Rekomendasi Acara
             </h2>
-            <p className="text-gray-500 text-sm md:text-base mt-3 leading-relaxed">
-              Temukan katering, pelaminan, foto, MUA, dan sound system terpercaya dari warga lokal Huntap Tondo 2 & Kota Palu untuk menyempurnakan pesta atau pertemuan Anda di gedung serbaguna.
+            <p className="text-[#4B5563] text-sm sm:text-base mt-3 leading-relaxed">
+              Temukan katering, pelaminan, foto, MUA, dan sound system terpercaya dari warga lokal Huntap Tondo 2 & Kota Palu untuk menyempurnakan acara Anda.
             </p>
           </div>
 
@@ -108,32 +108,32 @@ export default function VendorSection() {
             <button
               type="button"
               onClick={() => setIsRegisterOpen(true)}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-gray-50 text-gray-800 text-xs font-black uppercase tracking-wider border border-gray-200/80 shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 active:scale-95"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-lg bg-[#FCFCFD] hover:bg-[#F1F3F5] text-[#111827] text-xs font-medium border border-[#D1D5DB] transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4 text-primary" />
+              <PlusCircle className="w-4 h-4 text-[#1E40AF]" />
               <span>Daftarkan Usaha Anda</span>
             </button>
           </div>
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm mb-8 space-y-4">
+        <div className="bg-[#FCFCFD] p-4 sm:p-5 rounded-2xl border border-[#E5E7EB] mb-6 sm:mb-8 space-y-4">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
               <input 
                 type="text"
                 placeholder="Cari vendor katering, dekorasi, tenda, sound system, MUA..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200/80 rounded-2xl pl-11 pr-10 py-3 text-xs font-bold text-gray-800 placeholder-gray-400 outline-none focus:bg-white focus:border-primary transition-all"
+                className="w-full min-h-[44px] bg-[#F8F9FA] border border-[#D1D5DB] rounded-lg pl-10 pr-10 py-2.5 text-xs font-medium text-[#111827] placeholder:text-[#6B7280] outline-none focus:bg-[#FCFCFD] focus:border-[#1E40AF] transition-colors"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 min-w-[32px] min-h-[32px] flex items-center justify-center text-[#6B7280] hover:text-[#111827] rounded-full cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -141,20 +141,20 @@ export default function VendorSection() {
             </div>
 
             {/* Toggle Only Huntap Residents */}
-            <div className="flex items-center justify-between sm:justify-start gap-3 bg-gray-50 border border-gray-100 px-4 py-2.5 rounded-2xl shrink-0">
+            <div className="flex items-center justify-between sm:justify-start gap-3 bg-[#F8F9FA] border border-[#E5E7EB] min-h-[44px] px-4 py-2 rounded-lg shrink-0">
               <div className="flex items-center gap-2">
-                <Home className={`w-4 h-4 ${onlyHuntapResidents ? 'text-emerald-600' : 'text-gray-400'}`} />
-                <span className="text-xs font-black text-gray-700">Warga Huntap Saja</span>
+                <Home className={`w-4 h-4 ${onlyHuntapResidents ? 'text-[#16A34A]' : 'text-[#6B7280]'}`} />
+                <span className="text-xs font-medium text-[#111827]">Warga Huntap Saja</span>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={onlyHuntapResidents}
                 onClick={() => setOnlyHuntapResidents(!onlyHuntapResidents)}
-                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${onlyHuntapResidents ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none cursor-pointer ${onlyHuntapResidents ? 'bg-[#16A34A]' : 'bg-[#D1D5DB]'}`}
               >
                 <span 
-                  className={`block w-4 h-4 rounded-full bg-white shadow-md transform transition-transform ${onlyHuntapResidents ? 'translate-x-6' : 'translate-x-1'}`}
+                  className={`block w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform ${onlyHuntapResidents ? 'translate-x-6' : 'translate-x-1'}`}
                 />
               </button>
             </div>
@@ -171,10 +171,10 @@ export default function VendorSection() {
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id as VendorCategory)}
-                  className={`px-4 py-2.5 rounded-2xl font-black text-xs whitespace-nowrap transition-all duration-200 flex items-center gap-2 shrink-0 ${
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg font-medium text-xs whitespace-nowrap transition-colors flex items-center gap-2 shrink-0 border cursor-pointer ${
                     isSelected
-                      ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-100'
+                      ? 'bg-[#1E40AF] text-white border-[#1E40AF]'
+                      : 'bg-[#F8F9FA] hover:bg-[#F1F3F5] text-[#4B5563] border-[#E5E7EB]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -187,7 +187,7 @@ export default function VendorSection() {
 
         {/* Vendors Grid */}
         {filteredVendors.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredVendors.map((vendor) => (
               <VendorCard 
                 key={vendor.id} 
@@ -198,12 +198,12 @@ export default function VendorSection() {
           </div>
         ) : (
           /* Empty State */
-          <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm max-w-lg mx-auto">
-            <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-3xl flex items-center justify-center mx-auto mb-4">
-              <Store className="w-8 h-8" />
+          <div className="bg-[#FCFCFD] rounded-2xl p-8 sm:p-12 text-center border border-[#E5E7EB] max-w-lg mx-auto">
+            <div className="w-14 h-14 bg-[#F1F3F5] text-[#6B7280] rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Store className="w-7 h-7" strokeWidth={1.5} />
             </div>
-            <h3 className="text-lg font-black text-gray-900 mb-1">Tidak Ada Mitra Ditemukan</h3>
-            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+            <h3 className="text-lg font-semibold text-[#111827] mb-1">Tidak Ada Mitra Ditemukan</h3>
+            <p className="text-xs text-[#4B5563] mb-6 leading-relaxed">
               {searchQuery || onlyHuntapResidents || selectedCategory !== 'all'
                 ? 'Tidak ada vendor yang cocok dengan filter atau kata kunci pencarian Anda.'
                 : 'Belum ada data vendor yang terdaftar saat ini.'}
@@ -215,7 +215,7 @@ export default function VendorSection() {
                 setSearchQuery('');
                 setOnlyHuntapResidents(false);
               }}
-              className="px-6 py-3 rounded-2xl bg-primary text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-800 transition-colors shadow-sm"
+              className="min-h-[44px] px-5 py-2.5 rounded-lg bg-[#1E40AF] text-white text-xs font-medium hover:bg-[#1D3A8A] transition-colors cursor-pointer"
             >
               Reset Semua Filter
             </button>
@@ -223,15 +223,15 @@ export default function VendorSection() {
         )}
 
         {/* Bottom Banner Callout */}
-        <div className="mt-12 p-8 rounded-[2.5rem] bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="max-w-xl text-center md:text-left">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block mb-1">
+        <div className="mt-10 sm:mt-12 p-6 sm:p-8 rounded-2xl bg-[#1E3A8A] text-white border border-[#1E3A8A] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <span className="text-xs font-medium text-blue-200 block mb-1">
               Dukungan UMKM Mandiri Tondo 2
             </span>
-            <h3 className="text-2xl font-black tracking-tight mb-2">
+            <h3 className="text-xl sm:text-2xl font-display font-bold tracking-tight mb-2">
               Punya Usaha Katering, Tenda, Sound, atau Rias?
             </h3>
-            <p className="text-xs text-blue-100/80 leading-relaxed">
+            <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
               Pengelola Gedung Serbaguna Huntap Tondo 2 memberikan kesempatan bagi seluruh warga dan pelaku UMKM lokal untuk mempromosikan layanannya secara gratis tanpa dipungut biaya perantara.
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function VendorSection() {
           <button
             type="button"
             onClick={() => setIsRegisterOpen(true)}
-            className="shrink-0 px-8 py-4 bg-amber-400 hover:bg-amber-300 active:scale-95 text-amber-950 font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-amber-400/20 transition-all flex items-center gap-2"
+            className="w-full md:w-auto shrink-0 min-h-[44px] px-6 py-3 bg-[#F59E0B] hover:bg-[#D97706] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Gabung Jadi Mitra Kami</span>

@@ -26,6 +26,7 @@ import {
   Area
 } from 'recharts';
 import { syncFinanceTotals, checkCurrentAvailability } from '../../lib/db';
+import { getLocalDateISO } from '../../lib/dateUtils';
 import { useAppStore } from '../../store/useAppStore';
 
 import { useOutletContext, Link } from 'react-router-dom';
@@ -51,7 +52,7 @@ export default function DashboardOverview() {
       const d = new Date();
       d.setDate(now.getDate() - i);
       const dayName = days[d.getDay()];
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = getLocalDateISO(d);
       
       const dayTotal = transactions
         .filter(t => t.date === dateStr && t.type === 'income')
@@ -152,40 +153,41 @@ export default function DashboardOverview() {
     <div className="space-y-8">
       {/* Availability Status Card */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`p-4 sm:p-6 rounded-[2rem] sm:rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 ${
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className={`p-4 sm:p-5 rounded-xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
           availability.isBusy 
-          ? 'bg-red-50 border-red-100 text-red-900' 
-          : 'bg-emerald-50 border-emerald-100 text-emerald-900'
+          ? 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]' 
+          : 'bg-[#F0FDF4] border-[#BBF7D0] text-[#14532D]'
         }`}
       >
-        <div className="flex items-center gap-4 text-center md:text-left w-full md:w-auto">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-            availability.isBusy ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shrink-0 ${
+            availability.isBusy ? 'bg-[#FEE2E2] text-[#DC2626]' : 'bg-[#DCFCE7] text-[#16A34A]'
           }`}>
-            <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
+            <LayoutGrid className="w-5 h-5" strokeWidth={1.75} />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-black text-[10px] sm:text-sm uppercase tracking-widest opacity-60">Status Gedung Hari Ini</h4>
-            <p className="text-base sm:text-xl font-black truncate">
-              {availability.isBusy ? `SEDANG DIGUNAKAN: ${availability.currentBooking?.purpose}` : 'GEDUNG SEDANG KOSONG / TERSEDIA'}
+            <h4 className="font-medium text-xs opacity-80">Status gedung hari ini</h4>
+            <p className="text-base sm:text-lg font-semibold truncate">
+              {availability.isBusy ? `Sedang digunakan: ${availability.currentBooking?.purpose}` : 'Gedung sedang kosong / tersedia'}
             </p>
           </div>
         </div>
         
         {availability.isBusy ? (
-          <div className="flex items-center gap-3 bg-white/50 px-4 py-2 sm:px-5 sm:py-3 rounded-2xl border border-red-100 w-full md:w-auto">
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 shrink-0" />
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-[#FECACA] w-full md:w-auto">
+            <Clock className="w-4 h-4 text-[#DC2626] shrink-0" />
             <div className="text-left leading-tight min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-black uppercase text-red-400 leading-none mb-1">Booking Info</p>
-              <p className="text-xs sm:text-sm font-bold truncate">{availability.currentBooking?.customerName}</p>
+              <p className="text-[11px] font-medium text-[#B91C1C]">Penyewa</p>
+              <p className="text-xs sm:text-sm font-semibold text-[#171717] truncate">{availability.currentBooking?.customerName}</p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 bg-white/50 rounded-2xl border border-emerald-100 w-full md:w-auto justify-center md:justify-start">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-            <span className="text-xs sm:text-sm font-black uppercase tracking-widest text-emerald-600">Siap Digunakan</span>
+          <div className="flex items-center gap-2 px-3.5 py-2 bg-white rounded-lg border border-[#BBF7D0] w-full md:w-auto justify-center md:justify-start">
+            <span className="w-2 h-2 bg-[#16A34A] rounded-full" />
+            <span className="text-xs font-medium text-[#15803D]">Siap digunakan</span>
           </div>
         )}
       </motion.div>
@@ -193,32 +195,32 @@ export default function DashboardOverview() {
       {/* Radar Pengingat H-1 Acara Besok */}
       {tomorrowBookings.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-[2rem] sm:rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border border-blue-500/30"
+          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-white border border-[#E4E4E7] border-l-4 border-l-[#1E40AF] p-5 sm:p-6 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5"
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0">
-              <Bell className="w-6 h-6 animate-pulse" />
+            <div className="w-11 h-11 rounded-lg bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                Radar Pengingat H-1
-              </div>
-              <h4 className="text-base sm:text-lg font-black text-white">
-                Ada {tomorrowBookings.length} Jadwal Acara Besok ({tomorrow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })})
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] text-[11px] font-medium mb-1">
+                Radar pengingat H-1
+              </span>
+              <h4 className="text-base font-semibold text-[#171717]">
+                Ada <span className="font-mono tabular-nums">{tomorrowBookings.length}</span> jadwal acara besok ({tomorrow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })})
               </h4>
-              <p className="text-xs text-blue-200 mt-0.5 line-clamp-1">
-                {tomorrowBookings.map(b => `${b.customerName} - ${b.purpose || 'Acara'}`).join(' • ')}
+              <p className="text-xs text-[#737373] mt-0.5 line-clamp-1">
+                {tomorrowBookings.map(b => `${b.customerName} - ${b.purpose || 'Acara'}`).join(' · ')}
               </p>
             </div>
           </div>
           <Link
             to="/admin/bookings"
-            className="w-full md:w-auto px-5 py-3 rounded-2xl bg-white hover:bg-blue-50 text-blue-950 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shrink-0 active:scale-95"
+            className="w-full md:w-auto px-4 py-2.5 rounded-lg bg-[#1E40AF] hover:bg-[#1D3A8A] text-white font-medium text-xs transition-colors flex items-center justify-center gap-2 shrink-0"
           >
-            <span>Buka & Kirim Reminder WA</span>
+            <span>Buka & Kirim Pengingat WA</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </motion.div>
@@ -228,115 +230,115 @@ export default function DashboardOverview() {
       <QuickMenuGrid userRole={userRole} pendingBookingsCount={pendingBookings} />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`bg-white p-5 sm:p-6 rounded-[2rem] border border-gray-100 shadow-sm ${stat.hidden ? 'opacity-75 grayscale-[0.5]' : ''}`}
+            transition={{ delay: i * 0.05, duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className={`bg-white p-5 rounded-xl border border-[#E4E4E7] ${stat.hidden ? 'opacity-70 grayscale-[0.5]' : ''}`}
           >
             <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-primary">
-                <stat.icon className="w-5 h-5" />
+              <div className="w-9 h-9 bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg flex items-center justify-center text-[#1E40AF]">
+                <stat.icon className="w-4 h-4" strokeWidth={1.75} />
               </div>
-              <div className={`flex items-center gap-1 text-xs font-bold ${stat.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`flex items-center gap-1 text-xs font-mono tabular-nums font-medium ${stat.isPositive ? 'text-[#15803D]' : 'text-[#DC2626]'}`}>
                 {stat.trend}
                 {stat.isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
               </div>
             </div>
-            <p className="text-sm font-medium text-gray-500 mb-1">{stat.label}</p>
-            <h3 className="text-2xl font-bold text-gray-900">{stat.value}</h3>
-            {stat.hidden && <p className="text-[10px] text-orange-500 font-bold mt-2">Akses Terbatas</p>}
+            <p className="text-xs font-medium text-[#737373] mb-1">{stat.label}</p>
+            <h3 className="text-xl sm:text-2xl font-mono tabular-nums font-semibold text-[#171717]">{stat.value}</h3>
+            {stat.hidden && <p className="text-[11px] text-[#B45309] font-medium mt-2">Akses terbatas</p>}
           </motion.div>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Chart */}
-        <div className={`lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm h-[400px] relative overflow-hidden ${userRole === 'editor' ? 'opacity-50' : ''}`}>
+        <div className={`lg:col-span-2 bg-white p-6 rounded-xl border border-[#E4E4E7] h-[380px] relative overflow-hidden min-w-0 ${userRole === 'editor' ? 'opacity-50' : ''}`}>
           {userRole === 'editor' && (
-            <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
-              <div className="text-center p-6 bg-white rounded-2xl shadow-xl border border-gray-100">
-                <TrendingUp className="w-8 h-8 text-orange-500 mx-auto mb-3" />
-                <p className="font-bold text-gray-900">Statistik Keuangan Terkunci</p>
-                <p className="text-xs text-gray-400 mt-1">Hanya Owner, Admin, Bendahara, dan Finance yang dapat melihat data ini.</p>
+            <div className="absolute inset-0 z-10 bg-white/60 flex items-center justify-center">
+              <div className="text-center p-6 bg-white rounded-xl border border-[#E4E4E7] shadow-sm">
+                <TrendingUp className="w-7 h-7 text-[#B45309] mx-auto mb-2.5" />
+                <p className="font-semibold text-sm text-[#171717]">Statistik Keuangan Terkunci</p>
+                <p className="text-xs text-[#737373] mt-1">Hanya Owner, Admin, Bendahara, dan Finance yang dapat melihat data ini.</p>
               </div>
             </div>
           )}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="font-bold text-gray-900 text-lg">Arus Kas Masuk (Realtime)</h3>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Performa 7 Hari Terakhir</p>
+              <h3 className="font-semibold text-[#171717] text-base">Arus Kas Masuk (Realtime)</h3>
+              <p className="text-xs text-[#737373] mt-0.5">Performa 7 hari terakhir</p>
             </div>
-            <div className="p-1 bg-gray-50 rounded-xl flex gap-1">
-              <span className="px-3 py-1 bg-white rounded-lg text-[10px] font-black text-primary shadow-sm tracking-widest uppercase">MASUKAN</span>
-            </div>
+            <span className="px-2.5 py-1 bg-[#F4F4F5] border border-[#E4E4E7] rounded-md text-[11px] font-medium text-[#1E40AF]">
+              Pemasukan
+            </span>
           </div>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[260px] w-full min-w-0">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1E40AF" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#1E40AF" stopOpacity={0.12}/>
                     <stop offset="95%" stopColor="#1E40AF" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4E7" />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 12, fill: '#9CA3AF' }}
+                  tick={{ fontSize: 11, fill: '#737373' }}
                   dy={10}
                 />
                 <YAxis hide />
                 <Tooltip 
                   contentStyle={{ 
-                    borderRadius: '12px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                    borderRadius: '8px', 
+                    border: '1px solid #E4E4E7', 
+                    backgroundColor: '#FFFFFF',
                     fontSize: '12px'
                   }} 
-                  formatter={(value: any) => [`Rp ${value.toLocaleString()}k`, 'Pemasukan']}
+                  formatter={(value: any) => [`Rp ${value.toLocaleString('id-ID')}k`, 'Pemasukan']}
                 />
-                <Area type="monotone" dataKey="income" stroke="#1E40AF" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                <Area type="monotone" dataKey="income" stroke="#1E40AF" strokeWidth={2.5} fillOpacity={1} fill="url(#colorIncome)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white p-5 sm:p-8 rounded-[2rem] sm:rounded-3xl border border-gray-100 shadow-sm flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6 sm:mb-8">
-            <h3 className="font-bold text-gray-900 text-lg">Aktivitas Terbaru</h3>
-            <button className="text-xs font-bold text-primary hover:underline">Semua</button>
+        <div className="bg-white p-6 rounded-xl border border-[#E4E4E7] flex flex-col h-full">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-semibold text-[#171717] text-base">Aktivitas Terbaru</h3>
+            <Link to="/admin/finance" className="text-xs font-medium text-[#1E40AF] hover:underline">Semua</Link>
           </div>
-          <div className="space-y-4 sm:space-y-6 flex-1">
+          <div className="space-y-4 flex-1">
             {recentTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-start gap-3 sm:gap-4 group">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                  tx.type === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+              <div key={tx.id} className="flex items-start gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                  tx.type === 'expense' ? 'bg-[#FEF2F2] text-[#DC2626]' : 'bg-[#F0FDF4] text-[#16A34A]'
                 }`}>
-                  {tx.type === 'expense' ? <ArrowDownRight className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  {tx.type === 'expense' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-black text-sm text-gray-900 leading-tight">{tx.source}</p>
-                        {tx.receiptUrl && <Receipt className="w-3 h-3 text-primary shrink-0" />}
+                        <p className="font-semibold text-xs text-[#171717] leading-tight truncate">{tx.source}</p>
+                        {tx.receiptUrl && <Receipt className="w-3 h-3 text-[#1E40AF] shrink-0" />}
                       </div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                        {tx.category} • <span className="opacity-70">{tx.date}</span>
+                      <p className="text-[11px] text-[#737373] font-mono tabular-nums mt-0.5">
+                        {tx.category} · {tx.date}
                       </p>
                     </div>
                     <div className="flex items-center justify-between sm:flex-col sm:items-end shrink-0 sm:text-right mt-1 sm:mt-0">
-                      <p className={`text-sm font-black ${tx.type === 'expense' ? 'text-red-500' : 'text-emerald-600'}`}>
-                        {tx.type === 'income' ? '+' : '-'}Rp {Math.abs(tx.amount).toLocaleString()}
+                      <p className={`text-xs font-mono tabular-nums font-semibold ${tx.type === 'expense' ? 'text-[#DC2626]' : 'text-[#15803D]'}`}>
+                        {tx.type === 'income' ? '+' : '-'}Rp {Math.abs(tx.amount).toLocaleString('id-ID')}
                       </p>
-                      <p className="hidden sm:block text-[9px] font-bold text-gray-300 uppercase tracking-tighter">Berhasil</p>
+                      <p className="hidden sm:block text-[10px] text-[#737373]">Tercatat</p>
                     </div>
                   </div>
                 </div>
@@ -344,7 +346,7 @@ export default function DashboardOverview() {
             ))}
             {recentTransactions.length === 0 && (
               <div className="text-center py-10">
-                <p className="text-sm text-gray-400 italic">Belum ada transaksi</p>
+                <p className="text-xs text-[#737373]">Belum ada transaksi</p>
               </div>
             )}
           </div>
@@ -352,10 +354,10 @@ export default function DashboardOverview() {
           <button 
             onClick={() => syncFinanceTotals(transactions)}
             disabled={userRole === 'editor' || transactions.length === 0}
-            className={`w-full mt-8 sm:mt-10 py-3 sm:py-4 rounded-2xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
-              userRole === 'editor' 
-              ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
-              : 'bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10'
+            className={`w-full mt-6 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              userRole === 'editor' || transactions.length === 0
+              ? 'bg-[#F4F4F5] text-[#A1A1AA] cursor-not-allowed border border-[#E4E4E7]' 
+              : 'bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] border border-[#BFDBFE]'
             }`}
           >
             {userRole === 'editor' ? 'Akses Dibatasi' : 'Sinkronkan Data Dashboard'}
